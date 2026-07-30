@@ -6,6 +6,11 @@ An interactive system design canvas that goes beyond drawing: it **simulates** y
 
 ## Features
 
+- **🎓 Learn — a tutorial that grades your canvas.** Four sections in the side panel:
+  - **Steps** — a 13-step design walkthrough (requirements → capacity math → edge tier → stateless compute → datastore → cache → async → simulate → remove bottlenecks → chaos → observability → hardening → narrate the flow). Each step explains *why* and **checks itself against your live diagram**, so the progress bar fills as you actually build rather than as you click "next".
+  - **Compare** — 14 "difference between" tables for the trade-offs you get asked to justify: SQL vs NoSQL, queue vs event stream, cache-aside vs write-through, horizontal vs vertical scaling, strong vs eventual consistency, lake vs warehouse, ETL vs ELT, monolith vs microservices, orchestration vs choreography, L4 vs L7, REST/GraphQL vs gRPC, replication vs backup, metrics vs logs vs traces, latency vs throughput.
+  - **Quiz** — 14 interview questions with instant right/wrong marking and an explanation for every answer (capacity math, queueing under load, CAP, idempotency, availability multiplication, geo indexes, fan-out, outbox, RAG bottlenecks, alerting practice).
+  - **Numbers** — the cheat sheet: latency numbers, rough per-instance capacity, estimation shortcuts (1M/day ≈ 12 rps), and storage sizing.
 - **Blank canvas or a starter scaffold** — begin from nothing, from a 3-tier skeleton, or from any template. The picker is grouped by category.
 - **Light and dark mode** — one-click switch, remembered between visits, and honoured by PNG export.
 - **①②③ Steps** — number the connections in request order for a walkthrough-style diagram, and click any connection to label it ("cache miss", "write", "async").
