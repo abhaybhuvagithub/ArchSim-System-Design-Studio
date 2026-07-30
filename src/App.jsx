@@ -7,6 +7,7 @@ import { THEMES, readTheme, saveTheme } from './theme.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
 import { costReport, nodeCost, money, HOURS } from './pricing.js'
 import { autoArrange } from './layout.js'
+import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -34,6 +35,11 @@ export default function App() {
   const [theme, setTheme] = useState(readTheme) // 'dark' | 'light'
   const [steps, setSteps] = useState(false)     // numbered request-flow badges
   const [chaosUsed, setChaosUsed] = useState(false)
+  const [cloud, setCloud] = useState(readCloud)   // generic | aws | gcp | azure | oci
+  const [palQ, setPalQ] = useState('')            // palette search
+  const cloudInfo = cloudById(cloud)
+
+  useEffect(() => { saveCloud(cloud) }, [cloud])
   const T = THEMES[theme]
 
   useEffect(() => { document.documentElement.dataset.theme = theme; saveTheme(theme) }, [theme])
@@ -44,7 +50,7 @@ export default function App() {
   const sim = useMemo(() => simulate(nodes, edges, rps, downSet), [nodes, edges, rps, downSet])
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
-  const cost = useMemo(() => costReport(nodes, sim), [nodes, sim])
+  const cost = useMemo(() => costReport(nodes, sim, cloudInfo.mult), [nodes, sim, cloudInfo])
 
   const arrange = () => {
     if (!nodes.length) return
@@ -332,6 +338,10 @@ export default function App() {
           <input type="range" min={2} max={6} step={0.05} value={Math.log10(rps)} onChange={e => setRps(Math.round(10 ** +e.target.value))} />
           <b>{fmt(rps)} rps</b>
         </div>
+        <select className={`btn ${cloud !== 'generic' ? 'active' : ''}`} value={cloud} onChange={e => setCloud(e.target.value)}
+          title="Show the equivalent managed service on each cloud, and price accordingly">
+          {CLOUDS.map(c => <option key={c.id} value={c.id}>{c.id === 'generic' ? '☁ Generic' : '☁ ' + c.name}</option>)}
+        </select>
         <button className={`btn ${steps ? 'active' : ''}`} onClick={() => setSteps(s => !s)}
           title="Number the connections in request order, like a walkthrough diagram">①②③ Steps</button>
         <div className="spacer" />
@@ -352,21 +362,42 @@ export default function App() {
 
       <div className="body">
         <div className="palette">
-          {PALETTE_GROUPS.map(g => (
-            <div key={g.label}>
-              <h4>{g.label}</h4>
-              {g.types.map(t => {
-                const c = CATALOG[t]
-                return (
-                  <div key={t} className="pal-item" draggable
-                    onDragStart={e => e.dataTransfer.setData('type', t)} title={c.desc}>
-                    <div className="pal-glyph" style={{ background: c.color + '33', border: `1px solid ${c.color}` }}>{c.glyph}</div>
-                    {c.name}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+          <input className="pal-search" value={palQ} onChange={e => setPalQ(e.target.value)}
+            placeholder={`Search ${Object.keys(CATALOG).length} components…`} />
+          {PALETTE_GROUPS.map(g => {
+            const q = palQ.trim().toLowerCase()
+            const types = g.types.filter(t => {
+              if (!q) return true
+              const c = CATALOG[t]
+              const svc = (CLOUD_MAP[t] || []).join(' ')
+              return `${c.name} ${c.desc} ${svc}`.toLowerCase().includes(q)
+            })
+            if (!types.length) return null
+            return (
+              <div key={g.label}>
+                <h4>{g.label}</h4>
+                {types.map(t => {
+                  const c = CATALOG[t]
+                  const svc = serviceName(t, cloud)
+                  return (
+                    <div key={t} className="pal-item" draggable
+                      onDragStart={e => e.dataTransfer.setData('type', t)}
+                      title={svc ? `${c.desc}\n\n${cloudInfo.name}: ${svc}` : c.desc}>
+                      <div className="pal-glyph" style={{ background: c.color + '33', border: `1px solid ${c.color}` }}>{c.glyph}</div>
+                      <div className="pal-txt">
+                        {c.name}
+                        {svc && <span className="pal-svc">{svc}</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+          {palQ && !PALETTE_GROUPS.some(g => g.types.some(t => {
+            const c = CATALOG[t], svc = (CLOUD_MAP[t] || []).join(' ')
+            return `${c.name} ${c.desc} ${svc}`.toLowerCase().includes(palQ.trim().toLowerCase())
+          })) && <div className="empty" style={{ padding: '10px 6px' }}>No component matches “{palQ}”.</div>}
         </div>
 
         <div className="canvas-wrap" onDrop={onDrop} onDragOver={e => e.preventDefault()}>
@@ -397,7 +428,7 @@ export default function App() {
               })()}
               {dots.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={d.drop ? 3.5 : 2.5} fill={d.drop ? T.dotDrop : T.dot} opacity="0.9" />)}
               {nodes.map(n => (
-                <Node key={n.id} n={n} sim={sim} simOn={simOn} t={T}
+                <Node key={n.id} n={n} sim={sim} simOn={simOn} t={T} cloud={cloud}
                   selected={sel === n.id}
                   hovered={hover === n.id}
                   dimmed={neighbours ? !neighbours.has(n.id) : false}
@@ -407,7 +438,7 @@ export default function App() {
             </g>
           </svg>
 
-          {hoverNode && !selNode && <HoverCard n={hoverNode} sim={sim} simOn={simOn} />}
+          {hoverNode && !selNode && <HoverCard n={hoverNode} sim={sim} simOn={simOn} cloud={cloud} cloudName={cloudInfo.name} />}
 
           {simOn && (
             <div className="statbar">
@@ -439,13 +470,13 @@ export default function App() {
           </div>
 
           {tab === 'cost' ? (
-            <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} />
+            <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} cloud={cloudInfo} />
           ) : tab === 'learn' ? (
             <Learn done={doneSteps} />
           ) : tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
               onHover={setHover} empty={nodes.length === 0} />
-          ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} />
+          ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} cloud={cloud} cloudMult={cloudInfo.mult} />
             : selEdgeObj ? (
               <EdgeInspector e={selEdgeObj} nodes={nodes} sim={sim} step={stepMap[selEdgeObj.id]}
                 setEdges={setEdges} onDelete={() => { setEdges(es => es.filter(x => x.id !== selEdgeObj.id)); setSelEdge(null) }} />
@@ -491,11 +522,12 @@ export default function App() {
   )
 }
 
-function Node({ n, sim, simOn, t, selected, hovered, dimmed, onDown, onPortDown, onEnter, onLeave }) {
+function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPortDown, onEnter, onLeave }) {
   const spec = CATALOG[n.type]
   const s = sim.stats[n.id]
   const isDown = s?.down
   const util = s?.util || 0
+  const svc = serviceName(n.type, cloud)
   return (
     <g className={`node ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`} transform={`translate(${n.x},${n.y})`}
       onMouseDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
@@ -508,7 +540,9 @@ function Node({ n, sim, simOn, t, selected, hovered, dimmed, onDown, onPortDown,
       <text x="10" y="20" fontSize="13">{spec.glyph}</text>
       <text x="30" y="19" fontSize="10.5" fill={t.nodeText} fontWeight="600">{trunc(n.label, 15)}</text>
       <text x="30" y="33" fontSize="9" fill={t.nodeSub}>
-        {isDown ? 'CHAOS: instance lost' : `${n.replicas}× · ${spec.source ? 'source' : fmt(spec.cap * n.replicas) + ' rps cap'}`}
+        {isDown ? 'CHAOS: instance lost'
+          : svc ? `${n.replicas}× · ${trunc(svc, 22)}`
+          : `${n.replicas}× · ${spec.source ? 'source' : fmt(spec.cap * n.replicas) + ' rps cap'}`}
       </text>
       {simOn && !spec.source && (
         <>
@@ -551,7 +585,7 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
   )
 }
 
-function Cost({ cost, onHover, empty }) {
+function Cost({ cost, onHover, empty, cloud }) {
   const [detail, setDetail] = useState(null)
   if (empty) return (
     <section>
@@ -599,6 +633,7 @@ function Cost({ cost, onHover, empty }) {
       ))}
 
       <div className="muted" style={{ fontSize: 10.5, marginTop: 10, lineHeight: 1.55 }}>
+        Priced for <b>{cloud?.name || 'Generic'}</b>{cloud && cloud.mult !== 1 && <> (×{cloud.mult.toFixed(2)} vs AWS list)</>}.
         Order-of-magnitude on-demand US list prices, {HOURS} h/month, no reserved or committed-use discounts.
         Per-request costs scale with the traffic the simulation routes through each node, so raising the
         traffic slider or adding replicas moves this number immediately. Click a line item for its assumption.
@@ -610,12 +645,13 @@ function Cost({ cost, onHover, empty }) {
 function Learn({ done }) {
   const [sub, setSub] = useState('steps')
   const [answers, setAnswers] = useState({})
+  const [cq, setCq] = useState('')
   const doneCount = done.filter(Boolean).length
   const score = Object.entries(answers).filter(([i, a]) => QUIZ[+i].answer === a).length
   return (
     <section>
       <div className="tabs sub">
-        {[['steps', 'Steps'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
+        {[['steps', 'Steps'], ['clouds', 'Clouds'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
           <button key={k} className={sub === k ? 'on' : ''} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
@@ -637,6 +673,40 @@ function Learn({ done }) {
               <div className="lesson-why">{s.why}</div>
             </div>
           ))}
+        </>
+      )}
+
+      {sub === 'clouds' && (
+        <>
+          <h3>Multi-cloud service map</h3>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            Every building block and its managed equivalent on each cloud. Pick a cloud in the toolbar to
+            label the diagram with these names and price it accordingly.
+          </div>
+          <input className="pal-search" style={{ marginBottom: 10 }} value={cq} onChange={e => setCq(e.target.value)}
+            placeholder="Filter components or services…" />
+          {PALETTE_GROUPS.map(g => {
+            const q = cq.trim().toLowerCase()
+            const types = g.types.filter(t => CLOUD_MAP[t] &&
+              (!q || `${CATALOG[t].name} ${CLOUD_MAP[t].join(' ')}`.toLowerCase().includes(q)))
+            if (!types.length) return null
+            return (
+              <div key={g.label} className="cmp">
+                <div className="cmp-t">{g.label}</div>
+                <table>
+                  <thead><tr><th /><th>AWS</th><th>GCP</th><th>Azure</th><th>OCI</th></tr></thead>
+                  <tbody>
+                    {types.map(t => (
+                      <tr key={t}>
+                        <td className="k">{CATALOG[t].glyph} {CATALOG[t].name}</td>
+                        {CLOUD_MAP[t].map((s, i) => <td key={i}>{s}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })}
         </>
       )}
 
@@ -768,12 +838,14 @@ function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty }) {
   )
 }
 
-function HoverCard({ n, sim, simOn }) {
+function HoverCard({ n, sim, simOn, cloud, cloudName }) {
   const spec = CATALOG[n.type]
   const s = sim.stats[n.id]
+  const svc = serviceName(n.type, cloud)
   return (
     <div className="hovercard">
       <div className="hc-title">{spec.glyph} {n.label}<span className="hc-type">{spec.name}</span></div>
+      {svc && <div className="hc-svc">{cloudName}: <b>{svc}</b></div>}
       <div className="hc-desc">{spec.desc}</div>
       {!spec.source && (
         <div className="hc-stats">
@@ -789,14 +861,24 @@ function HoverCard({ n, sim, simOn }) {
   )
 }
 
-function Inspector({ n, sim, setNodes }) {
+function Inspector({ n, sim, setNodes, cloud, cloudMult = 1 }) {
   const spec = CATALOG[n.type]
   const s = sim.stats[n.id]
+  const map = CLOUD_MAP[n.type]
   const setRepl = d => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, replicas: Math.max(1, Math.min(64, (x.replicas || 1) + d)) } : x))
   return (
     <section>
       <h3>{spec.glyph} {spec.name}</h3>
       <div className="muted" style={{ marginBottom: 10 }}>{spec.desc}</div>
+      {map && (
+        <div className="cloudmap">
+          {['AWS', 'GCP', 'Azure', 'OCI'].map((c, i) => (
+            <div key={c} className={`cm-row ${['aws', 'gcp', 'azure', 'oci'][i] === cloud ? 'on' : ''}`}>
+              <span className="cm-k">{c}</span><span>{map[i]}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="field">
         <label>Label</label>
         <input value={n.label} onChange={e => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, label: e.target.value } : x))} />
@@ -820,7 +902,7 @@ function Inspector({ n, sim, setNodes }) {
         </>
       )}
       {!spec.source && (() => {
-        const c = nodeCost(n, s?.in || 0)
+        const c = nodeCost(n, s?.in || 0, cloudMult)
         return (
           <>
             <div className="row"><span>Cost</span><span className="v">{money(c.total)}/mo</span></div>

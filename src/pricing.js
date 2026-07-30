@@ -109,18 +109,19 @@ const GROUP_OF = {
 }
 
 // Monthly cost for one node given how much traffic actually reaches it.
-export function nodeCost(node, inRps = 0) {
+// `mult` is the selected cloud's rough list-price factor.
+export function nodeCost(node, inRps = 0, mult = 1) {
   const r = rateFor(node.type)
   const replicas = Math.max(1, node.replicas || 1)
-  const fixed = replicas * (r.hourly * HOURS + r.base)
-  const usage = Math.max(0, inRps) * REQ_M_PER_RPS * r.perM
+  const fixed = replicas * (r.hourly * HOURS + r.base) * mult
+  const usage = Math.max(0, inRps) * REQ_M_PER_RPS * r.perM * mult
   return { fixed, usage, total: fixed + usage, rate: r }
 }
 
-export function costReport(nodes, sim) {
+export function costReport(nodes, sim, mult = 1) {
   const rows = nodes.map(n => {
     const inRps = sim?.stats?.[n.id]?.in || 0
-    const c = nodeCost(n, inRps)
+    const c = nodeCost(n, inRps, mult)
     return {
       id: n.id, label: n.label, type: n.type, typeName: CATALOG[n.type]?.name || n.type,
       group: GROUP_OF[n.type] || 'Other', replicas: Math.max(1, n.replicas || 1),
