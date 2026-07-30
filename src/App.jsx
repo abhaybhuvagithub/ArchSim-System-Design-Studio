@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import { TEMPLATES } from './templates.js'
 import { simulate, capacityReport } from './sim.js'
+import { review, applyAll } from './advisor.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -24,12 +25,30 @@ export default function App() {
   const [checks, setChecks] = useState({})
   const [view, setView] = useState({ x: 0, y: 0, k: 1 })
   const [timer, setTimer] = useState(null)      // seconds remaining or null
+  const [tab, setTab] = useState('capacity')    // side panel: capacity | improve
+  const [applied, setApplied] = useState([])    // ids of suggestions already applied
   const svgRef = useRef(null)
   const drag = useRef(null)
 
   const downSet = useMemo(() => new Set(Object.keys(down)), [down])
   const sim = useMemo(() => simulate(nodes, edges, rps, downSet), [nodes, edges, rps, downSet])
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
+  const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
+
+  const applyOne = s => {
+    const r = s.apply?.(nodes, edges)
+    if (!r) return
+    setNodes(r.nodes); setEdges(r.edges)
+    setApplied(a => [...a, s.id])
+    if (r.focus) { setSel(r.focus); setHover(r.focus) }
+  }
+  const applyEvery = () => {
+    const actionable = sugs.filter(s => s.apply)
+    const r = applyAll(actionable, nodes, edges)
+    setNodes(r.nodes); setEdges(r.edges)
+    setApplied(a => [...a, ...actionable.map(s => s.id)])
+    if (r.focus) setSel(r.focus)
+  }
 
   // animation + chaos + recovery loop
   useEffect(() => {
@@ -216,6 +235,10 @@ export default function App() {
         </select>
         <button className={`btn ${simOn ? 'active' : ''}`} onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
         <button className={`btn ${chaosOn ? 'danger' : ''}`} onClick={() => setChaosOn(c => !c)} title="Randomly kills nodes while simulating; they auto-recover in 6s">🐒 Chaos {chaosOn ? 'ON' : 'off'}</button>
+        <button className={`btn ${tab === 'improve' ? 'active' : ''}`} onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
+          title="Review the design and suggest components to add, wired in automatically">
+          ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
+        </button>
         <div className="rps">
           <span>Traffic</span>
           <input type="range" min={2} max={6} step={0.05} value={Math.log10(rps)} onChange={e => setRps(Math.round(10 ** +e.target.value))} />
@@ -304,7 +327,17 @@ export default function App() {
         </div>
 
         <div className="side">
-          {selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} /> : (
+          <div className="tabs">
+            <button className={tab === 'capacity' ? 'on' : ''} onClick={() => setTab('capacity')}>Capacity</button>
+            <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
+              ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
+            </button>
+          </div>
+
+          {tab === 'improve' ? (
+            <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
+              onHover={setHover} empty={nodes.length === 0} />
+          ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} /> : (
             <section>
               <h3>Capacity report</h3>
               {cap.rows.length === 0 && <div className="empty">Nothing on the canvas yet. Load a template or drag components in, then hit ▶ Simulate.</div>}
@@ -396,6 +429,45 @@ function Edge({ e, nodes, sim, simOn, selected, hot, dimmed, onSelect }) {
       <path d={d} stroke="transparent" strokeWidth="12" />
       {simOn && flow > 0 && <text x={mx} y={(y1 + y2) / 2 - 6} fontSize="9" fill={hot ? '#c7d2fe' : '#8b96b5'} textAnchor="middle">{fmt(flow)}/s</text>}
     </g>
+  )
+}
+
+function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty }) {
+  const actionable = sugs.filter(s => s.apply)
+  return (
+    <section>
+      <h3>Architecture review</h3>
+      {empty ? (
+        <div className="empty">Load a template or drop a few components in, then come back — the review looks at what is missing, what is saturated, and what has no redundancy at the current traffic level.</div>
+      ) : sugs.length === 0 ? (
+        <div className="empty">✅ Nothing to flag at {' '}this traffic level. Push the traffic slider higher to expose the next bottleneck.</div>
+      ) : (
+        <>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            {sugs.length} finding{sugs.length > 1 ? 's' : ''}. Applying one drops the component in and wires it into the right place.
+          </div>
+          {actionable.length > 1 && (
+            <button className="btn primary" style={{ width: '100%', marginBottom: 10 }} onClick={onApplyAll}>
+              ✨ Apply all {actionable.length}
+            </button>
+          )}
+          {sugs.map(s => (
+            <div key={s.id} className={`sug ${s.severity}`}>
+              <div className="sug-t">
+                <span>{s.icon} {s.title}</span>
+                <span className={`pill ${s.severity === 'high' ? 'bad' : s.severity === 'med' ? 'warn' : 'ok'}`}>{s.severity}</span>
+              </div>
+              <div className="sug-d">{s.detail}</div>
+              {s.apply ? (
+                <button className="btn" style={{ marginTop: 7 }} onClick={() => onApply(s)}>
+                  {applied.includes(s.id) ? 'Apply again' : 'Apply'}
+                </button>
+              ) : <div className="sug-manual">manual fix</div>}
+            </div>
+          ))}
+        </>
+      )}
+    </section>
   )
 }
 

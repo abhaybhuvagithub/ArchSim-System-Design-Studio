@@ -31,12 +31,19 @@ export const CATALOG = {
   saga:        { name: 'Saga Orchestrator', glyph: '🎬', color: '#ec4899', cap: 4000, lat: 20,  avail: 0.999,  desc: 'Coordinates distributed transactions via compensating actions.' },
   config:      { name: 'Config Server',  glyph: '🎛️', color: '#a855f7', cap: 20000,   lat: 2,   avail: 0.9995, desc: 'Centralised config and feature flags with hot reload.' },
   tracing:     { name: 'Tracing',        glyph: '🧵', color: '#64748b', cap: 100000,  lat: 1,   avail: 0.999,  desc: 'Jaeger/OpenTelemetry — distributed traces across service hops.' },
+  // --- data platform ---
+  cdc:         { name: 'CDC Connector',  glyph: '🔗', color: '#eab308', cap: 20000,   lat: 5,   avail: 0.9995, desc: 'Debezium — streams DB changes out without touching app code.' },
+  etl:         { name: 'ETL / ELT Job',  glyph: '🧪', color: '#eab308', cap: 2000,    lat: 60,  avail: 0.999,  desc: 'Batch or streaming transform: clean, dedupe, conform to schema.' },
+  lake:        { name: 'Data Lake',      glyph: '🏞️', color: '#0ea5e9', cap: 50000,   lat: 40,  avail: 0.9999, desc: 'S3/ADLS raw zone — immutable landing area, schema-on-read, cheap at PB scale.' },
+  warehouse:   { name: 'Data Warehouse', glyph: '🏛️', color: '#0ea5e9', cap: 3000,    lat: 120, avail: 0.999,  desc: 'Snowflake/BigQuery/Redshift — modelled columnar store for SQL analytics.' },
+  bi:          { name: 'BI / Dashboards',glyph: '📈', color: '#f97316', cap: 1000,    lat: 150, avail: 0.999,  desc: 'Looker/Tableau/Superset — queries the warehouse, never production DBs.' },
 }
 
 export const PALETTE_GROUPS = [
-  { label: 'Traffic',  types: ['client', 'dns', 'cdn', 'lb', 'gateway', 'ratelimiter', 'bff'] },
-  { label: 'Compute',  types: ['web', 'app', 'micro', 'ws', 'worker', 'scheduler'] },
-  { label: 'Storage',  types: ['cache', 'sql', 'nosql', 'search', 'blob'] },
-  { label: 'Async',    types: ['queue', 'kafka', 'saga'] },
-  { label: 'Platform', types: ['registry', 'mesh', 'config', 'zk', 'analytics', 'ml', 'monitor', 'tracing'] },
+  { label: 'Traffic',   types: ['client', 'dns', 'cdn', 'lb', 'gateway', 'ratelimiter', 'bff'] },
+  { label: 'Compute',   types: ['web', 'app', 'micro', 'ws', 'worker', 'scheduler'] },
+  { label: 'Storage',   types: ['cache', 'sql', 'nosql', 'search', 'blob'] },
+  { label: 'Async',     types: ['queue', 'kafka', 'saga'] },
+  { label: 'Data',      types: ['cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics', 'ml'] },
+  { label: 'Platform',  types: ['registry', 'mesh', 'config', 'zk', 'monitor', 'tracing'] },
 ]

@@ -277,4 +277,27 @@ export const TEMPLATES = [
     'Every extraction needs a rollback path (route back to monolith)',
     'Retire monolith code only once traffic is 0% for a full cycle',
   ]),
+
+  // ─────────────── data platform ───────────────
+  T('Data Platform (Lakehouse)', 'Ingest → lake → warehouse → BI', 3000, [
+    ['app', 'client', 'Product Services', 40, 200], ['ops', 'client', 'Ops/3rd-party', 40, 380],
+    ['oltp', 'sql', 'Prod OLTP DB', 200, 470, 2], ['cdc', 'cdc', 'CDC (Debezium)', 340, 470, 2],
+    ['bus', 'kafka', 'Ingest Stream', 210, 290],
+    ['raw', 'lake', 'Lake — raw/bronze', 380, 200, 2],
+    ['etl', 'etl', 'ELT Transform', 540, 290, 6],
+    ['cur', 'lake', 'Lake — curated/silver', 380, 380, 2],
+    ['wh', 'warehouse', 'Warehouse (gold)', 700, 290, 4],
+    ['bi', 'bi', 'BI / Dashboards', 860, 200, 4],
+    ['ml', 'ml', 'Feature/ML Jobs', 860, 380, 6],
+    ['sch', 'scheduler', 'Orchestrator (DAGs)', 540, 470, 2],
+  ], [['app','bus'],['app','oltp'],['ops','bus'],['bus','raw'],['oltp','cdc'],['cdc','bus'],['raw','etl'],
+      ['etl','cur'],['cur','wh'],['etl','wh'],['wh','bi'],['wh','ml'],['sch','etl']], [
+    'Medallion layout: raw/bronze is immutable, curated/silver is conformed, warehouse/gold is modelled',
+    'Lake vs warehouse: schema-on-read + cheap PB storage vs modelled columnar SQL performance',
+    'ELT (transform inside the warehouse) vs ETL (transform before load)',
+    'CDC off the OLTP replica — analytics must never query the production primary',
+    'Partitioning + file compaction; small-files problem kills lake query performance',
+    'Orchestrator owns DAG dependencies, retries, backfills and data-freshness SLAs',
+    'Idempotent loads keyed on batch/watermark so replays do not double-count',
+  ]),
 ]
