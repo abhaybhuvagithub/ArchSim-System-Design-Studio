@@ -19,6 +19,7 @@ export default function App() {
   const [chaosOn, setChaosOn] = useState(false)
   const [down, setDown] = useState({})          // id -> recoverAt ms
   const [tick, setTick] = useState(0)
+  const [hover, setHover] = useState(null)     // hovered node id
   const [template, setTemplate] = useState(null)
   const [checks, setChecks] = useState({})
   const [view, setView] = useState({ x: 0, y: 0, k: 1 })
@@ -191,7 +192,19 @@ export default function App() {
   const dl = (href, name) => { const a = document.createElement('a'); a.href = href; a.download = name; a.click() }
 
   const selNode = nodes.find(n => n.id === sel)
+  const hoverNode = nodes.find(n => n.id === hover)
   const dots = simOn ? edgeDots(edges, nodes, sim, tick) : []
+
+  // neighbours of the hovered node — used to dim everything else
+  const neighbours = useMemo(() => {
+    if (!hover) return null
+    const s = new Set([hover])
+    for (const e of edges) {
+      if (e.from === hover) s.add(e.to)
+      if (e.to === hover) s.add(e.from)
+    }
+    return s
+  }, [hover, edges])
 
   return (
     <div className="app">
@@ -243,17 +256,38 @@ export default function App() {
               <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a5578" />
               </marker>
+              <marker id="arrow-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#a5b4fc" />
+              </marker>
+              <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+                <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#818cf8" floodOpacity="0.95" />
+              </filter>
             </defs>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
-              {edges.map(e => <Edge key={e.id} e={e} nodes={nodes} sim={sim} simOn={simOn} selected={selEdge === e.id} onSelect={() => { setSelEdge(e.id); setSel(null) }} />)}
+              {edges.map(e => (
+                <Edge key={e.id} e={e} nodes={nodes} sim={sim} simOn={simOn}
+                  selected={selEdge === e.id}
+                  hot={hover ? e.from === hover || e.to === hover : false}
+                  dimmed={hover ? !(e.from === hover || e.to === hover) : false}
+                  onSelect={() => { setSelEdge(e.id); setSel(null) }} />
+              ))}
               {drag.current?.kind === 'wire' && (() => {
                 const f = nodes.find(n => n.id === drag.current.from)
                 return f && <line x1={f.x + NODE_W} y1={f.y + NODE_H / 2} x2={drag.current.x} y2={drag.current.y} stroke="#6366f1" strokeWidth="2" strokeDasharray="5 4" />
               })()}
               {dots.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={d.drop ? 3.5 : 2.5} fill={d.drop ? '#ef4444' : '#818cf8'} opacity="0.9" />)}
-              {nodes.map(n => <Node key={n.id} n={n} sim={sim} simOn={simOn} selected={sel === n.id} onDown={onNodeDown} onPortDown={onPortDown} />)}
+              {nodes.map(n => (
+                <Node key={n.id} n={n} sim={sim} simOn={simOn}
+                  selected={sel === n.id}
+                  hovered={hover === n.id}
+                  dimmed={neighbours ? !neighbours.has(n.id) : false}
+                  onDown={onNodeDown} onPortDown={onPortDown}
+                  onEnter={() => setHover(n.id)} onLeave={() => setHover(h => (h === n.id ? null : h))} />
+              ))}
             </g>
           </svg>
+
+          {hoverNode && !selNode && <HoverCard n={hoverNode} sim={sim} simOn={simOn} />}
 
           {simOn && (
             <div className="statbar">
@@ -312,16 +346,20 @@ export default function App() {
   )
 }
 
-function Node({ n, sim, simOn, selected, onDown, onPortDown }) {
+function Node({ n, sim, simOn, selected, hovered, dimmed, onDown, onPortDown, onEnter, onLeave }) {
   const spec = CATALOG[n.type]
   const s = sim.stats[n.id]
   const isDown = s?.down
   const util = s?.util || 0
   return (
-    <g className={`node ${selected ? 'selected' : ''}`} transform={`translate(${n.x},${n.y})`}
-      onMouseDown={e => onDown(e, n)} style={{ cursor: 'move' }}>
+    <g className={`node ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`} transform={`translate(${n.x},${n.y})`}
+      onMouseDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
+      style={{ cursor: 'move', opacity: dimmed ? 0.32 : 1, transition: 'opacity .12s' }}>
+      {hovered && <rect x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke="#818cf8" strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
       <rect className="body" width={NODE_W} height={NODE_H} rx="10"
-        fill={isDown ? '#3f1d1d' : '#161f3a'} stroke={isDown ? '#ef4444' : spec.color} opacity={isDown ? 0.9 : 1} />
+        fill={isDown ? '#3f1d1d' : hovered ? '#1e2a4d' : '#161f3a'}
+        stroke={isDown ? '#ef4444' : hovered ? '#a5b4fc' : spec.color}
+        strokeWidth={hovered ? 2 : 1.5} opacity={isDown ? 0.9 : 1} />
       <text x="10" y="20" fontSize="13">{spec.glyph}</text>
       <text x="30" y="19" fontSize="10.5" fill="#e2e8f0" fontWeight="600">{trunc(n.label, 15)}</text>
       <text x="30" y="33" fontSize="9" fill="#8b96b5">
@@ -341,21 +379,43 @@ function Node({ n, sim, simOn, selected, onDown, onPortDown }) {
   )
 }
 
-function Edge({ e, nodes, sim, simOn, selected, onSelect }) {
+function Edge({ e, nodes, sim, simOn, selected, hot, dimmed, onSelect }) {
   const f = nodes.find(n => n.id === e.from), t = nodes.find(n => n.id === e.to)
   if (!f || !t) return null
   const x1 = f.x + NODE_W, y1 = f.y + NODE_H / 2, x2 = t.x, y2 = t.y + NODE_H / 2
   const mx = (x1 + x2) / 2
   const flow = sim.flowOnEdge[e.id] || 0
   const w = simOn ? Math.min(5, 1 + Math.log10(1 + flow) * 0.8) : 1.5
+  const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
+  const stroke = selected ? '#fff' : hot ? '#a5b4fc' : simOn && flow > 0 ? '#6366f1' : '#38436b'
   return (
-    <g className="edge" onMouseDown={ev => { ev.stopPropagation(); onSelect() }} style={{ cursor: 'pointer' }}>
-      <path d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`}
-        stroke={selected ? '#fff' : simOn && flow > 0 ? '#6366f1' : '#38436b'} strokeWidth={selected ? 3 : w}
-        markerEnd="url(#arrow)" opacity={simOn && flow === 0 ? 0.4 : 0.85} />
-      <path d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`} stroke="transparent" strokeWidth="12" />
-      {simOn && flow > 0 && <text x={mx} y={(y1 + y2) / 2 - 6} fontSize="9" fill="#8b96b5" textAnchor="middle">{fmt(flow)}/s</text>}
+    <g className="edge" onMouseDown={ev => { ev.stopPropagation(); onSelect() }}
+      style={{ cursor: 'pointer', opacity: dimmed ? 0.18 : 1, transition: 'opacity .12s' }}>
+      <path d={d} stroke={stroke} strokeWidth={selected ? 3 : hot ? Math.max(2.5, w) : w}
+        markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'} opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85} />
+      <path d={d} stroke="transparent" strokeWidth="12" />
+      {simOn && flow > 0 && <text x={mx} y={(y1 + y2) / 2 - 6} fontSize="9" fill={hot ? '#c7d2fe' : '#8b96b5'} textAnchor="middle">{fmt(flow)}/s</text>}
     </g>
+  )
+}
+
+function HoverCard({ n, sim, simOn }) {
+  const spec = CATALOG[n.type]
+  const s = sim.stats[n.id]
+  return (
+    <div className="hovercard">
+      <div className="hc-title">{spec.glyph} {n.label}<span className="hc-type">{spec.name}</span></div>
+      <div className="hc-desc">{spec.desc}</div>
+      {!spec.source && (
+        <div className="hc-stats">
+          <span>{n.replicas || 1}× replicas</span>
+          <span>{fmt(spec.cap * (n.replicas || 1))} rps capacity</span>
+          <span>{spec.lat} ms base</span>
+          {simOn && s && <span style={{ color: utilColor(s.util) }}>{(s.util * 100).toFixed(0)}% used</span>}
+          {simOn && s?.dropped > 0 && <span style={{ color: '#ef4444' }}>dropping {fmt(s.dropped)}/s</span>}
+        </div>
+      )}
+    </div>
   )
 }
 

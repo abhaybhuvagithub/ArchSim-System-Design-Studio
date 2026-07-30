@@ -24,12 +24,19 @@ export const CATALOG = {
   analytics:   { name: 'Analytics/OLAP', glyph: '📊', color: '#f97316', cap: 2000,    lat: 100, avail: 0.999,  desc: 'Warehouse / stream analytics (Flink, BigQuery).' },
   ml:          { name: 'ML Service',     glyph: '🤖', color: '#ec4899', cap: 500,     lat: 80,  avail: 0.999,  desc: 'Ranking / recommendation / embedding inference.' },
   monitor:     { name: 'Monitoring',     glyph: '🩺', color: '#64748b', cap: 100000,  lat: 1,   avail: 0.999,  desc: 'Metrics, logs, traces, alerting.' },
+  // --- microservice platform primitives ---
+  bff:         { name: 'BFF',            glyph: '🎭', color: '#8b5cf6', cap: 8000,    lat: 8,   avail: 0.999,  desc: 'Backend-for-frontend: per-client aggregation layer.' },
+  registry:    { name: 'Service Registry', glyph: '📖', color: '#a855f7', cap: 40000, lat: 2,   avail: 0.9999, desc: 'Consul/Eureka — service discovery and health checks.' },
+  mesh:        { name: 'Service Mesh',   glyph: '🕸️', color: '#a855f7', cap: 40000,   lat: 2,   avail: 0.9995, desc: 'Envoy sidecars — mTLS, retries, circuit breaking, traffic splitting.' },
+  saga:        { name: 'Saga Orchestrator', glyph: '🎬', color: '#ec4899', cap: 4000, lat: 20,  avail: 0.999,  desc: 'Coordinates distributed transactions via compensating actions.' },
+  config:      { name: 'Config Server',  glyph: '🎛️', color: '#a855f7', cap: 20000,   lat: 2,   avail: 0.9995, desc: 'Centralised config and feature flags with hot reload.' },
+  tracing:     { name: 'Tracing',        glyph: '🧵', color: '#64748b', cap: 100000,  lat: 1,   avail: 0.999,  desc: 'Jaeger/OpenTelemetry — distributed traces across service hops.' },
 }
 
 export const PALETTE_GROUPS = [
-  { label: 'Traffic',  types: ['client', 'dns', 'cdn', 'lb', 'gateway', 'ratelimiter'] },
+  { label: 'Traffic',  types: ['client', 'dns', 'cdn', 'lb', 'gateway', 'ratelimiter', 'bff'] },
   { label: 'Compute',  types: ['web', 'app', 'micro', 'ws', 'worker', 'scheduler'] },
   { label: 'Storage',  types: ['cache', 'sql', 'nosql', 'search', 'blob'] },
-  { label: 'Async',    types: ['queue', 'kafka'] },
-  { label: 'Platform', types: ['zk', 'analytics', 'ml', 'monitor'] },
+  { label: 'Async',    types: ['queue', 'kafka', 'saga'] },
+  { label: 'Platform', types: ['registry', 'mesh', 'config', 'zk', 'analytics', 'ml', 'monitor', 'tracing'] },
 ]
