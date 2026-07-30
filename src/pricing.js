@@ -150,7 +150,9 @@ export function costReport(nodes, sim, mult = 1) {
 }
 
 export const money = v =>
-  v >= 100000 ? '$' + (v / 1000).toFixed(0) + 'k'
+  v >= 1e9 ? '$' + (v / 1e9).toFixed(1) + 'B'
+  : v >= 1e6 ? '$' + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + 'M'
+  : v >= 100000 ? '$' + (v / 1000).toFixed(0) + 'k'
   : v >= 1000 ? '$' + (v / 1000).toFixed(1) + 'k'
   : v >= 10 ? '$' + v.toFixed(0)
   : v > 0 ? '$' + v.toFixed(2)

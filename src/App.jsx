@@ -10,6 +10,7 @@ import { costReport, nodeCost, money, HOURS } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
 import { FAULTS, FAULT_GROUPS, faultById, pickTarget, compileFaults } from './faults.js'
+import { describeArchitecture } from './describe.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -31,7 +32,6 @@ export default function App() {
   const [template, setTemplate] = useState(null)
   const [checks, setChecks] = useState({})
   const [view, setView] = useState({ x: 0, y: 0, k: 1 })
-  const [timer, setTimer] = useState(null)      // seconds remaining or null
   const [tab, setTab] = useState('capacity')    // side panel: capacity | improve
   const [applied, setApplied] = useState([])    // ids of suggestions already applied
   const [theme, setTheme] = useState(readTheme) // 'dark' | 'light'
@@ -60,6 +60,10 @@ export default function App() {
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
   const cost = useMemo(() => costReport(nodes, sim, cloudInfo.mult), [nodes, sim, cloudInfo])
+  const baseSim = useMemo(() => (faults.length ? simulate(nodes, edges, rps) : sim), [faults, nodes, edges, rps, sim])
+  const brief = useMemo(() => describeArchitecture({
+    nodes, edges, sim, baseSim, cap, cost, sugs, faults, fx, rps, template, cloud, simOn,
+  }), [nodes, edges, sim, baseSim, cap, cost, sugs, faults, fx, rps, template, cloud, simOn])
 
   // ---- panel resize / detach ----
   const startResize = (side, e) => {
@@ -207,12 +211,6 @@ export default function App() {
     return () => clearInterval(h)
   }, [chaosOn, simOn, nodes])
 
-  // interview timer
-  useEffect(() => {
-    if (timer === null) return
-    const h = setInterval(() => setTimer(t => (t !== null && t > 0 ? t - 1 : t)), 1000)
-    return () => clearInterval(h)
-  }, [timer !== null])
 
   // keyboard delete
   useEffect(() => {
@@ -431,9 +429,6 @@ export default function App() {
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
           {THEME_LABEL[theme]}
         </button>
-        <button className={`timer ${timer !== null && timer < 300 ? 'hot' : ''}`} onClick={() => setTimer(t => t === null ? 35 * 60 : null)} title="35-min interview timer">
-          ⏱ {timer === null ? '35:00' : `${String(Math.floor(timer / 60)).padStart(2, '0')}:${String(timer % 60).padStart(2, '0')}`}
-        </button>
         <button className="btn" onClick={arrange} title="Auto-arrange into clean left-to-right layers with fewer crossing lines">⧉ Arrange</button>
         <button className="btn" onClick={() => fitView(nodes)} title="Fit the whole diagram in view">⤢ Fit</button>
         <button className="btn" onClick={exportPNG}>PNG</button>
@@ -566,6 +561,7 @@ export default function App() {
             <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
               ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
             </button>
+            <button className={tab === 'brief' ? 'on' : ''} onClick={() => setTab('brief')} title="Written description of this architecture">📄</button>
             <button className={`${tab === 'chaos' ? 'on' : ''} ${faults.length ? 'alarm' : ''}`}
               onClick={() => setTab('chaos')}>
               🐒{faults.length ? ` ${faults.length}` : ''}
@@ -578,7 +574,9 @@ export default function App() {
             </button>
           </div>
 
-          {tab === 'chaos' ? (
+          {tab === 'brief' ? (
+            <Brief brief={brief} />
+          ) : tab === 'chaos' ? (
             <Chaos faults={faults} nodes={nodes} sel={sel} onInject={injectFault}
               onClear={clearFault} onRecoverAll={recoverAll} sim={sim} fx={fx} />
           ) : tab === 'cost' ? (
@@ -704,6 +702,43 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
         </>
       )}
     </g>
+  )
+}
+
+// Renders **bold** spans inside a generated line.
+function RichLine({ text }) {
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/g)
+  return <>{parts.map((p, i) => p.startsWith('**') && p.endsWith('**')
+    ? <b key={i}>{p.slice(2, -2)}</b>
+    : <span key={i}>{p}</span>)}</>
+}
+
+function Brief({ brief }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(brief.markdown); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch {}
+  }
+  const download = () => {
+    const blob = new Blob([brief.markdown], { type: 'text/markdown' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob); a.download = 'architecture-brief.md'; a.click()
+  }
+  return (
+    <section>
+      <h3>Architecture brief</h3>
+      {brief.markdown && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={copy}>{copied ? '✓ Copied' : '⧉ Copy markdown'}</button>
+          <button className="btn" onClick={download}>↓ .md</button>
+        </div>
+      )}
+      {brief.sections.map(sec => (
+        <div key={sec.title} className="brief-sec">
+          <div className="brief-h">{sec.title}</div>
+          {sec.lines.map((l, i) => <p key={i} className="brief-p"><RichLine text={l} /></p>)}
+        </div>
+      ))}
+    </section>
   )
 }
 
