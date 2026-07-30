@@ -87,6 +87,8 @@ export const RATES = {
   crm:         { hourly: 0,     base: 1500, perM: 0,    note: 'CRM seats' },
   mainframe:   { hourly: 0,     base: 12000,perM: 0,    note: 'MIPS capacity + software licences' },
   mft:         { hourly: 0,     base: 400,  perM: 0,    note: 'MFT/EDI platform licence' },
+  partner:     { hourly: 0,     base: 0,    perM: 50,   note: 'per-transaction fee charged by the partner (bank, switch, GDS)' },
+  hsm:         { hourly: 1.20,  base: 0,    perM: 0,    note: 'dedicated HSM instance — expensive and usually needs a pair' },
 }
 
 const FALLBACK = { hourly: 0.08, base: 0, perM: 0, note: 'generic compute estimate' }
@@ -103,7 +105,8 @@ const GROUP_OF = {
   ml: 'AI / ML', embed: 'AI / ML', vector: 'AI / ML', llm: 'AI / ML', guard: 'AI / ML',
   otel: 'Observability', monitor: 'Observability', logs: 'Observability', tracing: 'Observability',
   slo: 'Observability', alert: 'Observability', synthetic: 'Observability', apm: 'Observability',
-  iam: 'Security', secrets: 'Security', pii: 'Security', audit: 'Security', siem: 'Security',
+  iam: 'Security', secrets: 'Security', pii: 'Security', audit: 'Security', siem: 'Security', hsm: 'Security',
+  partner: 'Enterprise',
   registry: 'Platform', mesh: 'Platform', config: 'Platform', zk: 'Platform', cicd: 'Platform',
   erp: 'Enterprise', crm: 'Enterprise', mainframe: 'Enterprise', mft: 'Enterprise',
 }

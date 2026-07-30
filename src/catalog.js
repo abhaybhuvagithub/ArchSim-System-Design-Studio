@@ -72,6 +72,8 @@ export const CATALOG = {
   crm:         { name: 'CRM (Salesforce)', glyph: '🤝', color: '#10b981', cap: 1200,  lat: 100, avail: 0.999,  desc: 'Customer system of record; hard API limits make it a throttling risk.' },
   mainframe:   { name: 'Mainframe Core', glyph: '🖲️', color: '#10b981', cap: 1500,    lat: 60,  avail: 0.99999, desc: 'CICS/COBOL core banking. Extremely reliable, expensive per call, cannot be scaled out.' },
   mft:         { name: 'File Transfer / EDI', glyph: '📤', color: '#eab308', cap: 2000, lat: 40, avail: 0.999,  desc: 'Managed file transfer and B2B EDI batches — still how most partners integrate.' },
+  partner:     { name: 'Partner / Bank API', glyph: '⛓️', color: '#10b981', cap: 2000, lat: 250, avail: 0.995, desc: 'Third-party dependency you do not control — bank, acquirer, NPCI switch, GDS, supplier. Rate-limited, slow, and the least available thing in your design.' },
+  hsm:         { name: 'HSM (PIN / Keys)', glyph: '🔏', color: '#ef4444', cap: 8000, lat: 15, avail: 0.9999, desc: 'Hardware security module — PIN block translation, key custody, signing. Mandated for card and UPI flows.' },
   billing:     { name: 'Metering & Billing', glyph: '🧮', color: '#10b981', cap: 4000, lat: 30,  avail: 0.999,  desc: 'Usage metering, rating and invoicing. Must never lose or double-count an event.' },
   backup:      { name: 'Backup & Archive', glyph: '💾', color: '#10b981', cap: 6000,  lat: 200, avail: 0.99999, desc: 'PITR snapshots and archival with a tested restore path — replication is not backup.' },
 }
@@ -84,7 +86,7 @@ export const PALETTE_GROUPS = [
   { label: 'Data',          types: ['cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
   { label: 'AI / ML',       types: ['ml', 'embed', 'vector', 'llm', 'guard'] },
   { label: 'Observability', types: ['otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
-  { label: 'Security',      types: ['iam', 'secrets', 'pii', 'audit', 'siem'] },
-  { label: 'Enterprise',    types: ['erp', 'crm', 'mainframe', 'mft', 'billing', 'cicd'] },
+  { label: 'Security',      types: ['iam', 'secrets', 'hsm', 'pii', 'audit', 'siem'] },
+  { label: 'Enterprise',    types: ['partner', 'erp', 'crm', 'mainframe', 'mft', 'billing', 'cicd'] },
   { label: 'Platform',      types: ['registry', 'mesh', 'config', 'zk'] },
 ]

@@ -86,6 +86,8 @@ export const CLOUD_MAP = {
   crm:         ['Salesforce + AppFlow', 'Salesforce + Cortex Framework', 'Dynamics 365 / Power Platform', 'Salesforce + OCI Integration'],
   mainframe:   ['Mainframe Modernization', 'Dual Run / mainframe connectors', 'Host Integration Server', 'OCI Compute + partner'],
   mft:         ['AWS Transfer Family', 'Storage Transfer Service', 'Data Factory SFTP / Logic Apps', 'OCI Object Storage + MFT partner'],
+  partner:     ['PrivateLink / partner API', 'Private Service Connect / partner API', 'Private Link / partner API', 'Private Endpoint / partner API'],
+  hsm:         ['CloudHSM', 'Cloud HSM', 'Managed HSM / Dedicated HSM', 'OCI Key Management (HSM)'],
 }
 
 const IDX = { aws: 0, gcp: 1, azure: 2, oci: 3 }
