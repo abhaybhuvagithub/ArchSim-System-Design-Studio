@@ -5,7 +5,7 @@
 import { CATALOG } from './catalog.js'
 
 const NODE_W = 118, NODE_H = 46
-const GAP_X = 62, GAP_Y = 26
+const GAP_X = 48, GAP_Y = 24
 const ORIGIN_X = 40, ORIGIN_Y = 40
 
 export function autoArrange(nodes, edges) {

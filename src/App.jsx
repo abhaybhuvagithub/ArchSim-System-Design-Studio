@@ -68,8 +68,12 @@ export default function App() {
     const r = svgRef.current.getBoundingClientRect()
     const minX = Math.min(...ns.map(n => n.x)) - 40, maxX = Math.max(...ns.map(n => n.x)) + NODE_W + 40
     const minY = Math.min(...ns.map(n => n.y)) - 40, maxY = Math.max(...ns.map(n => n.y)) + NODE_H + 40
-    const k = Math.min(1.2, Math.max(0.3, Math.min(r.width / (maxX - minX), r.height / (maxY - minY))))
-    setView({ k, x: (r.width - (maxX - minX) * k) / 2 - minX * k, y: (r.height - (maxY - minY) * k) / 2 - minY * k })
+    const fit = Math.min(r.width / (maxX - minX), r.height / (maxY - minY))
+    // never shrink below a readable scale — pan instead of squinting
+    const k = Math.min(1.2, Math.max(0.62, Math.min(fit, 1.2)))
+    const cx = fit >= k ? (r.width - (maxX - minX) * k) / 2 : 0
+    const cy = Math.max(0, (r.height - (maxY - minY) * k) / 2)
+    setView({ k, x: cx - minX * k, y: cy - minY * k })
   }, [])
 
   const applyOne = s => {
