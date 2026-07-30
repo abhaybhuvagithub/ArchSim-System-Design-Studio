@@ -4,6 +4,7 @@ import { TEMPLATES } from './templates.js'
 import { simulate, capacityReport } from './sim.js'
 import { review, applyAll } from './advisor.js'
 import { THEMES, readTheme, saveTheme } from './theme.js'
+import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -30,6 +31,7 @@ export default function App() {
   const [applied, setApplied] = useState([])    // ids of suggestions already applied
   const [theme, setTheme] = useState(readTheme) // 'dark' | 'light'
   const [steps, setSteps] = useState(false)     // numbered request-flow badges
+  const [chaosUsed, setChaosUsed] = useState(false)
   const T = THEMES[theme]
 
   useEffect(() => { document.documentElement.dataset.theme = theme; saveTheme(theme) }, [theme])
@@ -40,6 +42,16 @@ export default function App() {
   const sim = useMemo(() => simulate(nodes, edges, rps, downSet), [nodes, edges, rps, downSet])
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
+
+  // context the guided lesson checks itself against
+  const lessonCtx = useMemo(() => ({
+    nodes, edges, rps, simOn, steps, chaosUsed,
+    successRate: sim.successRate,
+    maxUtil: Math.max(0, ...cap.rows.map(r => r.util)),
+    has: t => nodes.some(n => n.type === t),
+    any: ts => nodes.some(n => ts.includes(n.type)),
+  }), [nodes, edges, rps, simOn, steps, chaosUsed, sim, cap])
+  const doneSteps = useMemo(() => LESSON.map(s => { try { return !!s.check(lessonCtx) } catch { return false } }), [lessonCtx])
 
   const fitView = useCallback(ns => {
     if (!ns?.length || !svgRef.current) return
@@ -296,7 +308,7 @@ export default function App() {
           ))}
         </select>
         <button className={`btn ${simOn ? 'active' : ''}`} onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
-        <button className={`btn ${chaosOn ? 'danger' : ''}`} onClick={() => setChaosOn(c => !c)} title="Randomly kills nodes while simulating; they auto-recover in 6s">🐒 Chaos {chaosOn ? 'ON' : 'off'}</button>
+        <button className={`btn ${chaosOn ? 'danger' : ''}`} onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">🐒 Chaos {chaosOn ? 'ON' : 'off'}</button>
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
           title="Review the design and suggest components to add, wired in automatically">
           ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
@@ -402,9 +414,14 @@ export default function App() {
             <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
               ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
             </button>
+            <button className={tab === 'learn' ? 'on' : ''} onClick={() => { setTab('learn'); setSel(null) }}>
+              🎓 Learn ({doneSteps.filter(Boolean).length}/{LESSON.length})
+            </button>
           </div>
 
-          {tab === 'improve' ? (
+          {tab === 'learn' ? (
+            <Learn done={doneSteps} />
+          ) : tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
               onHover={setHover} empty={nodes.length === 0} />
           ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} />
@@ -510,6 +527,101 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
         </>
       )}
     </g>
+  )
+}
+
+function Learn({ done }) {
+  const [sub, setSub] = useState('steps')
+  const [answers, setAnswers] = useState({})
+  const doneCount = done.filter(Boolean).length
+  const score = Object.entries(answers).filter(([i, a]) => QUIZ[+i].answer === a).length
+  return (
+    <section>
+      <div className="tabs sub">
+        {[['steps', 'Steps'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
+          <button key={k} className={sub === k ? 'on' : ''} onClick={() => setSub(k)}>{l}</button>
+        ))}
+      </div>
+
+      {sub === 'steps' && (
+        <>
+          <h3>Design walkthrough</h3>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            Twelve steps, checked against your canvas as you build. {doneCount}/{LESSON.length} done.
+          </div>
+          <div className="progress"><i style={{ width: `${(doneCount / LESSON.length) * 100}%` }} /></div>
+          {LESSON.map((s, i) => (
+            <div key={i} className={`lesson ${done[i] ? 'done' : ''}`}>
+              <div className="lesson-t">
+                <span className="lesson-n">{done[i] ? '✓' : i + 1}</span>
+                <span>{s.title}</span>
+              </div>
+              <div className="lesson-do">→ {s.do}</div>
+              <div className="lesson-why">{s.why}</div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {sub === 'compare' && (
+        <>
+          <h3>Difference between…</h3>
+          <div className="muted" style={{ marginBottom: 8 }}>The trade-offs you get asked to justify.</div>
+          {COMPARISONS.map(c => (
+            <div key={c.title} className="cmp">
+              <div className="cmp-t">{c.title}</div>
+              <table>
+                <thead><tr><th /><th>{c.left}</th><th>{c.right}</th></tr></thead>
+                <tbody>
+                  {c.rows.map((r, i) => <tr key={i}><td className="k">{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td></tr>)}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </>
+      )}
+
+      {sub === 'quiz' && (
+        <>
+          <h3>Interview questions</h3>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            {Object.keys(answers).length ? `Score ${score}/${Object.keys(answers).length} answered` : `${QUIZ.length} questions — pick an answer to see the explanation.`}
+            {Object.keys(answers).length > 0 && <button className="btn" style={{ marginLeft: 8, padding: '2px 8px' }} onClick={() => setAnswers({})}>Reset</button>}
+          </div>
+          {QUIZ.map((q, i) => {
+            const picked = answers[i]
+            return (
+              <div key={i} className="quiz">
+                <div className="quiz-q"><b>Q{i + 1}.</b> {q.q}</div>
+                {q.options.map((o, j) => {
+                  const state = picked === undefined ? '' : j === q.answer ? 'right' : picked === j ? 'wrong' : ''
+                  return (
+                    <button key={j} className={`quiz-o ${state}`} disabled={picked !== undefined}
+                      onClick={() => setAnswers(a => ({ ...a, [i]: j }))}>
+                      {picked !== undefined && j === q.answer ? '✓ ' : picked === j ? '✗ ' : ''}{o}
+                    </button>
+                  )
+                })}
+                {picked !== undefined && <div className="quiz-why">{q.why}</div>}
+              </div>
+            )
+          })}
+        </>
+      )}
+
+      {sub === 'numbers' && (
+        <>
+          <h3>Numbers to know</h3>
+          <div className="muted" style={{ marginBottom: 8 }}>Back-of-envelope math beats hand-waving.</div>
+          {NUMBERS.map(g => (
+            <div key={g.group} className="cmp">
+              <div className="cmp-t">{g.group}</div>
+              {g.rows.map((r, i) => <div key={i} className="row"><span>{r[0]}</span><span className="v">{r[1]}</span></div>)}
+            </div>
+          ))}
+        </>
+      )}
+    </section>
   )
 }
 
