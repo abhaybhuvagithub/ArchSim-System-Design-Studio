@@ -547,7 +547,7 @@ function Learn({ done }) {
         <>
           <h3>Design walkthrough</h3>
           <div className="muted" style={{ marginBottom: 8 }}>
-            Twelve steps, checked against your canvas as you build. {doneCount}/{LESSON.length} done.
+            {LESSON.length} steps, checked against your canvas as you build. {doneCount}/{LESSON.length} done.
           </div>
           <div className="progress"><i style={{ width: `${(doneCount / LESSON.length) * 100}%` }} /></div>
           {LESSON.map((s, i) => (
