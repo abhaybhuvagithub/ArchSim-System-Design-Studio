@@ -3,12 +3,13 @@ import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import { TEMPLATES } from './templates.js'
 import { simulate, capacityReport } from './sim.js'
 import { review, applyAll } from './advisor.js'
-import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL, themeColor } from './theme.js'
+import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL } from './theme.js'
 import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
 import { costReport, nodeCost, money, HOURS } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
+import { FAULTS, FAULT_GROUPS, faultById, pickTarget, compileFaults } from './faults.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -42,6 +43,7 @@ export default function App() {
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ left: 168, right: 280 })
   const [floatPanel, setFloatPanel] = useState({ left: null, right: null }) // {x,y,w,h} when detached
+  const [faults, setFaults] = useState([])       // [{key, faultId, targetId, until}]
   const resizeRef = useRef(null)
   const cloudInfo = cloudById(cloud)
 
@@ -53,7 +55,8 @@ export default function App() {
   const drag = useRef(null)
 
   const downSet = useMemo(() => new Set(Object.keys(down)), [down])
-  const sim = useMemo(() => simulate(nodes, edges, rps, downSet), [nodes, edges, rps, downSet])
+  const fx = useMemo(() => compileFaults(faults, nodes, edges), [faults, nodes, edges])
+  const sim = useMemo(() => simulate(nodes, edges, rps, downSet, fx), [nodes, edges, rps, downSet, fx])
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
   const cost = useMemo(() => costReport(nodes, sim, cloudInfo.mult), [nodes, sim, cloudInfo])
@@ -111,6 +114,20 @@ export default function App() {
     }
   }
 
+  // ---- chaos ----
+  const injectFault = f => {
+    const target = f.scope === 'node' ? (nodes.find(n => n.id === sel) || pickTarget(f, nodes, sim)) : null
+    if (f.scope === 'node' && !target) return
+    setSimOn(true); setChaosUsed(true)
+    setFaults(fs => [...fs, {
+      key: `${f.id}_${Date.now()}`, faultId: f.id, targetId: target?.id || null,
+      until: Date.now() + f.secs * 1000,
+    }])
+    if (target) setHover(target.id)
+  }
+  const clearFault = key => setFaults(fs => fs.filter(x => x.key !== key))
+  const recoverAll = () => { setFaults([]); setDown({}); setChaosOn(false) }
+
   const arrange = () => {
     if (!nodes.length) return
     const laid = autoArrange(nodes, edges)
@@ -163,6 +180,11 @@ export default function App() {
     if (!simOn) return
     const h = setInterval(() => {
       setTick(t => t + 1)
+      setFaults(fs => {
+        const now = Date.now()
+        const keep = fs.filter(f => f.until > now)
+        return keep.length === fs.length ? fs : keep
+      })
       setDown(d => {
         const now = Date.now()
         const nd = Object.fromEntries(Object.entries(d).filter(([, until]) => until > now))
@@ -404,9 +426,9 @@ export default function App() {
         <button className={`btn ${steps ? 'active' : ''}`} onClick={() => setSteps(s => !s)}
           title="Number the connections in request order, like a walkthrough diagram">①②③ Steps</button>
         <div className="spacer" />
-        <button className={`btn ${theme === 'neon' ? 'active' : ''}`}
+        <button className="btn"
           onClick={() => setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length])}
-          title="Cycle dark → light → neon">
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
           {THEME_LABEL[theme]}
         </button>
         <button className={`timer ${timer !== null && timer < 300 ? 'hot' : ''}`} onClick={() => setTimer(t => t === null ? 35 * 60 : null)} title="35-min interview timer">
@@ -452,7 +474,7 @@ export default function App() {
                     <div key={t} className="pal-item" draggable
                       onDragStart={e => e.dataTransfer.setData('type', t)}
                       title={svc ? `${c.desc}\n\n${cloudInfo.name}: ${svc}` : c.desc}>
-                      <div className="pal-glyph" style={{ background: themeColor(c.color, theme) + '33', border: `1px solid ${themeColor(c.color, theme)}` }}>{c.glyph}</div>
+                      <div className="pal-glyph" style={{ background: c.color + '33', border: `1px solid ${c.color}` }}>{c.glyph}</div>
                       <div className="pal-txt">
                         {c.name}
                         {svc && <span className="pal-svc">{svc}</span>}
@@ -520,6 +542,7 @@ export default function App() {
               <div className="chip" title="Estimated monthly cloud cost at this traffic level">cost <b>{money(cost.total)}/mo</b></div>
               {sim.totalDropped > 1 && <div className="chip bad">dropping <b>{fmt(sim.totalDropped)}/s</b></div>}
               {Object.keys(down).length > 0 && <div className="chip bad">🐒 down: <b>{Object.keys(down).length}</b></div>}
+              {faults.length > 0 && <div className="chip bad">faults <b>{faults.length}</b></div>}
             </div>
           )}
           {nodes.length === 0 && <div className="hint">Blank canvas — drag components in from the left, wire them from a node's ● port, or pick a template ↑</div>}
@@ -543,6 +566,10 @@ export default function App() {
             <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
               ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
             </button>
+            <button className={`${tab === 'chaos' ? 'on' : ''} ${faults.length ? 'alarm' : ''}`}
+              onClick={() => setTab('chaos')}>
+              🐒{faults.length ? ` ${faults.length}` : ''}
+            </button>
             <button className={tab === 'cost' ? 'on' : ''} onClick={() => { setTab('cost'); setSel(null) }}>
               💵 {money(cost.total)}
             </button>
@@ -551,7 +578,10 @@ export default function App() {
             </button>
           </div>
 
-          {tab === 'cost' ? (
+          {tab === 'chaos' ? (
+            <Chaos faults={faults} nodes={nodes} sel={sel} onInject={injectFault}
+              onClear={clearFault} onRecoverAll={recoverAll} sim={sim} fx={fx} />
+          ) : tab === 'cost' ? (
             <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} cloud={cloudInfo} />
           ) : tab === 'learn' ? (
             <Learn done={doneSteps} />
@@ -619,21 +649,16 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
   const isDown = s?.down
   const util = s?.util || 0
   const svc = serviceName(n.type, cloud)
-  const color = t.neon ? themeColor(spec.color, 'neon') : spec.color
+  const color = spec.color
   return (
     <g className={`node ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`} transform={`translate(${n.x},${n.y})`}
       onMouseDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
       style={{ cursor: 'move', opacity: dimmed ? 0.32 : 1, transition: 'opacity .12s' }}>
       {hovered && <rect x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke={t.glow} strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
-      {t.neon && !isDown && (
-        <rect x="-2" y="-2" width={NODE_W + 4} height={NODE_H + 4} rx="12"
-          fill="none" stroke={color} strokeWidth="2.5" opacity="0.55"
-          style={{ filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 14px ${color})` }} />
-      )}
       <rect className="body" width={NODE_W} height={NODE_H} rx="10"
         fill={isDown ? t.downFill : hovered ? t.nodeFillHover : t.nodeFill}
         stroke={isDown ? t.downStroke : hovered ? t.nodeStrokeHover : color}
-        strokeWidth={t.neon ? 2 : hovered ? 2 : 1.5} opacity={isDown ? 0.9 : 1} />
+        strokeWidth={hovered ? 2 : 1.5} opacity={isDown ? 0.9 : 1} />
       <text x="10" y="20" fontSize="13">{spec.glyph}</text>
       <text x="30" y="19" fontSize="10.5" fill={t.nodeText} fontWeight="600">{trunc(n.label, 15)}</text>
       <text x="30" y="33" fontSize="9" fill={t.nodeSub}>
@@ -667,9 +692,8 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
   return (
     <g className="edge" onMouseDown={ev => { ev.stopPropagation(); onSelect() }}
       style={{ cursor: 'pointer', opacity: dimmed ? 0.18 : 1, transition: 'opacity .12s' }}>
-      <path d={d} stroke={stroke} strokeWidth={selected ? 3 : hot ? Math.max(2.5, w) : t.neon ? Math.max(2, w) : w}
-        markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'} opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85}
-        style={t.neon ? { filter: `drop-shadow(0 0 5px ${stroke})` } : undefined} />
+      <path d={d} stroke={stroke} strokeWidth={selected ? 3 : hot ? Math.max(2.5, w) : w}
+        markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'} opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85} />
       <path d={d} stroke="transparent" strokeWidth="12" />
       {e.label && <text x={mx} y={my + (simOn && flow > 0 ? 14 : 4)} fontSize="9.5" fill={t.nodeText} textAnchor="middle" fontWeight="600">{e.label}</text>}
       {simOn && flow > 0 && <text x={mx} y={my - 6} fontSize="9" fill={hot ? t.hotText : t.nodeSub} textAnchor="middle">{fmt(flow)}/s</text>}
@@ -680,6 +704,82 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
         </>
       )}
     </g>
+  )
+}
+
+function Chaos({ faults, nodes, sel, onInject, onClear, onRecoverAll, sim, fx }) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    if (!faults.length) return
+    const h = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(h)
+  }, [faults.length])
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
+  const selNode = nodes.find(n => n.id === sel)
+  const blastRadius = Object.keys(fx.node || {}).length
+
+  return (
+    <section>
+      <h3>Chaos engineering</h3>
+      {!nodes.length ? (
+        <div className="empty">Load a design first, then break it on purpose. Every fault runs for a
+          few seconds and heals itself — watch success rate, p99 and availability while it does.</div>
+      ) : (
+        <>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            Node faults hit <b>{selNode ? selNode.label : 'the busiest sensible component'}</b>
+            {!selNode && ' — select a node to aim them.'}
+          </div>
+
+          {faults.length > 0 && (
+            <>
+              <div className="chaos-live">
+                <span>{faults.length} active · {blastRadius} component{blastRadius === 1 ? '' : 's'} affected</span>
+                <button className="btn danger" onClick={onRecoverAll}>Recover all</button>
+              </div>
+              {faults.map(f => {
+                const spec = faultById(f.faultId)
+                const left = Math.max(0, Math.ceil((f.until - now) / 1000))
+                return (
+                  <div key={f.key} className="fault-live">
+                    <span>{spec.icon} <b>{spec.name}</b>{f.targetId && byId[f.targetId] ? ` → ${byId[f.targetId].label}` : ''}</span>
+                    <span className="fl-right">{left}s <button onClick={() => onClear(f.key)}>✕</button></span>
+                  </div>
+                )
+              })}
+              <div className="row" style={{ marginTop: 8 }}>
+                <span>Success rate</span>
+                <span className="v" style={{ color: sim.successRate < 0.99 ? 'var(--bad)' : 'var(--ok)' }}>
+                  {(sim.successRate * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="row"><span>p99</span><span className="v">{Math.round(sim.p99)} ms</span></div>
+              <div className="row"><span>Availability</span><span className="v">{(sim.sysAvail * 100).toFixed(2)}%</span></div>
+              {fx.cut?.size > 0 && <div className="row"><span>Severed links</span><span className="v">{fx.cut.size}</span></div>}
+              {fx.rpsMul !== 1 && <div className="row"><span>Traffic multiplier</span><span className="v">{fx.rpsMul}×</span></div>}
+            </>
+          )}
+
+          {FAULT_GROUPS.map(g => (
+            <div key={g} style={{ marginTop: 14 }}>
+              <h3>{g === 'Global' ? 'Global events' : `${g} chaos`}</h3>
+              <div className="fault-grid">
+                {FAULTS.filter(f => f.group === g).map(f => (
+                  <button key={f.id} className="fault-btn" title={f.desc} onClick={() => onInject(f)}>
+                    <span className="fb-ico">{f.icon}</span>
+                    <span className="fb-name">{f.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="muted" style={{ fontSize: 10.5, marginTop: 12, lineHeight: 1.55 }}>
+            Faults compile into capacity, latency and drop multipliers, severed links or a traffic
+            multiplier, then feed straight back into the simulation. Everything auto-recovers.
+          </div>
+        </>
+      )}
+    </section>
   )
 }
 
