@@ -37,6 +37,11 @@ export const CATALOG = {
   lake:        { name: 'Data Lake',      glyph: '🏞️', color: '#0ea5e9', cap: 50000,   lat: 40,  avail: 0.9999, desc: 'S3/ADLS raw zone — immutable landing area, schema-on-read, cheap at PB scale.' },
   warehouse:   { name: 'Data Warehouse', glyph: '🏛️', color: '#0ea5e9', cap: 3000,    lat: 120, avail: 0.999,  desc: 'Snowflake/BigQuery/Redshift — modelled columnar store for SQL analytics.' },
   bi:          { name: 'BI / Dashboards',glyph: '📈', color: '#f97316', cap: 1000,    lat: 150, avail: 0.999,  desc: 'Looker/Tableau/Superset — queries the warehouse, never production DBs.' },
+  // --- AI / GenAI ---
+  vector:      { name: 'Vector DB',      glyph: '🧭', color: '#ec4899', cap: 4000,    lat: 25,  avail: 0.999,  desc: 'Pinecone/pgvector/Milvus — ANN search over embeddings for retrieval.' },
+  embed:       { name: 'Embedding Svc',  glyph: '🔢', color: '#ec4899', cap: 800,     lat: 40,  avail: 0.999,  desc: 'Turns text/images into vectors; used at index time and query time.' },
+  llm:         { name: 'LLM Inference',  glyph: '🧠', color: '#ec4899', cap: 60,      lat: 900, avail: 0.999,  desc: 'GPU-served generation. Expensive, slow, and the usual bottleneck — batch and stream.' },
+  guard:       { name: 'Guardrails',     glyph: '🛟', color: '#ef4444', cap: 5000,    lat: 20,  avail: 0.999,  desc: 'Prompt-injection, PII and safety filtering on input and output.' },
 }
 
 export const PALETTE_GROUPS = [
@@ -44,6 +49,7 @@ export const PALETTE_GROUPS = [
   { label: 'Compute',   types: ['web', 'app', 'micro', 'ws', 'worker', 'scheduler'] },
   { label: 'Storage',   types: ['cache', 'sql', 'nosql', 'search', 'blob'] },
   { label: 'Async',     types: ['queue', 'kafka', 'saga'] },
-  { label: 'Data',      types: ['cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics', 'ml'] },
+  { label: 'Data',      types: ['cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
+  { label: 'AI / ML',   types: ['ml', 'embed', 'vector', 'llm', 'guard'] },
   { label: 'Platform',  types: ['registry', 'mesh', 'config', 'zk', 'monitor', 'tracing'] },
 ]

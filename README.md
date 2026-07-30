@@ -6,7 +6,10 @@ An interactive system design canvas that goes beyond drawing: it **simulates** y
 
 ## Features
 
-- **34-component canvas editor** — drag components (LBs, caches, queues, DBs, workers, BFFs, service mesh, saga orchestrators, CDC, data lake, warehouse, BI…) onto an infinite pan/zoom canvas and wire them with directed edges.
+- **Blank canvas or a starter scaffold** — begin from nothing, from a 3-tier skeleton, or from any template. The picker is grouped by category.
+- **Light and dark mode** — one-click switch, remembered between visits, and honoured by PNG export.
+- **①②③ Steps** — number the connections in request order for a walkthrough-style diagram, and click any connection to label it ("cache miss", "write", "async").
+- **38-component canvas editor** — drag components (LBs, caches, queues, DBs, workers, BFFs, service mesh, saga orchestrators, CDC, data lake, warehouse, BI…) onto an infinite pan/zoom canvas and wire them with directed edges.
 - **✨ Improve — architecture advisor** — reviews your diagram against the current traffic and lists findings by severity. **Every finding has a ⚡ Quick fix** that edits the graph for you, and **Quick fix all** applies them in one go:
   - load balancer spliced onto a client→service link; cache spliced between a service and its database; queue in front of a synchronously-called worker; rate limiter ahead of the gateway
   - replicas scaled on tiers past 70% utilization; single-instance databases replicated
@@ -17,10 +20,11 @@ An interactive system design canvas that goes beyond drawing: it **simulates** y
 - **Live traffic simulation** — set traffic (100 rps → 1M rps) and watch requests flow. Per-node utilization bars, queueing latency (M/M/1-style), drops when over capacity, p50/p99 estimates, success rate and system availability.
 - **Chaos monkey** — randomly kills instances while simulating; they auto-recover in 6 s. See whether your redundancy actually holds.
 - **Capacity report** — live bottleneck detection with the replica count each tier actually needs at current traffic.
-- **Template library — 21 pre-wired designs**, each with its own requirements checklist:
+- **Template library — 23 pre-wired designs**, each with its own requirements checklist:
   - *Product designs:* Bitly, Ticketmaster, Uber, YouTube, WhatsApp, Web Crawler, Google Docs, Twitter feed, Dropbox, Rate Limiter, Yelp, Leaderboard, Notifications, Payments, Autocomplete.
   - *Microservice architecture patterns:* E-commerce with Saga / database-per-service, CQRS + Event Sourcing, BFF + service-mesh platform, event-driven choreography with DLQ, and Strangler-fig monolith migration with CDC.
   - *Data platform:* medallion lakehouse — CDC + stream ingest → raw data lake → ELT → curated lake → data warehouse → BI and ML, with an orchestrator owning the DAGs.
+  - *AI / ML:* GenAI RAG assistant (embedder, vector DB, semantic cache, LLM inference, in/out guardrails, eval traces) and a two-stage recommendation ranker (candidate generation → feature store → ranker, with a feedback loop and model registry).
 - **Interview timer** — 35-minute countdown, turns red in the last 5 minutes.
 - **Export** — PNG snapshot, JSON save/load.
 
