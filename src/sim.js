@@ -2,11 +2,18 @@ import { CATALOG } from './catalog.js'
 
 // Propagate RPS from client nodes through the directed graph and compute
 // per-node utilization, drops, latency and an end-to-end estimate.
-export function simulate(nodes, edges, totalRps, downSet = new Set()) {
+// fx (optional) carries injected chaos: per-node capacity/latency/drop multipliers,
+// a set of severed edge ids, and a global traffic multiplier.
+export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null) {
+  const NOFX = { capMul: 1, latMul: 1, drop: 0, noCache: false }
+  const fxOf = id => (fx?.node?.[id] ? { ...NOFX, ...fx.node[id] } : NOFX)
+  const isCut = e => !!fx?.cut?.has(e.id)
+  totalRps = totalRps * (fx?.rpsMul || 1)
+
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
   const out = {}, incoming = {}
   for (const n of nodes) { out[n.id] = []; incoming[n.id] = 0 }
-  for (const e of edges) if (byId[e.from] && byId[e.to]) out[e.from].push(e.to)
+  for (const e of edges) if (byId[e.from] && byId[e.to] && !isCut(e)) out[e.from].push(e.to)
 
   const sources = nodes.filter(n => CATALOG[n.type]?.source)
   const wSum = sources.reduce((a, s) => a + (s.weight ?? 1), 0) || 1
@@ -14,7 +21,7 @@ export function simulate(nodes, edges, totalRps, downSet = new Set()) {
 
   // topo-ish propagation with cycle guard (Kahn on reachable subgraph, fall back to N passes)
   const stats = {}
-  const order = topoOrder(nodes, edges)
+  const order = topoOrder(nodes, edges.filter(e => !isCut(e)))
   const flowOnEdge = {}
 
   for (const id of order) {
@@ -23,21 +30,31 @@ export function simulate(nodes, edges, totalRps, downSet = new Set()) {
     if (!spec) continue
     const inRps = incoming[id]
     const isDown = downSet.has(id)
+    const f = fxOf(id)
     const replicas = isDown ? Math.max(0, (n.replicas || 1) - 1) : (n.replicas || 1)
-    const capacity = spec.source ? Infinity : spec.cap * Math.max(replicas, 0)
-    const processed = Math.min(inRps, capacity)
+    const rawCap = spec.source ? Infinity : spec.cap * Math.max(replicas, 0)
+    const capacity = rawCap === Infinity ? Infinity : rawCap * f.capMul
+    const faultDrop = inRps * f.drop                       // lost before any work happens
+    const offered = inRps - faultDrop
+    const processed = Math.min(offered, capacity)
     const dropped = inRps - processed
-    const util = capacity === Infinity ? 0 : capacity === 0 ? (inRps > 0 ? 999 : 0) : inRps / capacity
+    const util = capacity === Infinity ? 0 : capacity === 0 ? (offered > 0 ? 999 : 0) : offered / capacity
     // M/M/1-flavoured queueing delay
     const qFactor = util >= 1 ? 20 : 1 / Math.max(0.05, 1 - util)
-    const latency = spec.lat * Math.min(qFactor, 20)
+    const latency = spec.lat * Math.min(qFactor, 20) * f.latMul
     const availOne = spec.avail ?? 0.999
-    const avail = replicas <= 0 ? 0 : 1 - Math.pow(1 - availOne, replicas)
-    stats[id] = { in: inRps, processed, dropped, util, latency, avail, replicas, down: isDown }
+    let avail = replicas <= 0 ? 0 : 1 - Math.pow(1 - availOne, replicas)
+    if (f.drop > 0) avail *= (1 - f.drop)
+    if (f.capMul < 1) avail *= (0.5 + 0.5 * f.capMul)
+    stats[id] = {
+      in: inRps, processed, dropped, util, latency, avail, replicas,
+      down: isDown, faulted: f !== NOFX, faultDrop,
+    }
 
-    // forward: caches/CDN only forward misses
+    // forward: caches/CDN only forward misses (a stampede sends everything through)
     let fwd = processed
-    if (spec.cacheHit && out[id].length) fwd = processed * (1 - spec.cacheHit)
+    const hit = f.noCache ? 0 : (spec.cacheHit || 0)
+    if (hit && out[id].length) fwd = processed * (1 - hit)
     const targets = out[id]
     if (targets.length) {
       const share = fwd / targets.length
