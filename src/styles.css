@@ -7,13 +7,15 @@
   --canvas: radial-gradient(circle at 30% 20%, #16242a 0%, #0e1618 72%);
   --sel: #ffffff; --shadow: rgba(0,0,0,.45); --chip-bg: rgba(20,31,34,.93);
 }
+/* Neon green #2CFF05 (Figma) with its Alien Hues palette: #45CC2D #45663F #2B332A */
 [data-theme="neon"] {
-  --bg: #04050b; --panel: #080b16; --panel2: #101528; --border: #24306b;
-  --text: #f2ffff; --muted: #6ff5ff; --accent: #00ffd5; --ok: #ccff00;
-  --warn: #ffd400; --bad: #ff1e6b;
-  --canvas: radial-gradient(circle at 30% 15%, #0d1030 0%, #04050b 70%);
-  --sel: #ffffff; --shadow: rgba(0,255,213,.22); --chip-bg: rgba(8,11,22,.94);
+  --bg: #050a04; --panel: #0a1108; --panel2: #17210f; --border: #45663f;
+  --text: #eaffe6; --muted: #7fcf6e; --accent: #2cff05; --ok: #2cff05;
+  --warn: #a9ff05; --bad: #ff05a9;
+  --canvas: radial-gradient(circle at 30% 15%, #10210c 0%, #050a04 72%);
+  --sel: #ffffff; --shadow: rgba(44,255,5,.22); --chip-bg: rgba(10,17,8,.94);
 }
+[data-theme="neon"] .logo span { color: #2cff05; }
 [data-theme="neon"] .logo { text-shadow: 0 0 12px var(--accent); }
 [data-theme="neon"] .btn.active, [data-theme="neon"] .btn.primary,
 [data-theme="neon"] .tabs button.on {
