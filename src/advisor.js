@@ -114,6 +114,8 @@ const UPSTREAM = {
   apm: ['client', 'edge', 'cdn'],
   // security
   iam: ['gateway', 'bff', 'graphql', 'app', 'micro'],
+  partner: ['mq', 'queue', 'kafka', 'esb', 'saga', 'worker', 'micro', 'app'],
+  hsm: ['micro', 'app', 'gateway', 'worker'],
   secrets: ['app', 'micro', 'worker', 'k8s'], pii: ['app', 'micro', 'saga', 'gateway'],
   audit: ['app', 'micro', 'saga', 'gateway'], siem: ['logs', 'audit', 'waf', 'iam'],
 }
@@ -153,7 +155,7 @@ const PASSTHROUGH = ['dns', 'cdn', 'lb', 'ratelimiter', 'gateway', 'bff', 'mesh'
 // Components that generate their own work rather than being called.
 const SELF_TRIGGER = ['scheduler', 'synthetic', 'cicd']
 // Vendor or legacy systems you cannot simply add instances to.
-const NO_SCALE = ['erp', 'crm', 'mainframe']
+const NO_SCALE = ['erp', 'crm', 'mainframe', 'partner']
 // When nothing suitable exists yet, create this instead of the first routing hop
 // (prefer a component that actually does work over another indirection layer).
 const CREATE_DOWN = {
@@ -572,7 +574,7 @@ export function review(nodes, edges, rps) {
   }
   // low-QPS systems of record must not be called synchronously at scale
   for (const n of nodes) {
-    if (!['erp', 'crm', 'mainframe'].includes(n.type)) continue
+    if (!['erp', 'crm', 'mainframe', 'partner'].includes(n.type)) continue
     const callers = into(n.id)
     if (!callers.length) continue
     if (callers.some(e => ['queue', 'kafka', 'mq', 'esb', 'cache'].includes(typeOf(e.from)))) continue

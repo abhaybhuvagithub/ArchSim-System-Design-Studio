@@ -18,7 +18,7 @@ An interactive system design canvas that goes beyond drawing: it **simulates** y
   - **Quiz** — 14 interview questions with instant right/wrong marking and an explanation for every answer (capacity math, queueing under load, CAP, idempotency, availability multiplication, geo indexes, fan-out, outbox, RAG bottlenecks, alerting practice).
   - **Numbers** — the cheat sheet: latency numbers, rough per-instance capacity, estimation shortcuts (1M/day ≈ 12 rps), and storage sizing.
 - **Blank canvas or a starter scaffold** — begin from nothing, from a 3-tier skeleton, or from any template. The picker is grouped by category.
-- **Light and dark mode** — one-click switch, remembered between visits, and honoured by PNG export.
+- **Light and dark mode** — a restrained slate-and-teal palette in the spirit of levels.fyi: data first, low chrome. One-click switch, remembered between visits, honoured by PNG export.
 - **①②③ Steps** — number the connections in request order for a walkthrough-style diagram, and click any connection to label it ("cache miss", "write", "async").
 - **64-component canvas editor** across 10 palette groups — drag components onto an infinite pan/zoom canvas and wire them with directed edges:
   - *Traffic:* client, DNS, global traffic manager (GSLB), WAF/DDoS, CDN, edge functions, load balancer, API gateway, GraphQL federation, rate limiter, BFF, tenant router
@@ -43,10 +43,13 @@ An interactive system design canvas that goes beyond drawing: it **simulates** y
 - **Live traffic simulation** — set traffic (100 rps → 1M rps) and watch requests flow. Per-node utilization bars, queueing latency (M/M/1-style), drops when over capacity, p50/p99 estimates, success rate and system availability.
 - **Chaos monkey** — randomly kills instances while simulating; they auto-recover in 6 s. See whether your redundancy actually holds.
 - **Capacity report** — live bottleneck detection with the replica count each tier actually needs at current traffic.
-- **Template library — 25 pre-wired designs**, each with its own requirements checklist:
+- **Template library — 34 pre-wired designs**, each with its own requirements checklist:
   - *Product designs:* Bitly, Ticketmaster, Uber, YouTube, WhatsApp, Web Crawler, Google Docs, Twitter feed, Dropbox, Rate Limiter, Yelp, Leaderboard, Notifications, Payments, Autocomplete.
   - *Microservice architecture patterns:* E-commerce with Saga / database-per-service, CQRS + Event Sourcing, BFF + service-mesh platform, event-driven choreography with DLQ, and Strangler-fig monolith migration with CDC.
   - *Data platform:* medallion lakehouse — CDC + stream ingest → raw data lake → ELT → curated lake → data warehouse → BI and ML, with an orchestrator owning the DAGs.
+  - *India · consumer:* **Rapido** (captain allocation, H3 geo index, OTP ride start, surge), **Zomato** (discovery vs ordering split, menu caching, rider assignment, ETA), **Swiggy + Instamart** (per-dark-store inventory reservation, 10-minute dispatch, order batching).
+  - *India · fintech:* **Razorpay** (idempotency, double-entry ledger, outbox, smart routing across acquirers, webhooks, T+1 settlement), **BHIM/UPI** (HSM-bound UPI PIN, VPA directory, NPCI switch and bank legs, RRN idempotency), **Google Pay UPI** (multi-PSP bank routing on live health, inline fraud scoring, tokenization, rewards off the payment path).
+  - *Travel & booking:* **Booking.com** (1000:1 search-to-book, supplier availability cache, no-oversell booking saga), **Goibibo** (GDS fan-out with hard timeouts, short-TTL fare cache, price-change-on-booking, goCash split tender), **IndiGo** (PSS mainframe core behind enterprise MQ, seat maps, check-in thundering herd, fare-scraping bots).
   - *Enterprise:* zero-trust regulated multi-tenant platform — GSLB → WAF → gateway + SSO → tenant router → services on Kubernetes, with secrets/KMS, tokenization, audit log, backups, and enterprise MQ + ESB fronting a mainframe core and SAP.
   - *Observability:* golden-signals stack — services, gateway and Kubernetes → OTel collector → metrics / logs / traces → SLO burn-rate and SIEM → on-call paging, plus synthetic probes and RUM.
   - *AI / ML:* GenAI RAG assistant (embedder, vector DB, semantic cache, LLM inference, in/out guardrails, eval traces) and a two-stage recommendation ranker (candidate generation → feature store → ranker, with a feedback loop and model registry).
