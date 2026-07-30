@@ -307,3 +307,62 @@ select.btn { appearance: auto; }
   border: 1px solid var(--border); background: var(--panel2); white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+/* ─────────── Footer ─────────── */
+.foot {
+  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  padding: 7px 14px; background: var(--panel); border-top: 1px solid var(--border);
+  font-size: 11.5px; color: var(--muted); flex-shrink: 0;
+}
+.foot a { color: var(--accent); text-decoration: none; }
+.foot a:hover { text-decoration: underline; }
+.foot-sep { opacity: .5; }
+
+/* ─────────── Responsive: tablet and mobile ─────────── */
+.scrim {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 55;
+  backdrop-filter: blur(2px);
+}
+
+@media (max-width: 1100px) {
+  .toolbar { gap: 6px; padding: 7px 10px; overflow-x: auto; }
+  .btn { padding: 6px 12px; }
+  .rps input[type=range] { width: 92px; }
+
+  /* panels slide over the canvas instead of squeezing it */
+  .palette.drawer, .side.drawer {
+    position: fixed; top: 0; bottom: 0; z-index: 60; width: min(84vw, 380px);
+    transform: translateX(-102%); transition: transform .22s ease;
+    box-shadow: 0 0 40px var(--shadow); border-radius: 0;
+  }
+  .palette.drawer { left: 0; }
+  .side.drawer { right: 0; transform: translateX(102%); }
+  .palette.drawer.open, .side.drawer.open { transform: translateX(0); }
+  .side.drawer { width: min(92vw, 440px); }
+  .hovercard { display: none; }
+}
+
+@media (max-width: 700px) {
+  .toolbar { padding: 6px 8px; gap: 5px; flex-wrap: nowrap; }
+  .toolbar::-webkit-scrollbar { height: 0; }
+  .logo { font-size: 15px; margin-right: 2px; }
+  .btn { padding: 7px 12px; font-size: 12px; }        /* bigger tap targets */
+  .rps { gap: 5px; }
+  .rps input[type=range] { width: 76px; }
+  .rps b { min-width: 58px; font-size: 11.5px; }
+  .rps span { display: none; }
+  .statbar { top: 6px; left: 6px; gap: 5px; max-width: calc(100% - 12px); }
+  .chip { font-size: 10.5px; padding: 4px 8px; }
+  .hint { display: none; }
+  .foot { font-size: 10.5px; padding: 6px 10px; gap: 5px; }
+  .fault-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+  .fault-btn { padding: 10px 4px; }
+  .pal-item { padding: 9px 8px; }                      /* easier to tap */
+  .check { padding: 8px 0; }
+  .quiz-o { padding: 8px 10px; }
+  .cmp table { font-size: 10px; }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  .foot { display: none; }                             /* reclaim height */
+}
