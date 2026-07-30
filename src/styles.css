@@ -201,6 +201,15 @@ select.btn { appearance: auto; }
 .btn.quick { border-color: var(--accent); color: var(--accent); }
 .btn.quick:hover { background: var(--accent); color: #fff; }
 
+/* Architecture brief */
+.brief-sec { margin-bottom: 14px; }
+.brief-h {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--accent); margin-bottom: 5px; font-weight: 600;
+}
+.brief-p { font-size: 12px; line-height: 1.62; color: var(--muted); margin-bottom: 6px; }
+.brief-p b { color: var(--text); font-weight: 600; }
+
 /* Chaos panel */
 .tabs button.alarm { border-color: var(--bad); color: var(--bad); }
 .chaos-live {
