@@ -92,16 +92,20 @@ export default function App() {
   const toggleRequirement = (i, text) => {
     if (checks[i]) {
       const undo = undoRequirement(nodes, edges, reqLog[i])
-      if (undo) { setNodes(undo.nodes); setEdges(undo.edges) }
+      if (undo) {
+        setNodes(undo.nodes); setEdges(undo.edges)
+        if (undo.rps !== undefined) setRps(undo.rps)
+      }
       setChecks(s => ({ ...s, [i]: false }))
       setReqLog(l => { const n = { ...l }; delete n[i]; return n })
       return
     }
-    const r = applyRequirement(nodes, edges, text)
+    const r = applyRequirement(nodes, edges, text, rps)
     setChecks(s => ({ ...s, [i]: true }))
     if (r) {
       setNodes(r.nodes); setEdges(r.edges)
-      setReqLog(l => ({ ...l, [i]: { added: r.added, scaled: r.scaled } }))
+      if (r.rps) setRps(r.rps)
+      setReqLog(l => ({ ...l, [i]: { added: r.added, scaled: r.scaled, prevRps: r.prevRps } }))
       if (r.focus) { setSel(r.focus); setHover(r.focus) }
       fitView(r.nodes)
     }
@@ -589,7 +593,7 @@ export default function App() {
                 {template.tagline} — ticking a requirement adds the component it implies and wires it in.
               </div>
               {template.checklist.map((c, i) => {
-                const eff = checks[i] ? null : requirementEffect(c, nodes)
+                const eff = checks[i] ? null : requirementEffect(c, nodes, rps)
                 return (
                   <label key={i} className="check">
                     <input type="checkbox" checked={!!checks[i]} onChange={() => toggleRequirement(i, c)} />
