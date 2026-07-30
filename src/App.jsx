@@ -35,12 +35,22 @@ export default function App() {
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
 
+  const fitView = useCallback(ns => {
+    if (!ns?.length || !svgRef.current) return
+    const r = svgRef.current.getBoundingClientRect()
+    const minX = Math.min(...ns.map(n => n.x)) - 40, maxX = Math.max(...ns.map(n => n.x)) + NODE_W + 40
+    const minY = Math.min(...ns.map(n => n.y)) - 40, maxY = Math.max(...ns.map(n => n.y)) + NODE_H + 40
+    const k = Math.min(1.2, Math.max(0.3, Math.min(r.width / (maxX - minX), r.height / (maxY - minY))))
+    setView({ k, x: (r.width - (maxX - minX) * k) / 2 - minX * k, y: (r.height - (maxY - minY) * k) / 2 - minY * k })
+  }, [])
+
   const applyOne = s => {
     const r = s.apply?.(nodes, edges)
     if (!r) return
     setNodes(r.nodes); setEdges(r.edges)
     setApplied(a => [...a, s.id])
     if (r.focus) { setSel(r.focus); setHover(r.focus) }
+    fitView(r.nodes)
   }
   const applyEvery = () => {
     const actionable = sugs.filter(s => s.apply)
@@ -48,6 +58,7 @@ export default function App() {
     setNodes(r.nodes); setEdges(r.edges)
     setApplied(a => [...a, ...actionable.map(s => s.id)])
     if (r.focus) setSel(r.focus)
+    fitView(r.nodes)
   }
 
   // animation + chaos + recovery loop
@@ -169,8 +180,9 @@ export default function App() {
     const t = TEMPLATES[+idx]
     setNodes(t.nodes.map(n => ({ ...n })))
     setEdges(t.edges.map(e => ({ ...e })))
-    setTemplate(t); setChecks({}); setSel(null); setDown({})
-    setRps(t.rps); setView({ x: 20, y: 20, k: 1 })
+    setTemplate(t); setChecks({}); setSel(null); setDown({}); setApplied([])
+    setRps(t.rps)
+    requestAnimationFrame(() => fitView(t.nodes))
   }
   const clearAll = () => { setNodes([]); setEdges([]); setTemplate(null); setSel(null); setDown({}) }
 
@@ -248,6 +260,7 @@ export default function App() {
         <button className={`timer ${timer !== null && timer < 300 ? 'hot' : ''}`} onClick={() => setTimer(t => t === null ? 35 * 60 : null)} title="35-min interview timer">
           ⏱ {timer === null ? '35:00' : `${String(Math.floor(timer / 60)).padStart(2, '0')}:${String(timer % 60).padStart(2, '0')}`}
         </button>
+        <button className="btn" onClick={() => fitView(nodes)} title="Fit the whole diagram in view">⤢ Fit</button>
         <button className="btn" onClick={exportPNG}>PNG</button>
         <button className="btn" onClick={exportJSON}>JSON ↓</button>
         <label className="btn">JSON ↑<input type="file" accept=".json" style={{ display: 'none' }} onChange={importJSON} /></label>
