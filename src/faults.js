@@ -46,7 +46,7 @@ export const FAULTS = [
     effect: n => ({ node: { capMul: Math.max(0, ((n.replicas || 1) - 2) / (n.replicas || 1)) } }) },
 
   // ───────────── Network ─────────────
-  { id: 'partition', icon: '🌊', name: 'Network Partition', group: 'Network', scope: 'node', secs: 18,
+  { id: 'partition', icon: '🌊', name: 'Network Partition', group: 'Network', scope: 'node', secs: 18, needsOutbound: true,
     desc: 'Split brain: the target can no longer reach anything downstream.',
     effect: () => ({ node: {}, cutFrom: true }) },
   { id: 'region', icon: '🪐', name: 'Cross-Region Loss', group: 'Network', scope: 'global', secs: 20,
@@ -67,7 +67,7 @@ export const FAULTS = [
   { id: 'lbfail', icon: '⚓', name: 'Load Balancer', group: 'Network', scope: 'node', prefer: ['lb', 'gslb', 'gateway'], secs: 18,
     desc: 'The balancer degrades — uneven distribution and a third of capacity unusable.',
     effect: () => ({ node: { capMul: 0.35, latMul: 2 } }) },
-  { id: 'port', icon: '🔌', name: 'Backend Port', group: 'Network', scope: 'node', secs: 16,
+  { id: 'port', icon: '🔌', name: 'Backend Port', group: 'Network', scope: 'node', secs: 16, needsOutbound: true,
     desc: 'A security-group change blocks the port to one downstream dependency.',
     effect: () => ({ cutOne: true }) },
   { id: 'health', icon: '🩺', name: 'Health Check', group: 'Network', scope: 'node', secs: 18,
@@ -110,9 +110,14 @@ export const FAULT_GROUPS = ['Infrastructure', 'Network', 'Application', 'Global
 export const faultById = id => FAULTS.find(f => f.id === id)
 
 // Choose a sensible victim when the user has not selected one.
-export function pickTarget(fault, nodes, sim) {
+export function pickTarget(fault, nodes, sim, edges = []) {
   if (!nodes.length) return null
-  const usable = nodes.filter(n => !CATALOG[n.type]?.source)
+  let usable = nodes.filter(n => !CATALOG[n.type]?.source)
+  // faults that sever links are meaningless on a node with nothing downstream
+  if (fault.needsOutbound) {
+    const withOut = usable.filter(n => edges.some(e => e.from === n.id))
+    if (withOut.length) usable = withOut
+  }
   if (!usable.length) return null
   const pool = fault.prefer ? usable.filter(n => fault.prefer.includes(n.type)) : usable
   const list = pool.length ? pool : usable

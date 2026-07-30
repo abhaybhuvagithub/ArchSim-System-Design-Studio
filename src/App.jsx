@@ -116,7 +116,7 @@ export default function App() {
 
   // ---- chaos ----
   const injectFault = f => {
-    const target = f.scope === 'node' ? (nodes.find(n => n.id === sel) || pickTarget(f, nodes, sim)) : null
+    const target = f.scope === 'node' ? (nodes.find(n => n.id === sel) || pickTarget(f, nodes, sim, edges)) : null
     if (f.scope === 'node' && !target) return
     setSimOn(true); setChaosUsed(true)
     setFaults(fs => [...fs, {
