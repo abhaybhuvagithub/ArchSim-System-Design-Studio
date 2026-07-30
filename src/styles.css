@@ -244,6 +244,17 @@ select.btn { appearance: auto; }
 .cost-split { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--muted); }
 .cost-split b { color: var(--text); float: right; }
 .cost-split span { display: block; }
+.cost-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 11px; color: var(--muted); margin-top: 4px;
+}
+.cost-foot .repl { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.cost-foot .repl button {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--panel);
+  border: 1px solid var(--border); color: var(--text); cursor: pointer; line-height: 1; font-size: 12px;
+}
+.cost-foot .repl button:hover { border-color: var(--accent); color: var(--accent); }
+.cost-foot .repl b { min-width: 24px; text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* Learn panel */
 .tabs.sub button { font-size: 11px; padding: 4px 6px; }
@@ -289,3 +300,10 @@ select.btn { appearance: auto; }
 .empty { color: var(--muted); font-size: 12px; line-height: 1.6; padding: 8px 0; }
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Visitor counter */
+.visitors {
+  font-size: 11.5px; color: var(--muted); padding: 4px 10px; border-radius: 980px;
+  border: 1px solid var(--border); background: var(--panel2); white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
