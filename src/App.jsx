@@ -455,7 +455,7 @@ export default function App() {
           {nodes.length > 0 && <div className="hint">Drag ● port to connect · click a connection to label it · scroll to zoom · drag canvas to pan · Del removes selection</div>}
         </div>
 
-        <div className="side">
+        <div className={`side ${tab === 'learn' ? 'wide' : ''}`}>
           <div className="tabs">
             <button className={tab === 'capacity' ? 'on' : ''} onClick={() => setTab('capacity')}>Capacity</button>
             <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
