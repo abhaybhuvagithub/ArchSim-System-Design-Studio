@@ -7,7 +7,12 @@ An interactive system design canvas that goes beyond drawing: it **simulates** y
 ## Features
 
 - **34-component canvas editor** — drag components (LBs, caches, queues, DBs, workers, BFFs, service mesh, saga orchestrators, CDC, data lake, warehouse, BI…) onto an infinite pan/zoom canvas and wire them with directed edges.
-- **✨ Improve — architecture advisor** — reviews your diagram against the current traffic and lists findings by severity, each with a one-click **Apply** that inserts the missing component *and wires it into the right place*: load balancer spliced onto a client→service link, cache spliced between a service and its database, queue in front of a synchronously-called worker, rate limiter ahead of the gateway, replicas scaled on saturated tiers, service discovery / tracing / monitoring attached to the busiest components, and a full data platform chained off your event stream. **Apply all** folds every finding in at once and converges.
+- **✨ Improve — architecture advisor** — reviews your diagram against the current traffic and lists findings by severity. **Every finding has a ⚡ Quick fix** that edits the graph for you, and **Quick fix all** applies them in one go:
+  - load balancer spliced onto a client→service link; cache spliced between a service and its database; queue in front of a synchronously-called worker; rate limiter ahead of the gateway
+  - replicas scaled on tiers past 70% utilization; single-instance databases replicated
+  - service discovery, tracing and monitoring attached to the busiest components
+  - a full data platform (CDC → lake → ELT → warehouse → BI) chained off your event stream, and BI repointed at the warehouse when it reads production directly
+  - **auto-wiring:** unwired nodes and dead-end routing components are connected to the most plausible peer, chosen by component type and proximity — and if no suitable peer exists yet, the quick fix creates one (an orphaned SQL database gets an App Server in front, a dead-end queue gets a Worker Pool after it)
 - **Hover to inspect** — hovering a node glows it, highlights its connected edges, dims everything else, and shows a detail card with capacity, base latency and live utilization.
 - **Live traffic simulation** — set traffic (100 rps → 1M rps) and watch requests flow. Per-node utilization bars, queueing latency (M/M/1-style), drops when over capacity, p50/p99 estimates, success rate and system availability.
 - **Chaos monkey** — randomly kills instances while simulating; they auto-recover in 6 s. See whether your redundancy actually holds.
