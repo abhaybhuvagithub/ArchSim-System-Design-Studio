@@ -3,7 +3,8 @@ import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import { TEMPLATES } from './templates.js'
 import { simulate, capacityReport } from './sim.js'
 import { review, applyAll } from './advisor.js'
-import { THEMES, readTheme, saveTheme } from './theme.js'
+import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL, themeColor } from './theme.js'
+import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
 import { costReport, nodeCost, money, HOURS } from './pricing.js'
 import { autoArrange } from './layout.js'
@@ -37,6 +38,11 @@ export default function App() {
   const [chaosUsed, setChaosUsed] = useState(false)
   const [cloud, setCloud] = useState(readCloud)   // generic | aws | gcp | azure | oci
   const [palQ, setPalQ] = useState('')            // palette search
+  const [reqLog, setReqLog] = useState({})        // checklist index -> what it added
+  // panel geometry: docked width, or floating window position
+  const [panelW, setPanelW] = useState({ left: 168, right: 280 })
+  const [floatPanel, setFloatPanel] = useState({ left: null, right: null }) // {x,y,w,h} when detached
+  const resizeRef = useRef(null)
   const cloudInfo = cloudById(cloud)
 
   useEffect(() => { saveCloud(cloud) }, [cloud])
@@ -51,6 +57,55 @@ export default function App() {
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
   const cost = useMemo(() => costReport(nodes, sim, cloudInfo.mult), [nodes, sim, cloudInfo])
+
+  // ---- panel resize / detach ----
+  const startResize = (side, e) => {
+    e.preventDefault()
+    resizeRef.current = { side, startX: e.clientX, startW: panelW[side] }
+    const move = ev => {
+      const r = resizeRef.current
+      if (!r) return
+      const delta = r.side === 'left' ? ev.clientX - r.startX : r.startX - ev.clientX
+      setPanelW(w => ({ ...w, [r.side]: Math.max(120, Math.min(640, r.startW + delta)) }))
+    }
+    const up = () => { resizeRef.current = null; window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+  const detach = side => setFloatPanel(f => ({
+    ...f,
+    [side]: f[side] ? null : { x: side === 'left' ? 90 : window.innerWidth - 420, y: 110, w: panelW[side] + 60, h: 460 },
+  }))
+  const startDragPanel = (side, e) => {
+    if (e.target.closest('input,button,select,label')) return
+    e.preventDefault()
+    const start = { mx: e.clientX, my: e.clientY, ...floatPanel[side] }
+    const move = ev => setFloatPanel(f => ({
+      ...f, [side]: { ...f[side], x: start.x + ev.clientX - start.mx, y: Math.max(0, start.y + ev.clientY - start.my) },
+    }))
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
+  // ---- requirements drive the diagram ----
+  const toggleRequirement = (i, text) => {
+    if (checks[i]) {
+      const undo = undoRequirement(nodes, edges, reqLog[i])
+      if (undo) { setNodes(undo.nodes); setEdges(undo.edges) }
+      setChecks(s => ({ ...s, [i]: false }))
+      setReqLog(l => { const n = { ...l }; delete n[i]; return n })
+      return
+    }
+    const r = applyRequirement(nodes, edges, text)
+    setChecks(s => ({ ...s, [i]: true }))
+    if (r) {
+      setNodes(r.nodes); setEdges(r.edges)
+      setReqLog(l => ({ ...l, [i]: { added: r.added, scaled: r.scaled } }))
+      if (r.focus) { setSel(r.focus); setHover(r.focus) }
+      fitView(r.nodes)
+    }
+  }
 
   const arrange = () => {
     if (!nodes.length) return
@@ -345,9 +400,10 @@ export default function App() {
         <button className={`btn ${steps ? 'active' : ''}`} onClick={() => setSteps(s => !s)}
           title="Number the connections in request order, like a walkthrough diagram">①②③ Steps</button>
         <div className="spacer" />
-        <button className="btn" onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
-          {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+        <button className={`btn ${theme === 'neon' ? 'active' : ''}`}
+          onClick={() => setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length])}
+          title="Cycle dark → light → neon">
+          {THEME_LABEL[theme]}
         </button>
         <button className={`timer ${timer !== null && timer < 300 ? 'hot' : ''}`} onClick={() => setTimer(t => t === null ? 35 * 60 : null)} title="35-min interview timer">
           ⏱ {timer === null ? '35:00' : `${String(Math.floor(timer / 60)).padStart(2, '0')}:${String(timer % 60).padStart(2, '0')}`}
@@ -361,7 +417,16 @@ export default function App() {
       </div>
 
       <div className="body">
-        <div className="palette">
+        <div className={`palette ${floatPanel.left ? 'floating' : ''}`}
+          style={floatPanel.left
+            ? { left: floatPanel.left.x, top: floatPanel.left.y, width: floatPanel.left.w, height: floatPanel.left.h }
+            : { width: panelW.left }}>
+          <div className="panel-bar" onMouseDown={e => floatPanel.left && startDragPanel('left', e)}>
+            <span>⠿ Components</span>
+            <button onClick={() => detach('left')} title={floatPanel.left ? 'Dock panel' : 'Detach into a floating window'}>
+              {floatPanel.left ? '⇤ Dock' : '⧉ Float'}
+            </button>
+          </div>
           <input className="pal-search" value={palQ} onChange={e => setPalQ(e.target.value)}
             placeholder={`Search ${Object.keys(CATALOG).length} components…`} />
           {PALETTE_GROUPS.map(g => {
@@ -383,7 +448,7 @@ export default function App() {
                     <div key={t} className="pal-item" draggable
                       onDragStart={e => e.dataTransfer.setData('type', t)}
                       title={svc ? `${c.desc}\n\n${cloudInfo.name}: ${svc}` : c.desc}>
-                      <div className="pal-glyph" style={{ background: c.color + '33', border: `1px solid ${c.color}` }}>{c.glyph}</div>
+                      <div className="pal-glyph" style={{ background: themeColor(c.color, theme) + '33', border: `1px solid ${themeColor(c.color, theme)}` }}>{c.glyph}</div>
                       <div className="pal-txt">
                         {c.name}
                         {svc && <span className="pal-svc">{svc}</span>}
@@ -399,6 +464,8 @@ export default function App() {
             return `${c.name} ${c.desc} ${svc}`.toLowerCase().includes(palQ.trim().toLowerCase())
           })) && <div className="empty" style={{ padding: '10px 6px' }}>No component matches “{palQ}”.</div>}
         </div>
+
+        {!floatPanel.left && <div className="splitter" onMouseDown={e => startResize('left', e)} title="Drag to resize" />}
 
         <div className="canvas-wrap" onDrop={onDrop} onDragOver={e => e.preventDefault()}>
           <svg ref={svgRef} onMouseDown={onCanvasDown} onMouseMove={onMove} onMouseUp={onUp} onWheel={onWheel}>
@@ -455,7 +522,18 @@ export default function App() {
           {nodes.length > 0 && <div className="hint">Drag ● port to connect · click a connection to label it · scroll to zoom · drag canvas to pan · Del removes selection</div>}
         </div>
 
-        <div className={`side ${tab === 'learn' ? 'wide' : ''}`}>
+        {!floatPanel.right && <div className="splitter" onMouseDown={e => startResize('right', e)} title="Drag to resize" />}
+
+        <div className={`side ${floatPanel.right ? 'floating' : ''}`}
+          style={floatPanel.right
+            ? { left: floatPanel.right.x, top: floatPanel.right.y, width: floatPanel.right.w, height: floatPanel.right.h }
+            : { width: tab === 'learn' ? Math.max(panelW.right, 430) : panelW.right }}>
+          <div className="panel-bar" onMouseDown={e => floatPanel.right && startDragPanel('right', e)}>
+            <span>⠿ Analysis</span>
+            <button onClick={() => detach('right')} title={floatPanel.right ? 'Dock panel' : 'Detach into a floating window'}>
+              {floatPanel.right ? '⇥ Dock' : '⧉ Float'}
+            </button>
+          </div>
           <div className="tabs">
             <button className={tab === 'capacity' ? 'on' : ''} onClick={() => setTab('capacity')}>Capacity</button>
             <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
@@ -507,13 +585,22 @@ export default function App() {
           {template && (
             <section>
               <h3>{template.name} — requirements</h3>
-              <div className="muted" style={{ marginBottom: 6 }}>{template.tagline}</div>
-              {template.checklist.map((c, i) => (
-                <label key={i} className="check">
-                  <input type="checkbox" checked={!!checks[i]} onChange={() => setChecks(s => ({ ...s, [i]: !s[i] }))} />
-                  <span>{c}</span>
-                </label>
-              ))}
+              <div className="muted" style={{ marginBottom: 6 }}>
+                {template.tagline} — ticking a requirement adds the component it implies and wires it in.
+              </div>
+              {template.checklist.map((c, i) => {
+                const eff = checks[i] ? null : requirementEffect(c, nodes)
+                return (
+                  <label key={i} className="check">
+                    <input type="checkbox" checked={!!checks[i]} onChange={() => toggleRequirement(i, c)} />
+                    <span>
+                      {c}
+                      {eff && <em className="req-eff">{eff.hint || eff.label}</em>}
+                      {checks[i] && reqLog[i] && <em className="req-eff done">✓ applied</em>}
+                    </span>
+                  </label>
+                )
+              })}
             </section>
           )}
         </div>
@@ -528,6 +615,7 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
   const isDown = s?.down
   const util = s?.util || 0
   const svc = serviceName(n.type, cloud)
+  const color = t.neon ? themeColor(spec.color, 'neon') : spec.color
   return (
     <g className={`node ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`} transform={`translate(${n.x},${n.y})`}
       onMouseDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
@@ -535,7 +623,7 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
       {hovered && <rect x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke={t.glow} strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
       <rect className="body" width={NODE_W} height={NODE_H} rx="10"
         fill={isDown ? t.downFill : hovered ? t.nodeFillHover : t.nodeFill}
-        stroke={isDown ? t.downStroke : hovered ? t.nodeStrokeHover : spec.color}
+        stroke={isDown ? t.downStroke : hovered ? t.nodeStrokeHover : color}
         strokeWidth={hovered ? 2 : 1.5} opacity={isDown ? 0.9 : 1} />
       <text x="10" y="20" fontSize="13">{spec.glyph}</text>
       <text x="30" y="19" fontSize="10.5" fill={t.nodeText} fontWeight="600">{trunc(n.label, 15)}</text>
@@ -550,7 +638,7 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
           <rect x="8" y={NODE_H - 7} width={(NODE_W - 16) * Math.min(1, util)} height="4" rx="2" fill={utilColor(util)} />
         </>
       )}
-      {(n.replicas || 1) > 1 && <circle cx={NODE_W - 12} cy="12" r="8" fill={spec.color} opacity="0.9" />}
+      {(n.replicas || 1) > 1 && <circle cx={NODE_W - 12} cy="12" r="8" fill={color} opacity="0.9" />}
       {(n.replicas || 1) > 1 && <text x={NODE_W - 12} y="15" fontSize="9" textAnchor="middle" fill={t.badgeText} fontWeight="700">{n.replicas}</text>}
       <circle cx={NODE_W} cy={NODE_H / 2} r="6" fill={t.wire} stroke={t.nodeFill} strokeWidth="2"
         style={{ cursor: 'crosshair' }} onMouseDown={e => onPortDown(e, n)} />

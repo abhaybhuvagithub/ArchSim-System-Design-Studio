@@ -617,6 +617,34 @@ export function review(nodes, edges, rps) {
   return out.sort((a, b) => RANK[a.severity] - RANK[b.severity] || a.title.localeCompare(b.title))
 }
 
+// Drop a component in and wire it the way the advisor would — used by the
+// requirements checklist so ticking a requirement edits the architecture.
+export function addComponent(nodes, edges, type, label) {
+  if (!CATALOG[type]) return null
+  const right = nodes.length ? Math.max(...nodes.map(n => n.x)) + NODE_W + 60 : 200
+  const bottom = nodes.length ? Math.max(...nodes.map(n => n.y)) + NODE_H + 40 : 200
+  const seed = attach(nodes, edges, { type, label, x: right, y: bottom })
+  if (!seed) return null
+  const wired = runPlan(seed.nodes, seed.edges, seed.focus, 'both')
+  let g = wired || seed
+  // never leave it stranded: fall back to the busiest non-source component
+  if (!g.edges.some(e => e.from === seed.focus || e.to === seed.focus)) {
+    const host = g.nodes.find(n => n.id !== seed.focus && COMPUTE.includes(n.type))
+      || g.nodes.find(n => n.id !== seed.focus && !CATALOG[n.type]?.source)
+    if (host) g = { ...g, edges: connect(g.nodes, g.edges, host.id, seed.focus) }
+  }
+  // park it near whatever it ended up connected to
+  const peer = g.edges.find(e => e.to === seed.focus) || g.edges.find(e => e.from === seed.focus)
+  if (peer) {
+    const other = g.nodes.find(n => n.id === (peer.to === seed.focus ? peer.from : peer.to))
+    if (other) {
+      const pos = freeSpot(g.nodes.filter(n => n.id !== seed.focus), other.x + NODE_W + 60, other.y + 90)
+      g.nodes = g.nodes.map(n => (n.id === seed.focus ? { ...n, ...pos } : n))
+    }
+  }
+  return { ...g, focus: seed.focus, added: g.nodes.filter(n => !nodes.some(o => o.id === n.id)).map(n => n.id) }
+}
+
 // Fold every applicable suggestion into one graph
 export function applyAll(suggestions, nodes, edges) {
   let g = { nodes, edges, focus: null }
