@@ -1,7 +1,8 @@
 // Pre-wired classic system designs. Node: [id, type, label, x, y, replicas, weight]
 // weight = share of total traffic for source (client) nodes.
-const T = (name, tagline, rps, nodes, edges, checklist) => ({
-  name, tagline, rps,
+// group drives the optgroup in the template picker.
+const T = (name, tagline, rps, nodes, edges, checklist, group = 'Product designs') => ({
+  name, tagline, rps, group,
   nodes: nodes.map(([id, type, label, x, y, replicas = 1, weight]) => ({ id, type, label, x, y, replicas, ...(weight !== undefined ? { weight } : {}) })),
   edges: edges.map(([from, to, label = '']) => ({ id: `${from}->${to}`, from, to, label })),
   checklist,
@@ -214,7 +215,7 @@ export const TEMPLATES = [
     'Orchestration (central saga) vs choreography (services react to events)',
     'Outbox pattern so DB commit and event publish cannot diverge',
     'Idempotent handlers — every event may be delivered twice',
-  ]),
+  ], 'Microservice patterns'),
   T('µsvc: CQRS + Event Sourcing', 'Split write model from read models', 9000, [
     ['c', 'client', 'Clients', 40, 250], ['gw', 'gateway', 'API Gateway', 175, 250, 2],
     ['cmd', 'micro', 'Command Side', 320, 150, 3], ['es', 'kafka', 'Event Store (log)', 480, 150],
@@ -229,7 +230,7 @@ export const TEMPLATES = [
     'Eventual consistency window between write and read side: how do you hide it?',
     'Snapshots to bound replay time for long-lived aggregates',
     'Event versioning / schema evolution (upcasting)',
-  ]),
+  ], 'Microservice patterns'),
   T('µsvc: BFF + Mesh Platform', 'Per-client edge, sidecar-managed east-west', 14000, [
     ['web', 'client', 'Web', 40, 130], ['mob', 'client', 'Mobile', 40, 300],
     ['bffw', 'bff', 'Web BFF', 200, 130, 3], ['bffm', 'bff', 'Mobile BFF', 200, 300, 3],
@@ -245,7 +246,7 @@ export const TEMPLATES = [
     'Fan-out per request: N downstream calls means N× tail-latency risk',
     'Timeout budget must shrink at every hop, never grow',
     'Discovery + centralised config so services stay stateless',
-  ]),
+  ], 'Microservice patterns'),
   T('µsvc: Event-Driven Orders', 'Choreography, no central coordinator', 8000, [
     ['c', 'client', 'Clients', 40, 250], ['gw', 'gateway', 'API Gateway', 175, 250, 2],
     ['ord', 'micro', 'Order Svc', 320, 250, 5], ['bus', 'kafka', 'Kafka Topics', 470, 250],
@@ -261,7 +262,7 @@ export const TEMPLATES = [
     'Dead-letter queue with retry/backoff for poison messages',
     'Exactly-once is really at-least-once + idempotent consumers',
     'Trade-off: loose coupling, but the end-to-end flow is hard to see',
-  ]),
+  ], 'Microservice patterns'),
   T('µsvc: Strangler Migration', 'Carving services out of a monolith', 7000, [
     ['c', 'client', 'Clients', 40, 250], ['lb', 'lb', 'Router / LB', 180, 250],
     ['gw', 'gateway', 'Strangler Facade', 320, 250, 3],
@@ -276,7 +277,7 @@ export const TEMPLATES = [
     'Migrate by bounded context, never by database table',
     'Every extraction needs a rollback path (route back to monolith)',
     'Retire monolith code only once traffic is 0% for a full cycle',
-  ]),
+  ], 'Microservice patterns'),
 
   // ─────────────── data platform ───────────────
   T('Data Platform (Lakehouse)', 'Ingest → lake → warehouse → BI', 3000, [
@@ -299,5 +300,50 @@ export const TEMPLATES = [
     'Partitioning + file compaction; small-files problem kills lake query performance',
     'Orchestrator owns DAG dependencies, retries, backfills and data-freshness SLAs',
     'Idempotent loads keyed on batch/watermark so replays do not double-count',
-  ]),
+  ], 'Data platform'),
+
+  // ─────────────── AI / ML system design ───────────────
+  T('GenAI: RAG Assistant', 'Retrieval-augmented chat over your own docs', 400, [
+    ['c', 'client', 'Users', 40, 250], ['gw', 'gateway', 'API Gateway', 180, 250, 2],
+    ['rl', 'ratelimiter', 'Token Budget', 180, 400, 2],
+    ['orch', 'app', 'Orchestrator', 330, 250, 4],
+    ['gin', 'guard', 'Input Guardrails', 330, 110, 2],
+    ['qemb', 'embed', 'Query Embedder', 480, 340, 3],
+    ['vec', 'vector', 'Vector DB', 630, 340, 3],
+    ['sem', 'cache', 'Semantic Cache', 480, 180, 2],
+    ['llm', 'llm', 'LLM Inference', 630, 180, 12],
+    ['gout', 'guard', 'Output Guardrails', 790, 180, 2],
+    ['ing', 'worker', 'Doc Ingest', 330, 520, 3], ['blob', 'blob', 'Doc Store', 480, 520],
+    ['iemb', 'embed', 'Index Embedder', 630, 520, 3],
+    ['obs', 'analytics', 'Eval + Traces', 790, 340, 2],
+  ], [['c','gw'],['gw','rl'],['gw','orch'],['orch','gin'],['orch','sem'],['sem','llm'],
+      ['orch','qemb'],['qemb','vec'],['llm','gout'],['ing','blob'],['ing','iemb'],['iemb','vec'],['llm','obs']], [
+    'Retrieval first, generation second — chunking strategy and chunk size drive answer quality',
+    'Semantic cache on embeddings: identical-intent questions skip the LLM entirely (huge cost lever)',
+    'LLM is the bottleneck by orders of magnitude — batch requests, stream tokens, cap max output',
+    'Cost/latency budget per request: embed + ANN search + prompt tokens + generated tokens',
+    'Guardrails on both sides: prompt injection and PII in, hallucination and unsafe content out',
+    'Index pipeline is separate from the serving path; re-embed when the model version changes',
+    'Evaluation is a first-class component — log traces, ground-truth sets, offline scoring',
+  ], 'AI / ML'),
+  T('ML: Recommendation Ranking', 'Candidate generation → ranking → serving', 20000, [
+    ['c', 'client', 'Users', 40, 250], ['cdn', 'cdn', 'CDN', 170, 250],
+    ['gw', 'gateway', 'API Gateway', 300, 250, 3],
+    ['rec', 'micro', 'Recs Service', 440, 250, 6],
+    ['cand', 'cache', 'Candidate Store', 590, 120, 3],
+    ['feat', 'cache', 'Feature Store', 590, 250, 4],
+    ['rank', 'ml', 'Ranker (GBDT/NN)', 740, 250, 20],
+    ['fb', 'kafka', 'Click/Impression Log', 440, 400],
+    ['train', 'worker', 'Training Jobs', 590, 400, 4],
+    ['lake', 'lake', 'Feature Lake', 740, 400, 2],
+    ['ab', 'config', 'A/B + Model Registry', 300, 400, 2],
+  ], [['c','cdn'],['cdn','gw'],['gw','rec'],['rec','cand'],['rec','feat'],['rec','rank'],
+      ['rec','fb'],['fb','train'],['train','lake'],['lake','feat'],['gw','ab']], [
+    'Two stages: cheap candidate generation (thousands) then expensive ranking (hundreds)',
+    'Feature store must serve online reads with the same values training saw — beware skew',
+    'Latency budget ~100ms end to end, so the ranker gets a hard cap on candidates',
+    'Feedback loop: impressions and clicks streamed back, and position bias corrected for',
+    'Model registry + A/B assignment so a bad model is one flag flip away from rollback',
+    'Cold start for new users and new items; fall back to popularity',
+  ], 'AI / ML'),
 ]

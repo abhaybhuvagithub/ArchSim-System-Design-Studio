@@ -3,6 +3,7 @@ import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import { TEMPLATES } from './templates.js'
 import { simulate, capacityReport } from './sim.js'
 import { review, applyAll } from './advisor.js'
+import { THEMES, readTheme, saveTheme } from './theme.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -27,6 +28,11 @@ export default function App() {
   const [timer, setTimer] = useState(null)      // seconds remaining or null
   const [tab, setTab] = useState('capacity')    // side panel: capacity | improve
   const [applied, setApplied] = useState([])    // ids of suggestions already applied
+  const [theme, setTheme] = useState(readTheme) // 'dark' | 'light'
+  const [steps, setSteps] = useState(false)     // numbered request-flow badges
+  const T = THEMES[theme]
+
+  useEffect(() => { document.documentElement.dataset.theme = theme; saveTheme(theme) }, [theme])
   const svgRef = useRef(null)
   const drag = useRef(null)
 
@@ -175,8 +181,42 @@ export default function App() {
   }
 
   // ---- templates ----
+  const STARTER = {
+    name: 'Starter scaffold', tagline: 'Minimal 3-tier skeleton to build on', rps: 5000,
+    nodes: [
+      { id: 's_c', type: 'client', label: 'Users', x: 80, y: 240, replicas: 1 },
+      { id: 's_lb', type: 'lb', label: 'Load Balancer', x: 250, y: 240, replicas: 1 },
+      { id: 's_app', type: 'app', label: 'App Service', x: 420, y: 240, replicas: 3 },
+      { id: 's_db', type: 'sql', label: 'Primary DB', x: 590, y: 240, replicas: 2 },
+    ],
+    edges: [
+      { id: 's_c->s_lb', from: 's_c', to: 's_lb', label: '' },
+      { id: 's_lb->s_app', from: 's_lb', to: 's_app', label: '' },
+      { id: 's_app->s_db', from: 's_app', to: 's_db', label: '' },
+    ],
+    checklist: [
+      'Sketch functional requirements before adding components',
+      'Do the back-of-envelope math: QPS, storage, bandwidth',
+      'Add a cache once you know the read:write ratio',
+      'Then run ▶ Simulate and ✨ Improve to find the gaps',
+    ],
+  }
+
+  const blank = () => {
+    setNodes([]); setEdges([]); setTemplate(null); setSel(null); setSelEdge(null)
+    setDown({}); setApplied([]); setChecks({}); setChaosOn(false)
+    setView({ x: 0, y: 0, k: 1 })
+  }
+
   const loadTemplate = idx => {
     if (idx === '') return
+    if (idx === 'blank') { blank(); return }
+    if (idx === 'starter') {
+      setNodes(STARTER.nodes.map(n => ({ ...n }))); setEdges(STARTER.edges.map(e => ({ ...e })))
+      setTemplate(STARTER); setChecks({}); setSel(null); setDown({}); setApplied([])
+      setRps(STARTER.rps); requestAnimationFrame(() => fitView(STARTER.nodes))
+      return
+    }
     const t = TEMPLATES[+idx]
     setNodes(t.nodes.map(n => ({ ...n })))
     setEdges(t.edges.map(e => ({ ...e })))
@@ -184,7 +224,7 @@ export default function App() {
     setRps(t.rps)
     requestAnimationFrame(() => fitView(t.nodes))
   }
-  const clearAll = () => { setNodes([]); setEdges([]); setTemplate(null); setSel(null); setDown({}) }
+  const clearAll = blank
 
   // ---- export ----
   const exportJSON = () => {
@@ -214,7 +254,7 @@ export default function App() {
       const c = document.createElement('canvas')
       c.width = 1600; c.height = 1000
       const ctx = c.getContext('2d')
-      ctx.fillStyle = '#0b1020'; ctx.fillRect(0, 0, c.width, c.height)
+      ctx.fillStyle = T.canvasBg; ctx.fillRect(0, 0, c.width, c.height)
       ctx.drawImage(img, 0, 0)
       dl(c.toDataURL('image/png'), 'archsim-design.png')
     }
@@ -223,8 +263,10 @@ export default function App() {
   const dl = (href, name) => { const a = document.createElement('a'); a.href = href; a.download = name; a.click() }
 
   const selNode = nodes.find(n => n.id === sel)
+  const selEdgeObj = edges.find(e => e.id === selEdge)
   const hoverNode = nodes.find(n => n.id === hover)
   const dots = simOn ? edgeDots(edges, nodes, sim, tick) : []
+  const stepMap = useMemo(() => (steps ? flowSteps(nodes, edges) : {}), [steps, nodes, edges])
 
   // neighbours of the hovered node — used to dim everything else
   const neighbours = useMemo(() => {
@@ -242,8 +284,16 @@ export default function App() {
       <div className="toolbar">
         <div className="logo">Arch<span>Sim</span></div>
         <select className="btn" value="" onChange={e => loadTemplate(e.target.value)}>
-          <option value="">📚 Load template…</option>
-          {TEMPLATES.map((t, i) => <option key={t.name} value={i}>{t.name}</option>)}
+          <option value="">📚 New / load template…</option>
+          <optgroup label="Start from scratch">
+            <option value="blank">＋ Blank canvas</option>
+            <option value="starter">◻︎ Starter scaffold (client → LB → service → DB)</option>
+          </optgroup>
+          {[...new Set(TEMPLATES.map(t => t.group))].map(g => (
+            <optgroup key={g} label={g}>
+              {TEMPLATES.map((t, i) => t.group === g ? <option key={t.name} value={i}>{t.name}</option> : null)}
+            </optgroup>
+          ))}
         </select>
         <button className={`btn ${simOn ? 'active' : ''}`} onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
         <button className={`btn ${chaosOn ? 'danger' : ''}`} onClick={() => setChaosOn(c => !c)} title="Randomly kills nodes while simulating; they auto-recover in 6s">🐒 Chaos {chaosOn ? 'ON' : 'off'}</button>
@@ -256,7 +306,13 @@ export default function App() {
           <input type="range" min={2} max={6} step={0.05} value={Math.log10(rps)} onChange={e => setRps(Math.round(10 ** +e.target.value))} />
           <b>{fmt(rps)} rps</b>
         </div>
+        <button className={`btn ${steps ? 'active' : ''}`} onClick={() => setSteps(s => !s)}
+          title="Number the connections in request order, like a walkthrough diagram">①②③ Steps</button>
         <div className="spacer" />
+        <button className="btn" onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+          {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+        </button>
         <button className={`timer ${timer !== null && timer < 300 ? 'hot' : ''}`} onClick={() => setTimer(t => t === null ? 35 * 60 : null)} title="35-min interview timer">
           ⏱ {timer === null ? '35:00' : `${String(Math.floor(timer / 60)).padStart(2, '0')}:${String(timer % 60).padStart(2, '0')}`}
         </button>
@@ -290,30 +346,31 @@ export default function App() {
           <svg ref={svgRef} onMouseDown={onCanvasDown} onMouseMove={onMove} onMouseUp={onUp} onWheel={onWheel}>
             <defs>
               <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a5578" />
+                <path d="M 0 0 L 10 5 L 0 10 z" fill={T.arrow} />
               </marker>
               <marker id="arrow-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#a5b4fc" />
+                <path d="M 0 0 L 10 5 L 0 10 z" fill={T.arrowHot} />
               </marker>
               <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-                <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#818cf8" floodOpacity="0.95" />
+                <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor={T.glow} floodOpacity="0.95" />
               </filter>
             </defs>
             <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
               {edges.map(e => (
-                <Edge key={e.id} e={e} nodes={nodes} sim={sim} simOn={simOn}
+                <Edge key={e.id} e={e} nodes={nodes} sim={sim} simOn={simOn} t={T}
                   selected={selEdge === e.id}
+                  step={steps ? stepMap[e.id] : null}
                   hot={hover ? e.from === hover || e.to === hover : false}
                   dimmed={hover ? !(e.from === hover || e.to === hover) : false}
-                  onSelect={() => { setSelEdge(e.id); setSel(null) }} />
+                  onSelect={() => { setSelEdge(e.id); setSel(null); setTab('capacity') }} />
               ))}
               {drag.current?.kind === 'wire' && (() => {
                 const f = nodes.find(n => n.id === drag.current.from)
-                return f && <line x1={f.x + NODE_W} y1={f.y + NODE_H / 2} x2={drag.current.x} y2={drag.current.y} stroke="#6366f1" strokeWidth="2" strokeDasharray="5 4" />
+                return f && <line x1={f.x + NODE_W} y1={f.y + NODE_H / 2} x2={drag.current.x} y2={drag.current.y} stroke={T.wire} strokeWidth="2" strokeDasharray="5 4" />
               })()}
-              {dots.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={d.drop ? 3.5 : 2.5} fill={d.drop ? '#ef4444' : '#818cf8'} opacity="0.9" />)}
+              {dots.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={d.drop ? 3.5 : 2.5} fill={d.drop ? T.dotDrop : T.dot} opacity="0.9" />)}
               {nodes.map(n => (
-                <Node key={n.id} n={n} sim={sim} simOn={simOn}
+                <Node key={n.id} n={n} sim={sim} simOn={simOn} t={T}
                   selected={sel === n.id}
                   hovered={hover === n.id}
                   dimmed={neighbours ? !neighbours.has(n.id) : false}
@@ -335,8 +392,8 @@ export default function App() {
               {Object.keys(down).length > 0 && <div className="chip bad">🐒 down: <b>{Object.keys(down).length}</b></div>}
             </div>
           )}
-          {nodes.length === 0 && <div className="hint">Drag components from the left, wire them by dragging from a node's ● port, or load a template ↑</div>}
-          {nodes.length > 0 && <div className="hint">Drag ● port to connect · scroll to zoom · drag canvas to pan · Del removes selection</div>}
+          {nodes.length === 0 && <div className="hint">Blank canvas — drag components in from the left, wire them from a node's ● port, or pick a template ↑</div>}
+          {nodes.length > 0 && <div className="hint">Drag ● port to connect · click a connection to label it · scroll to zoom · drag canvas to pan · Del removes selection</div>}
         </div>
 
         <div className="side">
@@ -350,7 +407,11 @@ export default function App() {
           {tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
               onHover={setHover} empty={nodes.length === 0} />
-          ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} /> : (
+          ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} />
+            : selEdgeObj ? (
+              <EdgeInspector e={selEdgeObj} nodes={nodes} sim={sim} step={stepMap[selEdgeObj.id]}
+                setEdges={setEdges} onDelete={() => { setEdges(es => es.filter(x => x.id !== selEdgeObj.id)); setSelEdge(null) }} />
+            ) : (
             <section>
               <h3>Capacity report</h3>
               {cap.rows.length === 0 && <div className="empty">Nothing on the canvas yet. Load a template or drag components in, then hit ▶ Simulate.</div>}
@@ -392,7 +453,7 @@ export default function App() {
   )
 }
 
-function Node({ n, sim, simOn, selected, hovered, dimmed, onDown, onPortDown, onEnter, onLeave }) {
+function Node({ n, sim, simOn, t, selected, hovered, dimmed, onDown, onPortDown, onEnter, onLeave }) {
   const spec = CATALOG[n.type]
   const s = sim.stats[n.id]
   const isDown = s?.down
@@ -401,47 +462,83 @@ function Node({ n, sim, simOn, selected, hovered, dimmed, onDown, onPortDown, on
     <g className={`node ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`} transform={`translate(${n.x},${n.y})`}
       onMouseDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
       style={{ cursor: 'move', opacity: dimmed ? 0.32 : 1, transition: 'opacity .12s' }}>
-      {hovered && <rect x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke="#818cf8" strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
+      {hovered && <rect x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke={t.glow} strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
       <rect className="body" width={NODE_W} height={NODE_H} rx="10"
-        fill={isDown ? '#3f1d1d' : hovered ? '#1e2a4d' : '#161f3a'}
-        stroke={isDown ? '#ef4444' : hovered ? '#a5b4fc' : spec.color}
+        fill={isDown ? t.downFill : hovered ? t.nodeFillHover : t.nodeFill}
+        stroke={isDown ? t.downStroke : hovered ? t.nodeStrokeHover : spec.color}
         strokeWidth={hovered ? 2 : 1.5} opacity={isDown ? 0.9 : 1} />
       <text x="10" y="20" fontSize="13">{spec.glyph}</text>
-      <text x="30" y="19" fontSize="10.5" fill="#e2e8f0" fontWeight="600">{trunc(n.label, 15)}</text>
-      <text x="30" y="33" fontSize="9" fill="#8b96b5">
+      <text x="30" y="19" fontSize="10.5" fill={t.nodeText} fontWeight="600">{trunc(n.label, 15)}</text>
+      <text x="30" y="33" fontSize="9" fill={t.nodeSub}>
         {isDown ? 'CHAOS: instance lost' : `${n.replicas}× · ${spec.source ? 'source' : fmt(spec.cap * n.replicas) + ' rps cap'}`}
       </text>
       {simOn && !spec.source && (
         <>
-          <rect x="8" y={NODE_H - 7} width={NODE_W - 16} height="4" rx="2" fill="#0b1020" />
+          <rect x="8" y={NODE_H - 7} width={NODE_W - 16} height="4" rx="2" fill={t.barTrack} />
           <rect x="8" y={NODE_H - 7} width={(NODE_W - 16) * Math.min(1, util)} height="4" rx="2" fill={utilColor(util)} />
         </>
       )}
       {(n.replicas || 1) > 1 && <circle cx={NODE_W - 12} cy="12" r="8" fill={spec.color} opacity="0.9" />}
-      {(n.replicas || 1) > 1 && <text x={NODE_W - 12} y="15" fontSize="9" textAnchor="middle" fill="#fff" fontWeight="700">{n.replicas}</text>}
-      <circle cx={NODE_W} cy={NODE_H / 2} r="6" fill="#6366f1" stroke="#0b1020" strokeWidth="2"
+      {(n.replicas || 1) > 1 && <text x={NODE_W - 12} y="15" fontSize="9" textAnchor="middle" fill={t.badgeText} fontWeight="700">{n.replicas}</text>}
+      <circle cx={NODE_W} cy={NODE_H / 2} r="6" fill={t.wire} stroke={t.nodeFill} strokeWidth="2"
         style={{ cursor: 'crosshair' }} onMouseDown={e => onPortDown(e, n)} />
     </g>
   )
 }
 
-function Edge({ e, nodes, sim, simOn, selected, hot, dimmed, onSelect }) {
-  const f = nodes.find(n => n.id === e.from), t = nodes.find(n => n.id === e.to)
-  if (!f || !t) return null
-  const x1 = f.x + NODE_W, y1 = f.y + NODE_H / 2, x2 = t.x, y2 = t.y + NODE_H / 2
-  const mx = (x1 + x2) / 2
+function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }) {
+  const f = nodes.find(n => n.id === e.from), tgt = nodes.find(n => n.id === e.to)
+  if (!f || !tgt) return null
+  const x1 = f.x + NODE_W, y1 = f.y + NODE_H / 2, x2 = tgt.x, y2 = tgt.y + NODE_H / 2
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2
   const flow = sim.flowOnEdge[e.id] || 0
   const w = simOn ? Math.min(5, 1 + Math.log10(1 + flow) * 0.8) : 1.5
   const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
-  const stroke = selected ? '#fff' : hot ? '#a5b4fc' : simOn && flow > 0 ? '#6366f1' : '#38436b'
+  const stroke = selected ? t.selStroke : hot ? t.edgeHot : simOn && flow > 0 ? t.edgeActive : t.edge
   return (
     <g className="edge" onMouseDown={ev => { ev.stopPropagation(); onSelect() }}
       style={{ cursor: 'pointer', opacity: dimmed ? 0.18 : 1, transition: 'opacity .12s' }}>
       <path d={d} stroke={stroke} strokeWidth={selected ? 3 : hot ? Math.max(2.5, w) : w}
         markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'} opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85} />
       <path d={d} stroke="transparent" strokeWidth="12" />
-      {simOn && flow > 0 && <text x={mx} y={(y1 + y2) / 2 - 6} fontSize="9" fill={hot ? '#c7d2fe' : '#8b96b5'} textAnchor="middle">{fmt(flow)}/s</text>}
+      {e.label && <text x={mx} y={my + (simOn && flow > 0 ? 14 : 4)} fontSize="9.5" fill={t.nodeText} textAnchor="middle" fontWeight="600">{e.label}</text>}
+      {simOn && flow > 0 && <text x={mx} y={my - 6} fontSize="9" fill={hot ? t.hotText : t.nodeSub} textAnchor="middle">{fmt(flow)}/s</text>}
+      {step != null && (
+        <>
+          <circle cx={mx} cy={my - (simOn && flow > 0 ? 20 : 12)} r="8.5" fill={t.stepFill} stroke={t.stepStroke} strokeWidth="1.2" />
+          <text x={mx} y={my - (simOn && flow > 0 ? 17 : 9)} fontSize="9" fontWeight="700" fill={t.stepText} textAnchor="middle">{step}</text>
+        </>
+      )}
     </g>
+  )
+}
+
+function EdgeInspector({ e, nodes, sim, step, setEdges, onDelete }) {
+  const from = nodes.find(n => n.id === e.from), to = nodes.find(n => n.id === e.to)
+  const flow = sim.flowOnEdge[e.id] || 0
+  const reverse = () => setEdges(es => es.map(x => x.id === e.id
+    ? { ...x, id: `${x.to}->${x.from}`, from: x.to, to: x.from } : x))
+  return (
+    <section>
+      <h3>🔗 Connection</h3>
+      <div className="muted" style={{ marginBottom: 10 }}>
+        {from?.label} → {to?.label}
+      </div>
+      <div className="field">
+        <label>Label</label>
+        <input value={e.label || ''} placeholder="e.g. cache miss, write"
+          onChange={ev => setEdges(es => es.map(x => x.id === e.id ? { ...x, label: ev.target.value } : x))} />
+      </div>
+      <div className="row"><span>Flow</span><span className="v">{fmt(flow)}/s</span></div>
+      {step != null && <div className="row"><span>Step</span><span className="v">#{step}</span></div>}
+      <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+        <button className="btn" style={{ flex: 1 }} onClick={reverse}>⇄ Reverse</button>
+        <button className="btn danger" style={{ flex: 1 }} onClick={onDelete}>Delete</button>
+      </div>
+      <div className="muted" style={{ marginTop: 10, fontSize: 11 }}>
+        Labels render on the diagram and survive PNG/JSON export — useful for annotating a walkthrough.
+      </div>
+    </section>
   )
 }
 
@@ -565,3 +662,29 @@ function bezier(t, x1, y1, mx, x2, y2) {
   return { x, y }
 }
 const trunc = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
+
+// Number the connections in request order (BFS from traffic sources) — the
+// numbered-walkthrough style used in system design write-ups.
+function flowSteps(nodes, edges) {
+  const map = {}
+  const outAdj = {}
+  for (const e of edges) (outAdj[e.from] ||= []).push(e)
+  const seen = new Set()
+  let queue = nodes.filter(n => CATALOG[n.type]?.source).map(n => n.id)
+  if (!queue.length && nodes.length) queue = [nodes[0].id]
+  let step = 1
+  while (queue.length) {
+    const next = []
+    for (const id of queue) {
+      for (const e of (outAdj[id] || [])) {
+        if (seen.has(e.id)) continue
+        seen.add(e.id)
+        map[e.id] = step++
+        next.push(e.to)
+      }
+    }
+    queue = [...new Set(next)]
+  }
+  for (const e of edges) if (!(e.id in map)) map[e.id] = step++
+  return map
+}
