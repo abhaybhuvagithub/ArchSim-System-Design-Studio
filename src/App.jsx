@@ -46,11 +46,21 @@ export default function App() {
   const [floatPanel, setFloatPanel] = useState({ left: null, right: null }) // {x,y,w,h} when detached
   const [faults, setFaults] = useState([])       // [{key, faultId, targetId, until}]
   const [visitors, setVisitors] = useState(null)
+  const [vw, setVw] = useState(() => (typeof window === 'undefined' ? 1400 : window.innerWidth))
+  const [drawer, setDrawer] = useState(null)     // 'left' | 'right' | null on small screens
+  const compact = vw < 1100        // tablet and below: panels become drawers
+  const mobile = vw < 700
   const resizeRef = useRef(null)
   const cloudInfo = cloudById(cloud)
 
   useEffect(() => { saveCloud(cloud) }, [cloud])
   useEffect(() => { countVisit().then(v => { if (v != null) setVisitors(v) }) }, [])
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    window.addEventListener('orientationchange', onResize)
+    return () => { window.removeEventListener('resize', onResize); window.removeEventListener('orientationchange', onResize) }
+  }, [])
   const T = THEMES[theme]
 
   useEffect(() => { document.documentElement.dataset.theme = theme; saveTheme(theme) }, [theme])
@@ -78,9 +88,9 @@ export default function App() {
       const delta = r.side === 'left' ? ev.clientX - r.startX : r.startX - ev.clientX
       setPanelW(w => ({ ...w, [r.side]: Math.max(120, Math.min(640, r.startW + delta)) }))
     }
-    const up = () => { resizeRef.current = null; window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
-    window.addEventListener('mousemove', move)
-    window.addEventListener('mouseup', up)
+    const up = () => { resizeRef.current = null; window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
   }
   const detach = side => setFloatPanel(f => ({
     ...f,
@@ -93,9 +103,9 @@ export default function App() {
     const move = ev => setFloatPanel(f => ({
       ...f, [side]: { ...f[side], x: start.x + ev.clientX - start.mx, y: Math.max(0, start.y + ev.clientY - start.my) },
     }))
-    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
-    window.addEventListener('mousemove', move)
-    window.addEventListener('mouseup', up)
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
   }
 
   // ---- requirements drive the diagram ----
@@ -244,6 +254,17 @@ export default function App() {
     return { x: (cx - r.left - view.x) / view.k, y: (cy - r.top - view.y) / view.k }
   }, [view])
 
+  // Touch devices can't use HTML5 drag — tapping a component drops it in the middle.
+  const addAtCentre = type => {
+    if (!CATALOG[type] || !svgRef.current) return
+    const r = svgRef.current.getBoundingClientRect()
+    const p = toWorld(r.left + r.width / 2, r.top + r.height / 2)
+    const id = nid(type)
+    setNodes(ns => [...ns, { id, type, label: CATALOG[type].name, x: p.x - NODE_W / 2, y: p.y - NODE_H / 2, replicas: 1 }])
+    setSel(id)
+    if (compact) setDrawer(null)
+  }
+
   // ---- palette drop ----
   const onDrop = e => {
     e.preventDefault()
@@ -268,11 +289,31 @@ export default function App() {
     drag.current = { kind: 'wire', from: n.id, x: p.x, y: p.y }
     setTick(t => t + 1)
   }
+  const pinch = useRef(null)
+  const pointers = useRef(new Map())
+
   const onCanvasDown = e => {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointers.current.size === 2) {
+      const [p1, p2] = [...pointers.current.values()]
+      pinch.current = { d: Math.hypot(p2.x - p1.x, p2.y - p1.y), k: view.k }
+      drag.current = null
+      return
+    }
     setSel(null); setSelEdge(null)
     drag.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y }
   }
   const onMove = e => {
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pinch.current && pointers.current.size >= 2) {
+      const [p1, p2] = [...pointers.current.values()]
+      const d2 = Math.hypot(p2.x - p1.x, p2.y - p1.y)
+      const k = Math.min(2.5, Math.max(0.3, pinch.current.k * (d2 / (pinch.current.d || 1))))
+      const r = svgRef.current.getBoundingClientRect()
+      const mx = (p1.x + p2.x) / 2 - r.left, my = (p1.y + p2.y) / 2 - r.top
+      setView(v => ({ k, x: mx - (mx - v.x) * (k / v.k), y: my - (my - v.y) * (k / v.k) }))
+      return
+    }
     const d = drag.current
     if (!d) return
     if (d.kind === 'node') {
@@ -287,6 +328,8 @@ export default function App() {
     }
   }
   const onUp = e => {
+    pointers.current.delete(e.pointerId)
+    if (pointers.current.size < 2) pinch.current = null
     const d = drag.current
     if (d?.kind === 'wire') {
       const p = toWorld(e.clientX, e.clientY)
@@ -405,9 +448,15 @@ export default function App() {
   }, [hover, edges])
 
   return (
-    <div className="app">
+    <div className={`app ${compact ? 'compact' : ''} ${mobile ? 'mobile' : ''}`}>
       <div className="toolbar">
         <div className="logo">Arch<span>Sim</span></div>
+        {compact && (
+          <>
+            <button className={`btn ${drawer === 'left' ? 'active' : ''}`} onClick={() => setDrawer(d => d === 'left' ? null : 'left')}>☰</button>
+            <button className={`btn ${drawer === 'right' ? 'active' : ''}`} onClick={() => setDrawer(d => d === 'right' ? null : 'right')}>▤</button>
+          </>
+        )}
         <select className="btn" value="" onChange={e => loadTemplate(e.target.value)}>
           <option value="">📚 New / load template…</option>
           <optgroup label="Start from scratch">
@@ -457,14 +506,15 @@ export default function App() {
       </div>
 
       <div className="body">
-        <div className={`palette ${floatPanel.left ? 'floating' : ''}`}
-          style={floatPanel.left
+        <div className={`palette ${floatPanel.left ? 'floating' : ''} ${compact ? 'drawer left' : ''} ${compact && drawer === 'left' ? 'open' : ''}`}
+          style={compact ? undefined : floatPanel.left
             ? { left: floatPanel.left.x, top: floatPanel.left.y, width: floatPanel.left.w, height: floatPanel.left.h }
             : { width: panelW.left }}>
-          <div className="panel-bar" onMouseDown={e => floatPanel.left && startDragPanel('left', e)}>
+          <div className="panel-bar" onPointerDown={e => floatPanel.left && startDragPanel('left', e)}>
             <span>⠿ Components</span>
-            <button onClick={() => detach('left')} title={floatPanel.left ? 'Dock panel' : 'Detach into a floating window'}>
-              {floatPanel.left ? '⇤ Dock' : '⧉ Float'}
+            <button onClick={() => (compact ? setDrawer(null) : detach('left'))}
+              title={compact ? 'Close' : floatPanel.left ? 'Dock panel' : 'Detach into a floating window'}>
+              {compact ? '✕ Close' : floatPanel.left ? '⇤ Dock' : '⧉ Float'}
             </button>
           </div>
           <input className="pal-search" value={palQ} onChange={e => setPalQ(e.target.value)}
@@ -487,6 +537,7 @@ export default function App() {
                   return (
                     <div key={t} className="pal-item" draggable
                       onDragStart={e => e.dataTransfer.setData('type', t)}
+                      onClick={() => addAtCentre(t)}
                       title={svc ? `${c.desc}\n\n${cloudInfo.name}: ${svc}` : c.desc}>
                       <div className="pal-glyph" style={{ background: c.color + '33', border: `1px solid ${c.color}` }}>{c.glyph}</div>
                       <div className="pal-txt">
@@ -505,10 +556,10 @@ export default function App() {
           })) && <div className="empty" style={{ padding: '10px 6px' }}>No component matches “{palQ}”.</div>}
         </div>
 
-        {!floatPanel.left && <div className="splitter" onMouseDown={e => startResize('left', e)} title="Drag to resize" />}
+        {!compact && !floatPanel.left && <div className="splitter" onPointerDown={e => startResize('left', e)} title="Drag to resize" />}
 
         <div className="canvas-wrap" onDrop={onDrop} onDragOver={e => e.preventDefault()}>
-          <svg ref={svgRef} onMouseDown={onCanvasDown} onMouseMove={onMove} onMouseUp={onUp} onWheel={onWheel}>
+          <svg ref={svgRef} onPointerDown={onCanvasDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onWheel={onWheel} style={{ touchAction: 'none' }}>
             <defs>
               <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill={T.arrow} />
@@ -563,16 +614,17 @@ export default function App() {
           {nodes.length > 0 && <div className="hint">Drag ● port to connect · click a connection to label it · scroll to zoom · drag canvas to pan · Del removes selection</div>}
         </div>
 
-        {!floatPanel.right && <div className="splitter" onMouseDown={e => startResize('right', e)} title="Drag to resize" />}
+        {!compact && !floatPanel.right && <div className="splitter" onPointerDown={e => startResize('right', e)} title="Drag to resize" />}
 
-        <div className={`side ${floatPanel.right ? 'floating' : ''}`}
-          style={floatPanel.right
+        <div className={`side ${floatPanel.right ? 'floating' : ''} ${compact ? 'drawer right' : ''} ${compact && drawer === 'right' ? 'open' : ''}`}
+          style={compact ? undefined : floatPanel.right
             ? { left: floatPanel.right.x, top: floatPanel.right.y, width: floatPanel.right.w, height: floatPanel.right.h }
             : { width: tab === 'learn' ? Math.max(panelW.right, 430) : panelW.right }}>
-          <div className="panel-bar" onMouseDown={e => floatPanel.right && startDragPanel('right', e)}>
+          <div className="panel-bar" onPointerDown={e => floatPanel.right && startDragPanel('right', e)}>
             <span>⠿ Analysis</span>
-            <button onClick={() => detach('right')} title={floatPanel.right ? 'Dock panel' : 'Detach into a floating window'}>
-              {floatPanel.right ? '⇥ Dock' : '⧉ Float'}
+            <button onClick={() => (compact ? setDrawer(null) : detach('right'))}
+              title={compact ? 'Close' : floatPanel.right ? 'Dock panel' : 'Detach into a floating window'}>
+              {compact ? '✕ Close' : floatPanel.right ? '⇥ Dock' : '⧉ Float'}
             </button>
           </div>
           <div className="tabs">
@@ -657,7 +709,14 @@ export default function App() {
             </section>
           )}
         </div>
+        {compact && drawer && <div className="scrim" onClick={() => setDrawer(null)} />}
       </div>
+
+      <footer className="foot">
+        <span>Curated &amp; built by <a href="https://www.linkedin.com/in/abhaybhuva/" target="_blank" rel="noopener noreferrer">Abhaykumar Bhuva ↗</a></span>
+        <span className="foot-sep">·</span>
+        <span>Built with <a href="https://www.anthropic.com/claude" target="_blank" rel="noopener noreferrer">Anthropic Claude ↗</a></span>
+      </footer>
     </div>
   )
 }
@@ -671,7 +730,7 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
   const color = spec.color
   return (
     <g className={`node ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`} transform={`translate(${n.x},${n.y})`}
-      onMouseDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
+      onPointerDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
       style={{ cursor: 'move', opacity: dimmed ? 0.32 : 1, transition: 'opacity .12s' }}>
       {hovered && <rect x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke={t.glow} strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
       <rect className="body" width={NODE_W} height={NODE_H} rx="10"
@@ -694,7 +753,7 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
       {(n.replicas || 1) > 1 && <circle cx={NODE_W - 12} cy="12" r="8" fill={color} opacity="0.9" />}
       {(n.replicas || 1) > 1 && <text x={NODE_W - 12} y="15" fontSize="9" textAnchor="middle" fill={t.badgeText} fontWeight="700">{n.replicas}</text>}
       <circle cx={NODE_W} cy={NODE_H / 2} r="6" fill={t.wire} stroke={t.nodeFill} strokeWidth="2"
-        style={{ cursor: 'crosshair' }} onMouseDown={e => onPortDown(e, n)} />
+        style={{ cursor: 'crosshair' }} onPointerDown={e => onPortDown(e, n)} />
     </g>
   )
 }
@@ -709,7 +768,7 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
   const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
   const stroke = selected ? t.selStroke : hot ? t.edgeHot : simOn && flow > 0 ? t.edgeActive : t.edge
   return (
-    <g className="edge" onMouseDown={ev => { ev.stopPropagation(); onSelect() }}
+    <g className="edge" onPointerDown={ev => { ev.stopPropagation(); onSelect() }}
       style={{ cursor: 'pointer', opacity: dimmed ? 0.18 : 1, transition: 'opacity .12s' }}>
       <path d={d} stroke={stroke} strokeWidth={selected ? 3 : hot ? Math.max(2.5, w) : w}
         markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'} opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85} />
