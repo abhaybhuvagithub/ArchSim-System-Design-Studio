@@ -23,7 +23,7 @@ export const CATALOG = {
   zk:          { name: 'Coordination',   glyph: '🐘', color: '#a855f7', cap: 10000,   lat: 2,   avail: 0.9999, desc: 'ZooKeeper/etcd — leader election, config, locks.' },
   analytics:   { name: 'Analytics/OLAP', glyph: '📊', color: '#f97316', cap: 2000,    lat: 100, avail: 0.999,  desc: 'Warehouse / stream analytics (Flink, BigQuery).' },
   ml:          { name: 'ML Service',     glyph: '🤖', color: '#ec4899', cap: 500,     lat: 80,  avail: 0.999,  desc: 'Ranking / recommendation / embedding inference.' },
-  monitor:     { name: 'Monitoring',     glyph: '🩺', color: '#64748b', cap: 100000,  lat: 1,   avail: 0.999,  desc: 'Metrics, logs, traces, alerting.' },
+  monitor:     { name: 'Metrics & Alerts',glyph: '🩺', color: '#64748b', cap: 100000, lat: 1,   avail: 0.999,  desc: 'Prometheus/Datadog — RED & USE metrics, dashboards, alert rules.' },
   // --- microservice platform primitives ---
   bff:         { name: 'BFF',            glyph: '🎭', color: '#8b5cf6', cap: 8000,    lat: 8,   avail: 0.999,  desc: 'Backend-for-frontend: per-client aggregation layer.' },
   registry:    { name: 'Service Registry', glyph: '📖', color: '#a855f7', cap: 40000, lat: 2,   avail: 0.9999, desc: 'Consul/Eureka — service discovery and health checks.' },
@@ -42,14 +42,49 @@ export const CATALOG = {
   embed:       { name: 'Embedding Svc',  glyph: '🔢', color: '#ec4899', cap: 800,     lat: 40,  avail: 0.999,  desc: 'Turns text/images into vectors; used at index time and query time.' },
   llm:         { name: 'LLM Inference',  glyph: '🧠', color: '#ec4899', cap: 60,      lat: 900, avail: 0.999,  desc: 'GPU-served generation. Expensive, slow, and the usual bottleneck — batch and stream.' },
   guard:       { name: 'Guardrails',     glyph: '🛟', color: '#ef4444', cap: 5000,    lat: 20,  avail: 0.999,  desc: 'Prompt-injection, PII and safety filtering on input and output.' },
+
+  // ─── observability ───
+  otel:        { name: 'OTel Collector', glyph: '📥', color: '#64748b', cap: 120000,  lat: 1,   avail: 0.9995, desc: 'OpenTelemetry collector — one pipeline for metrics, logs and traces; batching, sampling, redaction.' },
+  logs:        { name: 'Log Pipeline',   glyph: '🧾', color: '#64748b', cap: 60000,   lat: 2,   avail: 0.999,  desc: 'ELK/Loki/Splunk — structured logs, retention tiers, correlation by trace id.' },
+  slo:         { name: 'SLO / Error Budget', glyph: '🎯', color: '#64748b', cap: 20000, lat: 5,  avail: 0.999,  desc: 'Service level objectives, burn-rate alerts, error budget policy.' },
+  alert:       { name: 'On-call / Paging', glyph: '📟', color: '#f59e0b', cap: 5000,   lat: 2,   avail: 0.9999, desc: 'PagerDuty/Opsgenie — routing, escalation, runbooks, incident timeline.' },
+  synthetic:   { name: 'Synthetic Probes', glyph: '📡', color: '#64748b', cap: 20000,  lat: 5,   avail: 0.9999, desc: 'Black-box checks from outside your network — catches what internal metrics miss.' },
+  apm:         { name: 'RUM / Client APM', glyph: '🖱️', color: '#64748b', cap: 80000,  lat: 2,   avail: 0.999,  desc: 'Real user monitoring — actual client latency, errors and web vitals.' },
+
+  // ─── security & governance ───
+  waf:         { name: 'WAF / DDoS',     glyph: '🛡️', color: '#ef4444', cap: 200000,  lat: 3,   avail: 0.9999, desc: 'Edge filtering: OWASP rules, bot and volumetric attack mitigation.' },
+  iam:         { name: 'Identity (SSO)', glyph: '🔑', color: '#ef4444', cap: 25000,   lat: 15,  avail: 0.9999, desc: 'OIDC/SAML provider — SSO, MFA, token issuance, RBAC claims.' },
+  secrets:     { name: 'Secrets / KMS',  glyph: '🔐', color: '#ef4444', cap: 30000,   lat: 5,   avail: 0.9999, desc: 'Vault/KMS — dynamic credentials, rotation, envelope encryption.' },
+  pii:         { name: 'Tokenization Vault', glyph: '🎫', color: '#ef4444', cap: 15000, lat: 12, avail: 0.9995, desc: 'Swaps PII/PAN for tokens so downstream systems stay out of scope (PCI/GDPR).' },
+  audit:       { name: 'Audit Log',      glyph: '📜', color: '#ef4444', cap: 40000,   lat: 5,   avail: 0.9999, desc: 'Append-only, tamper-evident record of who did what — retained for compliance.' },
+  siem:        { name: 'SIEM',           glyph: '🕵️', color: '#ef4444', cap: 60000,   lat: 10,  avail: 0.999,  desc: 'Security analytics over logs and audit trails; detections and threat hunting.' },
+
+  // ─── enterprise platform & integration ───
+  gslb:        { name: 'Global Traffic Mgr', glyph: '🌍', color: '#0ea5e9', cap: 500000, lat: 2, avail: 0.99999, desc: 'Anycast/GSLB — geo routing, health-based failover between regions.' },
+  edge:        { name: 'Edge Functions', glyph: '🛰️', color: '#f59e0b', cap: 50000,   lat: 4,   avail: 0.9999, desc: 'Compute at the PoP — auth checks, A/B, personalisation without an origin hop.' },
+  graphql:     { name: 'GraphQL Federation', glyph: '🔷', color: '#8b5cf6', cap: 6000, lat: 12,  avail: 0.999,  desc: 'One typed graph over many subgraphs; solves client over-fetching, adds a planner hop.' },
+  tenant:      { name: 'Tenant Router',  glyph: '🏷️', color: '#8b5cf6', cap: 60000,   lat: 2,   avail: 0.9995, desc: 'Multi-tenancy: routes by tenant to the right shard/silo, enforces isolation.' },
+  k8s:         { name: 'Container Platform', glyph: '☸️', color: '#3b82f6', cap: 90000, lat: 2,  avail: 0.9995, desc: 'Kubernetes — scheduling, autoscaling, rollouts, self-healing for the service fleet.' },
+  cicd:        { name: 'CI/CD Pipeline', glyph: '🚀', color: '#a855f7', cap: 500,     lat: 30,  avail: 0.999,  desc: 'Build, test, scan, progressive delivery (canary/blue-green) and rollback.' },
+  esb:         { name: 'Integration Bus', glyph: '🔀', color: '#eab308', cap: 9000,   lat: 25,  avail: 0.999,  desc: 'ESB/iPaaS — protocol and schema mediation between modern services and legacy systems.' },
+  mq:          { name: 'Enterprise MQ',  glyph: '📬', color: '#eab308', cap: 30000,   lat: 5,   avail: 0.9995, desc: 'IBM MQ/JMS — transactional, guaranteed-delivery messaging with XA semantics.' },
+  erp:         { name: 'ERP (SAP)',      glyph: '🏢', color: '#10b981', cap: 900,     lat: 120, avail: 0.999,  desc: 'System of record for finance/supply chain. Low QPS ceiling — always front it with a cache or queue.' },
+  crm:         { name: 'CRM (Salesforce)', glyph: '🤝', color: '#10b981', cap: 1200,  lat: 100, avail: 0.999,  desc: 'Customer system of record; hard API limits make it a throttling risk.' },
+  mainframe:   { name: 'Mainframe Core', glyph: '🖲️', color: '#10b981', cap: 1500,    lat: 60,  avail: 0.99999, desc: 'CICS/COBOL core banking. Extremely reliable, expensive per call, cannot be scaled out.' },
+  mft:         { name: 'File Transfer / EDI', glyph: '📤', color: '#eab308', cap: 2000, lat: 40, avail: 0.999,  desc: 'Managed file transfer and B2B EDI batches — still how most partners integrate.' },
+  billing:     { name: 'Metering & Billing', glyph: '🧮', color: '#10b981', cap: 4000, lat: 30,  avail: 0.999,  desc: 'Usage metering, rating and invoicing. Must never lose or double-count an event.' },
+  backup:      { name: 'Backup & Archive', glyph: '💾', color: '#10b981', cap: 6000,  lat: 200, avail: 0.99999, desc: 'PITR snapshots and archival with a tested restore path — replication is not backup.' },
 }
 
 export const PALETTE_GROUPS = [
-  { label: 'Traffic',   types: ['client', 'dns', 'cdn', 'lb', 'gateway', 'ratelimiter', 'bff'] },
-  { label: 'Compute',   types: ['web', 'app', 'micro', 'ws', 'worker', 'scheduler'] },
-  { label: 'Storage',   types: ['cache', 'sql', 'nosql', 'search', 'blob'] },
-  { label: 'Async',     types: ['queue', 'kafka', 'saga'] },
-  { label: 'Data',      types: ['cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
-  { label: 'AI / ML',   types: ['ml', 'embed', 'vector', 'llm', 'guard'] },
-  { label: 'Platform',  types: ['registry', 'mesh', 'config', 'zk', 'monitor', 'tracing'] },
+  { label: 'Traffic',       types: ['client', 'dns', 'gslb', 'waf', 'cdn', 'edge', 'lb', 'gateway', 'graphql', 'ratelimiter', 'bff', 'tenant'] },
+  { label: 'Compute',       types: ['web', 'app', 'micro', 'ws', 'worker', 'scheduler', 'k8s'] },
+  { label: 'Storage',       types: ['cache', 'sql', 'nosql', 'search', 'blob', 'backup'] },
+  { label: 'Async',         types: ['queue', 'kafka', 'mq', 'esb', 'saga'] },
+  { label: 'Data',          types: ['cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
+  { label: 'AI / ML',       types: ['ml', 'embed', 'vector', 'llm', 'guard'] },
+  { label: 'Observability', types: ['otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
+  { label: 'Security',      types: ['iam', 'secrets', 'pii', 'audit', 'siem'] },
+  { label: 'Enterprise',    types: ['erp', 'crm', 'mainframe', 'mft', 'billing', 'cicd'] },
+  { label: 'Platform',      types: ['registry', 'mesh', 'config', 'zk'] },
 ]

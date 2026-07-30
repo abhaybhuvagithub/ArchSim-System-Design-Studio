@@ -9,21 +9,35 @@ An interactive system design canvas that goes beyond drawing: it **simulates** y
 - **Blank canvas or a starter scaffold** — begin from nothing, from a 3-tier skeleton, or from any template. The picker is grouped by category.
 - **Light and dark mode** — one-click switch, remembered between visits, and honoured by PNG export.
 - **①②③ Steps** — number the connections in request order for a walkthrough-style diagram, and click any connection to label it ("cache miss", "write", "async").
-- **38-component canvas editor** — drag components (LBs, caches, queues, DBs, workers, BFFs, service mesh, saga orchestrators, CDC, data lake, warehouse, BI…) onto an infinite pan/zoom canvas and wire them with directed edges.
+- **64-component canvas editor** across 10 palette groups — drag components onto an infinite pan/zoom canvas and wire them with directed edges:
+  - *Traffic:* client, DNS, global traffic manager (GSLB), WAF/DDoS, CDN, edge functions, load balancer, API gateway, GraphQL federation, rate limiter, BFF, tenant router
+  - *Compute:* web, app, microservice, WebSocket, worker pool, scheduler, container platform (Kubernetes)
+  - *Storage:* cache, SQL, NoSQL, search, object storage, backup & archive
+  - *Async:* queue, event stream (Kafka), enterprise MQ, integration bus (ESB), saga orchestrator
+  - *Data:* CDC, ETL/ELT, data lake, data warehouse, BI, analytics
+  - *AI/ML:* ML service, embedding service, vector DB, LLM inference, guardrails
+  - *Observability:* OTel collector, metrics & alerts, log pipeline, tracing, SLO/error budget, on-call paging, synthetic probes, RUM/client APM
+  - *Security:* identity provider (SSO), secrets/KMS, tokenization vault, audit log, SIEM
+  - *Enterprise:* ERP (SAP), CRM (Salesforce), mainframe core, managed file transfer/EDI, metering & billing, CI/CD
+  - *Platform:* service registry, service mesh, config server, coordination (ZooKeeper/etcd)
 - **✨ Improve — architecture advisor** — reviews your diagram against the current traffic and lists findings by severity. **Every finding has a ⚡ Quick fix** that edits the graph for you, and **Quick fix all** applies them in one go:
   - load balancer spliced onto a client→service link; cache spliced between a service and its database; queue in front of a synchronously-called worker; rate limiter ahead of the gateway
-  - replicas scaled on tiers past 70% utilization; single-instance databases replicated
+  - replicas scaled on tiers past 70% utilization; single-instance databases replicated (vendor cores like SAP or a mainframe are never "just scaled out" — they get shielded behind enterprise MQ instead)
   - service discovery, tracing and monitoring attached to the busiest components
+  - **observability gaps:** alerts with no on-call route, metrics with no logs, no OTel collector funnelling telemetry, no SLO/error budget, no synthetic probing from outside the network
+  - **enterprise hardening:** no WAF at the edge, no central identity provider behind the gateway, databases with no backup (replicas aren't backups), credentials not in a secrets store, no audit trail, security logs with no SIEM
   - a full data platform (CDC → lake → ELT → warehouse → BI) chained off your event stream, and BI repointed at the warehouse when it reads production directly
   - **auto-wiring:** unwired nodes and dead-end routing components are connected to the most plausible peer, chosen by component type and proximity — and if no suitable peer exists yet, the quick fix creates one (an orphaned SQL database gets an App Server in front, a dead-end queue gets a Worker Pool after it)
 - **Hover to inspect** — hovering a node glows it, highlights its connected edges, dims everything else, and shows a detail card with capacity, base latency and live utilization.
 - **Live traffic simulation** — set traffic (100 rps → 1M rps) and watch requests flow. Per-node utilization bars, queueing latency (M/M/1-style), drops when over capacity, p50/p99 estimates, success rate and system availability.
 - **Chaos monkey** — randomly kills instances while simulating; they auto-recover in 6 s. See whether your redundancy actually holds.
 - **Capacity report** — live bottleneck detection with the replica count each tier actually needs at current traffic.
-- **Template library — 23 pre-wired designs**, each with its own requirements checklist:
+- **Template library — 25 pre-wired designs**, each with its own requirements checklist:
   - *Product designs:* Bitly, Ticketmaster, Uber, YouTube, WhatsApp, Web Crawler, Google Docs, Twitter feed, Dropbox, Rate Limiter, Yelp, Leaderboard, Notifications, Payments, Autocomplete.
   - *Microservice architecture patterns:* E-commerce with Saga / database-per-service, CQRS + Event Sourcing, BFF + service-mesh platform, event-driven choreography with DLQ, and Strangler-fig monolith migration with CDC.
   - *Data platform:* medallion lakehouse — CDC + stream ingest → raw data lake → ELT → curated lake → data warehouse → BI and ML, with an orchestrator owning the DAGs.
+  - *Enterprise:* zero-trust regulated multi-tenant platform — GSLB → WAF → gateway + SSO → tenant router → services on Kubernetes, with secrets/KMS, tokenization, audit log, backups, and enterprise MQ + ESB fronting a mainframe core and SAP.
+  - *Observability:* golden-signals stack — services, gateway and Kubernetes → OTel collector → metrics / logs / traces → SLO burn-rate and SIEM → on-call paging, plus synthetic probes and RUM.
   - *AI / ML:* GenAI RAG assistant (embedder, vector DB, semantic cache, LLM inference, in/out guardrails, eval traces) and a two-stage recommendation ranker (candidate generation → feature store → ranker, with a feedback loop and model registry).
 - **Interview timer** — 35-minute countdown, turns red in the last 5 minutes.
 - **Export** — PNG snapshot, JSON save/load.
