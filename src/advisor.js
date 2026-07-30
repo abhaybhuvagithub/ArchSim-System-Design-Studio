@@ -94,8 +94,27 @@ const UPSTREAM = {
   bi: ['warehouse', 'lake', 'analytics'], analytics: ['kafka', 'queue', 'warehouse', 'lake'],
   ml: ['warehouse', 'lake', 'kafka', 'app', 'micro', 'gateway'],
   registry: ['mesh', 'micro', 'bff', 'gateway', 'app'], config: ['mesh', 'micro', 'app'],
-  zk: ['micro', 'app', 'kafka'], monitor: ['app', 'micro', 'web', 'worker', 'gateway'],
-  tracing: ['mesh', 'micro', 'app', 'gateway'],
+  zk: ['micro', 'app', 'kafka'], monitor: ['otel', 'app', 'micro', 'web', 'worker', 'gateway'],
+  tracing: ['otel', 'mesh', 'micro', 'app', 'gateway'],
+  // edge / enterprise ingress
+  gslb: ['client'], waf: ['gslb', 'dns', 'client'], edge: ['cdn', 'waf', 'client'],
+  graphql: ['lb', 'gateway', 'edge', 'cdn', 'client'], tenant: ['gateway', 'graphql', 'lb'],
+  k8s: ['lb', 'gateway', 'mesh', 'cicd'],
+  // integration & systems of record
+  mq: ['app', 'micro', 'esb', 'saga'], esb: ['gateway', 'mq', 'app', 'micro'],
+  erp: ['esb', 'mq', 'app', 'micro'], crm: ['esb', 'mq', 'app', 'micro'],
+  mainframe: ['esb', 'mq', 'gateway', 'app'], mft: ['esb', 'mq', 'scheduler', 'worker'],
+  billing: ['kafka', 'queue', 'app', 'micro', 'gateway'],
+  backup: ['sql', 'nosql', 'blob', 'warehouse'],
+  // observability
+  otel: ['app', 'micro', 'web', 'worker', 'k8s', 'gateway'],
+  logs: ['otel', 'app', 'micro', 'k8s', 'gateway'],
+  slo: ['monitor', 'otel'], alert: ['monitor', 'slo', 'siem'],
+  apm: ['client', 'edge', 'cdn'],
+  // security
+  iam: ['gateway', 'bff', 'graphql', 'app', 'micro'],
+  secrets: ['app', 'micro', 'worker', 'k8s'], pii: ['app', 'micro', 'saga', 'gateway'],
+  audit: ['app', 'micro', 'saga', 'gateway'], siem: ['logs', 'audit', 'waf', 'iam'],
 }
 // What a component of this type should normally call.
 const DOWNSTREAM = {
@@ -114,15 +133,34 @@ const DOWNSTREAM = {
   cdc: ['kafka', 'queue', 'lake', 'etl'], etl: ['warehouse', 'lake'],
   lake: ['etl', 'warehouse', 'analytics', 'ml'], warehouse: ['bi', 'ml', 'analytics'],
   cache: ['sql', 'nosql', 'search'],
+  // edge / enterprise ingress
+  gslb: ['waf', 'cdn', 'lb'], waf: ['cdn', 'edge', 'lb', 'gateway'],
+  edge: ['gateway', 'lb', 'app', 'micro'], graphql: ['mesh', 'micro', 'app'],
+  tenant: ['micro', 'app', 'sql'], k8s: ['micro', 'app'],
+  // integration
+  mq: ['esb', 'erp', 'mainframe', 'worker', 'micro'],
+  esb: ['erp', 'crm', 'mainframe', 'mft', 'micro'],
+  billing: ['warehouse', 'sql'],
+  // observability & security fan-out
+  otel: ['monitor', 'logs', 'tracing'], monitor: ['alert', 'slo'], slo: ['alert'],
+  logs: ['siem', 'search'], siem: ['alert'], synthetic: ['gslb', 'waf', 'cdn', 'lb', 'gateway'],
+  cicd: ['k8s', 'micro', 'app'],
 }
 // Types that are wrong as a dead end — they exist to route traffic onward.
-const PASSTHROUGH = ['dns', 'cdn', 'lb', 'ratelimiter', 'gateway', 'bff', 'mesh', 'saga', 'queue', 'kafka', 'cdc', 'etl', 'scheduler']
+const PASSTHROUGH = ['dns', 'cdn', 'lb', 'ratelimiter', 'gateway', 'bff', 'mesh', 'saga', 'queue', 'kafka', 'cdc', 'etl', 'scheduler',
+  'gslb', 'waf', 'edge', 'graphql', 'tenant', 'k8s', 'mq', 'esb', 'otel', 'cicd', 'synthetic']
+// Components that generate their own work rather than being called.
+const SELF_TRIGGER = ['scheduler', 'synthetic', 'cicd']
+// Vendor or legacy systems you cannot simply add instances to.
+const NO_SCALE = ['erp', 'crm', 'mainframe']
 // When nothing suitable exists yet, create this instead of the first routing hop
 // (prefer a component that actually does work over another indirection layer).
 const CREATE_DOWN = {
   dns: 'cdn', cdn: 'lb', lb: 'app', ratelimiter: 'gateway', gateway: 'app', bff: 'micro',
   mesh: 'micro', saga: 'micro', queue: 'worker', kafka: 'worker', cdc: 'kafka',
   etl: 'warehouse', scheduler: 'worker',
+  gslb: 'waf', waf: 'lb', edge: 'app', graphql: 'micro', tenant: 'micro', k8s: 'micro',
+  mq: 'worker', esb: 'erp', otel: 'monitor', cicd: 'k8s', synthetic: 'gateway',
 }
 const article = name => (/^[AEIOU]/i.test(name) ? 'an' : 'a')
 
@@ -149,7 +187,7 @@ export function planWiring(nodes, edges, target, want = 'both') {
   const isSource = !!CATALOG[target.type]?.source
   const plan = { from: null, to: null, createFrom: null, createTo: null }
 
-  if ((want === 'both' || want === 'in') && !inbound.length && !isSource) {
+  if ((want === 'both' || want === 'in') && !inbound.length && !isSource && !SELF_TRIGGER.includes(target.type)) {
     const cands = UPSTREAM[target.type] || []
     plan.from = pickNearest(nodes, cands, target, 'left')
     if (!plan.from && cands.length) plan.createFrom = cands[0]
@@ -253,7 +291,7 @@ export function review(nodes, edges, rps) {
   for (const r of cap.rows) {
     if (r.util <= 0.7 || r.down) continue
     const spec = CATALOG[byId[r.id]?.type]
-    if (!spec) continue
+    if (!spec || NO_SCALE.includes(byId[r.id].type)) continue  // cannot scale a vendor core out
     const target = Math.max(r.replicas + 1, Math.ceil(r.in / (spec.cap * 0.55)))
     push({
       id: 'scale:' + r.id, icon: '📶', severity: r.util >= 1 ? 'high' : 'med',
@@ -407,9 +445,130 @@ export function review(nodes, edges, rps) {
     })
   }
 
+  // ── observability: golden signals, then the pipeline that feeds them ──
+  if (has('monitor') && !has('alert')) {
+    const m = all('monitor')[0]
+    push({
+      id: 'alert:' + m.id, icon: '📟', severity: 'med',
+      title: 'Route alerts to on-call',
+      detail: `${m.label} collects metrics but nothing pages a human, so an alert firing at 3am goes nowhere. Attaches an on-call/paging tier fed by ${m.label}.`,
+      apply: (ns, es) => attach(ns, es, { type: 'alert', label: 'On-call / Paging', x: byId[m.id].x + 160, y: byId[m.id].y, fromIds: [m.id] }),
+    })
+  }
+  if (has('monitor') && !has('logs')) {
+    const anchor = all('otel')[0] || all('monitor')[0]
+    push({
+      id: 'logs:' + anchor.id, icon: '🧾', severity: 'med',
+      title: 'Add a log pipeline',
+      detail: 'Metrics tell you something is wrong; logs tell you what. Without centralised, structured logs you are SSH-ing into instances during an incident. Attaches a log pipeline.',
+      apply: (ns, es) => attach(ns, es, { type: 'logs', label: 'Log Pipeline', replicas: 2, x: byId[anchor.id].x, y: bottomOf(), fromIds: [anchor.id] }),
+    })
+  }
+  if ((has('monitor') || has('logs') || has('tracing')) && !has('otel') && nodes.length >= 6) {
+    const anchors = cap.rows.filter(r => COMPUTE.includes(typeOf(r.id))).slice(0, 3).map(r => r.id)
+    const sinks = nodes.filter(n => ['monitor', 'logs', 'tracing'].includes(n.type)).map(n => n.id)
+    if (anchors.length) push({
+      id: 'otel:all', icon: '📥', severity: 'low',
+      title: 'Funnel telemetry through an OTel collector',
+      detail: 'Each service exporting straight to each backend means N×M wiring, no shared sampling and no place to redact PII. One collector gives you a single pipeline for metrics, logs and traces.',
+      apply: (ns, es) => attach(ns, es, {
+        type: 'otel', label: 'OTel Collector', replicas: 2, x: rightOf(), y: bottomOf(),
+        fromIds: anchors.filter(id => ns.some(n => n.id === id)), toIds: sinks.filter(id => ns.some(n => n.id === id)),
+      }),
+    })
+  }
+  if (has('monitor') && !has('slo')) {
+    const m = all('monitor')[0]
+    push({
+      id: 'slo:' + m.id, icon: '🎯', severity: 'low',
+      title: 'Define SLOs and an error budget',
+      detail: 'Dashboards without objectives mean every blip looks equally urgent. SLOs plus burn-rate alerts tell you when reliability work actually has to beat feature work.',
+      apply: (ns, es) => attach(ns, es, { type: 'slo', label: 'SLO / Error Budget', x: byId[m.id].x + 160, y: bottomOf(), fromIds: [m.id] }),
+    })
+  }
+  if (has('monitor') && !has('synthetic') && sources.length) {
+    const edgeNode = nodes.find(n => ['gslb', 'waf', 'cdn', 'lb', 'gateway'].includes(n.type))
+    if (edgeNode) push({
+      id: 'synth:' + edgeNode.id, icon: '📡', severity: 'low',
+      title: 'Probe from outside the network',
+      detail: `All your signals are internal, so a DNS, TLS or edge failure looks perfectly healthy from the inside. Adds synthetic probes hitting ${edgeNode.label}.`,
+      apply: (ns, es) => attach(ns, es, { type: 'synthetic', label: 'Synthetic Probes', x: byId[edgeNode.id].x - 40, y: bottomOf(), toIds: [edgeNode.id] }),
+    })
+  }
+
+  // ── enterprise hardening ──
+  if (!has('waf') && sources.length && nodes.length >= 5) {
+    const e = edges.find(e2 => CATALOG[typeOf(e2.from)]?.source && ['cdn', 'lb', 'gateway', 'edge', 'gslb', 'bff'].includes(typeOf(e2.to)))
+    if (e) push({
+      id: 'waf:' + e.id, icon: '🛡️', severity: 'med',
+      title: 'Filter attacks at the edge with a WAF',
+      detail: `Anything that reaches ${byId[e.to].label} today is unfiltered — OWASP-class payloads, credential stuffing and volumetric floods all land on your own capacity. Inserts a WAF/DDoS layer on that link.`,
+      apply: (ns, es) => insertOnEdge(ns, es, e.from, e.to, 'waf', 'WAF / DDoS'),
+    })
+  }
+  if ((has('gateway') || has('bff') || has('graphql')) && !has('iam') && nodes.length >= 5) {
+    const gw = all('gateway')[0] || all('graphql')[0] || all('bff')[0]
+    push({
+      id: 'iam:' + gw.id, icon: '🔑', severity: 'med',
+      title: 'Centralise authentication',
+      detail: `${gw.label} has no identity provider behind it, so every service is left to validate credentials its own way. Attaches an OIDC/SAML provider for SSO, MFA and token issuance.`,
+      apply: (ns, es) => attach(ns, es, { type: 'iam', label: 'Identity (SSO)', replicas: 2, x: byId[gw.id].x, y: bottomOf(), fromIds: [gw.id] }),
+    })
+  }
+  if (nodes.some(n => DBS.includes(n.type) || n.type === 'blob') && !has('backup')) {
+    const store = nodes.find(n => DBS.includes(n.type)) || nodes.find(n => n.type === 'blob')
+    push({
+      id: 'backup:' + store.id, icon: '💾', severity: 'med',
+      title: `Back up ${store.label}`,
+      detail: `Replicas protect against hardware failure, not against a bad migration, a bug or ransomware — those replicate perfectly. Attaches point-in-time backup and archival off ${store.label}.`,
+      apply: (ns, es) => attach(ns, es, { type: 'backup', label: 'Backup & Archive', x: byId[store.id].x + 160, y: bottomOf(), fromIds: [store.id] }),
+    })
+  }
+  if (nodes.length >= 6 && !has('secrets') && nodes.some(n => COMPUTE.includes(n.type))) {
+    const anchor = cap.rows.find(r => COMPUTE.includes(typeOf(r.id)))
+    if (anchor) push({
+      id: 'secrets:' + anchor.id, icon: '🔐', severity: 'low',
+      title: 'Manage credentials in a secrets store',
+      detail: 'Database passwords and API keys are presumably in config or env vars — impossible to rotate and easy to leak in a log line. Attaches Vault/KMS for dynamic, rotatable credentials.',
+      apply: (ns, es) => attach(ns, es, { type: 'secrets', label: 'Secrets / KMS', x: byId[anchor.id].x, y: bottomOf(), fromIds: [anchor.id] }),
+    })
+  }
+  if (nodes.length >= 6 && !has('audit') && (has('saga') || has('sql') || has('billing') || has('iam'))) {
+    const anchor = all('saga')[0] || nodes.find(n => COMPUTE.includes(n.type))
+    if (anchor) push({
+      id: 'audit:' + anchor.id, icon: '📜', severity: 'low',
+      title: 'Record an audit trail',
+      detail: 'Nothing here answers "who changed this, when, and from where" — the first question in any incident, dispute or compliance review. Attaches an append-only, tamper-evident audit log.',
+      apply: (ns, es) => attach(ns, es, { type: 'audit', label: 'Audit Log', x: byId[anchor.id].x + 160, y: bottomOf(), fromIds: [anchor.id] }),
+    })
+  }
+  if ((has('waf') || has('iam')) && has('logs') && !has('siem')) {
+    const anchor = all('logs')[0]
+    push({
+      id: 'siem:' + anchor.id, icon: '🕵️', severity: 'low',
+      title: 'Feed security analytics (SIEM)',
+      detail: 'Security signals are spread across WAF, identity and application logs with nothing correlating them. Attaches a SIEM over your log pipeline for detections and threat hunting.',
+      apply: (ns, es) => attach(ns, es, { type: 'siem', label: 'SIEM', x: byId[anchor.id].x + 160, y: bottomOf(), fromIds: [anchor.id] }),
+    })
+  }
+  // low-QPS systems of record must not be called synchronously at scale
+  for (const n of nodes) {
+    if (!['erp', 'crm', 'mainframe'].includes(n.type)) continue
+    const callers = into(n.id)
+    if (!callers.length) continue
+    if (callers.some(e => ['queue', 'kafka', 'mq', 'esb', 'cache'].includes(typeOf(e.from)))) continue
+    const e = callers[0]
+    push({
+      id: 'sor:' + n.id, icon: '🏢', severity: 'high',
+      title: `Shield ${n.label} behind a queue`,
+      detail: `${byId[e.from].label} calls ${n.label} synchronously, and it only sustains ${fmt(CATALOG[n.type].cap)}/s per instance at ${CATALOG[n.type].lat}ms — you cannot scale it out. Inserts enterprise MQ so load is absorbed instead of rejected.`,
+      apply: (ns, es) => insertOnEdge(ns, es, e.from, n.id, 'mq', 'Enterprise MQ'),
+    })
+  }
+
   // 12. orphans — nothing routes to it, so it carries no traffic
   for (const n of nodes) {
-    if (CATALOG[n.type]?.source || n.type === 'scheduler') continue  // cron triggers itself
+    if (CATALOG[n.type]?.source || SELF_TRIGGER.includes(n.type)) continue
     if (into(n.id).length) continue
     const plan = planWiring(nodes, edges, n, 'in')
     if (!plan.from && !plan.createFrom) continue
