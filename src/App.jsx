@@ -621,10 +621,15 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
       onMouseDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
       style={{ cursor: 'move', opacity: dimmed ? 0.32 : 1, transition: 'opacity .12s' }}>
       {hovered && <rect x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke={t.glow} strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
+      {t.neon && !isDown && (
+        <rect x="-2" y="-2" width={NODE_W + 4} height={NODE_H + 4} rx="12"
+          fill="none" stroke={color} strokeWidth="2.5" opacity="0.55"
+          style={{ filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 14px ${color})` }} />
+      )}
       <rect className="body" width={NODE_W} height={NODE_H} rx="10"
         fill={isDown ? t.downFill : hovered ? t.nodeFillHover : t.nodeFill}
         stroke={isDown ? t.downStroke : hovered ? t.nodeStrokeHover : color}
-        strokeWidth={hovered ? 2 : 1.5} opacity={isDown ? 0.9 : 1} />
+        strokeWidth={t.neon ? 2 : hovered ? 2 : 1.5} opacity={isDown ? 0.9 : 1} />
       <text x="10" y="20" fontSize="13">{spec.glyph}</text>
       <text x="30" y="19" fontSize="10.5" fill={t.nodeText} fontWeight="600">{trunc(n.label, 15)}</text>
       <text x="30" y="33" fontSize="9" fill={t.nodeSub}>
@@ -658,8 +663,9 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
   return (
     <g className="edge" onMouseDown={ev => { ev.stopPropagation(); onSelect() }}
       style={{ cursor: 'pointer', opacity: dimmed ? 0.18 : 1, transition: 'opacity .12s' }}>
-      <path d={d} stroke={stroke} strokeWidth={selected ? 3 : hot ? Math.max(2.5, w) : w}
-        markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'} opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85} />
+      <path d={d} stroke={stroke} strokeWidth={selected ? 3 : hot ? Math.max(2.5, w) : t.neon ? Math.max(2, w) : w}
+        markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'} opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85}
+        style={t.neon ? { filter: `drop-shadow(0 0 5px ${stroke})` } : undefined} />
       <path d={d} stroke="transparent" strokeWidth="12" />
       {e.label && <text x={mx} y={my + (simOn && flow > 0 ? 14 : 4)} fontSize="9.5" fill={t.nodeText} textAnchor="middle" fontWeight="600">{e.label}</text>}
       {simOn && flow > 0 && <text x={mx} y={my - 6} fontSize="9" fill={hot ? t.hotText : t.nodeSub} textAnchor="middle">{fmt(flow)}/s</text>}
