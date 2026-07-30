@@ -116,7 +116,9 @@ select.btn { appearance: auto; }
 .side {
   width: 280px; background: var(--panel); border-left: 1px solid var(--border);
   overflow-y: auto; flex-shrink: 0; padding: 12px; font-size: 12.5px;
+  transition: width .18s;
 }
+.side.wide { width: 430px; }
 .side h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
 .side section { margin-bottom: 18px; }
 .field { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
