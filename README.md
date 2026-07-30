@@ -18,7 +18,7 @@ An interactive system design canvas that goes beyond drawing: it **simulates** y
   - **Quiz** — 14 interview questions with instant right/wrong marking and an explanation for every answer (capacity math, queueing under load, CAP, idempotency, availability multiplication, geo indexes, fan-out, outbox, RAG bottlenecks, alerting practice).
   - **Numbers** — the cheat sheet: latency numbers, rough per-instance capacity, estimation shortcuts (1M/day ≈ 12 rps), and storage sizing.
 - **Blank canvas or a starter scaffold** — begin from nothing, from a 3-tier skeleton, or from any template. The picker is grouped by category.
-- **Light and dark mode** — a restrained slate-and-teal palette in the spirit of levels.fyi: data first, low chrome. One-click switch, remembered between visits, honoured by PNG export.
+- **Light and dark mode** — Apple’s palette — #f5f5f7 grey and #1d1d1f near-black with the system blue, SF Pro type and pill controls — plus a fluorescent neon-green mode. One-click switch, remembered between visits, honoured by PNG export.
 - **①②③ Steps** — number the connections in request order for a walkthrough-style diagram, and click any connection to label it ("cache miss", "write", "async").
 - **64-component canvas editor** across 10 palette groups — drag components onto an infinite pan/zoom canvas and wire them with directed edges:
   - *Traffic:* client, DNS, global traffic manager (GSLB), WAF/DDoS, CDN, edge functions, load balancer, API gateway, GraphQL federation, rate limiter, BFF, tenant router
