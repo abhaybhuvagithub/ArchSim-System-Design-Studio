@@ -132,7 +132,8 @@ select.btn { appearance: auto; }
 .sug.low  { border-left-color: var(--accent); }
 .sug-t { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; font-size: 12.5px; font-weight: 600; line-height: 1.35; }
 .sug-d { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
-.sug-manual { font-size: 11px; color: var(--muted); margin-top: 6px; font-style: italic; }
+.btn.quick { border-color: var(--accent); color: #c7d2fe; }
+.btn.quick:hover { background: var(--accent); color: #fff; }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; margin-left: 6px; }
 .pill.ok { background: #14532d; color: #86efac; }
 .pill.warn { background: #713f12; color: #fde047; }

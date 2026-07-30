@@ -66,6 +66,129 @@ function scaleTo(nodes, edges, id, replicas) {
   return { nodes: nodes.map(n => n.id === id ? { ...n, replicas } : n), edges, focus: id }
 }
 
+function connect(nodes, edges, fromId, toId) {
+  if (fromId === toId) return edges
+  if (!nodes.some(n => n.id === fromId) || !nodes.some(n => n.id === toId)) return edges
+  if (edges.some(e => e.from === fromId && e.to === toId)) return edges
+  return [...edges, { id: `${fromId}->${toId}`, from: fromId, to: toId, label: '' }]
+}
+
+// ---------- wiring intelligence ----------
+// Who should normally call a component of this type, best candidate first.
+const UPSTREAM = {
+  dns: ['client'], cdn: ['client', 'dns'], lb: ['cdn', 'dns', 'client'],
+  ratelimiter: ['lb', 'cdn', 'client', 'gateway'], gateway: ['ratelimiter', 'lb', 'cdn', 'client'],
+  bff: ['cdn', 'lb', 'client'], mesh: ['gateway', 'bff', 'lb'],
+  web: ['lb', 'cdn', 'gateway', 'client'], app: ['lb', 'gateway', 'mesh', 'bff', 'client'],
+  micro: ['mesh', 'gateway', 'bff', 'saga', 'lb', 'client'], ws: ['lb', 'gateway', 'client'],
+  worker: ['queue', 'kafka', 'scheduler', 'app', 'micro'], saga: ['gateway', 'bff', 'lb', 'app'],
+  cache: ['app', 'micro', 'web', 'bff', 'ws', 'worker', 'saga', 'gateway'],
+  sql: ['app', 'micro', 'web', 'worker', 'saga', 'etl'],
+  nosql: ['app', 'micro', 'web', 'ws', 'worker', 'saga', 'etl'],
+  search: ['app', 'micro', 'web', 'worker', 'etl'],
+  blob: ['app', 'micro', 'web', 'ws', 'worker'],
+  queue: ['app', 'micro', 'web', 'gateway', 'saga', 'scheduler'],
+  kafka: ['app', 'micro', 'web', 'ws', 'gateway', 'saga', 'cdc'],
+  cdc: ['sql', 'nosql'], etl: ['lake', 'kafka', 'queue', 'cdc', 'scheduler'],
+  lake: ['etl', 'kafka', 'queue', 'cdc', 'worker'], warehouse: ['etl', 'lake', 'kafka'],
+  bi: ['warehouse', 'lake', 'analytics'], analytics: ['kafka', 'queue', 'warehouse', 'lake'],
+  ml: ['warehouse', 'lake', 'kafka', 'app', 'micro', 'gateway'],
+  registry: ['mesh', 'micro', 'bff', 'gateway', 'app'], config: ['mesh', 'micro', 'app'],
+  zk: ['micro', 'app', 'kafka'], monitor: ['app', 'micro', 'web', 'worker', 'gateway'],
+  tracing: ['mesh', 'micro', 'app', 'gateway'],
+}
+// What a component of this type should normally call.
+const DOWNSTREAM = {
+  dns: ['cdn', 'lb', 'gateway'], cdn: ['lb', 'gateway', 'bff', 'web', 'app'],
+  lb: ['gateway', 'ratelimiter', 'bff', 'web', 'app', 'micro', 'ws'],
+  ratelimiter: ['gateway', 'app', 'micro', 'web'],
+  gateway: ['mesh', 'saga', 'app', 'micro', 'web', 'ws'],
+  bff: ['mesh', 'micro', 'app'], mesh: ['micro', 'app'],
+  web: ['cache', 'app', 'sql', 'nosql', 'blob'],
+  app: ['cache', 'sql', 'nosql', 'search', 'queue', 'kafka', 'blob'],
+  micro: ['cache', 'sql', 'nosql', 'queue', 'kafka', 'search'],
+  ws: ['cache', 'kafka', 'queue', 'nosql'],
+  saga: ['micro', 'queue', 'kafka'], scheduler: ['worker', 'etl'],
+  queue: ['worker', 'micro', 'app'], kafka: ['worker', 'micro', 'lake', 'etl', 'analytics'],
+  worker: ['blob', 'sql', 'nosql', 'lake', 'cache'],
+  cdc: ['kafka', 'queue', 'lake', 'etl'], etl: ['warehouse', 'lake'],
+  lake: ['etl', 'warehouse', 'analytics', 'ml'], warehouse: ['bi', 'ml', 'analytics'],
+  cache: ['sql', 'nosql', 'search'],
+}
+// Types that are wrong as a dead end — they exist to route traffic onward.
+const PASSTHROUGH = ['dns', 'cdn', 'lb', 'ratelimiter', 'gateway', 'bff', 'mesh', 'saga', 'queue', 'kafka', 'cdc', 'etl', 'scheduler']
+// When nothing suitable exists yet, create this instead of the first routing hop
+// (prefer a component that actually does work over another indirection layer).
+const CREATE_DOWN = {
+  dns: 'cdn', cdn: 'lb', lb: 'app', ratelimiter: 'gateway', gateway: 'app', bff: 'micro',
+  mesh: 'micro', saga: 'micro', queue: 'worker', kafka: 'worker', cdc: 'kafka',
+  etl: 'warehouse', scheduler: 'worker',
+}
+const article = name => (/^[AEIOU]/i.test(name) ? 'an' : 'a')
+
+function pickNearest(nodes, types, target, side) {
+  let best = null, bestScore = Infinity
+  types.forEach((t, rank) => {
+    for (const n of nodes) {
+      if (n.type !== t || n.id === target.id) continue
+      const dx = n.x - target.x, dy = n.y - target.y
+      let score = Math.abs(dx) + Math.abs(dy) * 0.6 + rank * 240
+      if (side === 'left' && dx > 0) score += 300
+      if (side === 'right' && dx < 0) score += 300
+      if (score < bestScore) { bestScore = score; best = n }
+    }
+  })
+  return best
+}
+
+// Decide how to wire `target` in. Returns a plan describing existing peers to use
+// and, when there is no sensible peer at all, the component type to create.
+export function planWiring(nodes, edges, target, want = 'both') {
+  const outbound = edges.filter(e => e.from === target.id)
+  const inbound = edges.filter(e => e.to === target.id)
+  const isSource = !!CATALOG[target.type]?.source
+  const plan = { from: null, to: null, createFrom: null, createTo: null }
+
+  if ((want === 'both' || want === 'in') && !inbound.length && !isSource) {
+    const cands = UPSTREAM[target.type] || []
+    plan.from = pickNearest(nodes, cands, target, 'left')
+    if (!plan.from && cands.length) plan.createFrom = cands[0]
+  }
+  if ((want === 'both' || want === 'out') && !outbound.length && PASSTHROUGH.includes(target.type)) {
+    const cands = DOWNSTREAM[target.type] || []
+    plan.to = pickNearest(nodes, cands, target, 'right')
+    if (!plan.to && cands.length) plan.createTo = CREATE_DOWN[target.type] || cands[0]
+  }
+  return plan
+}
+
+function describe(plan) {
+  const bits = []
+  if (plan.from) bits.push(`wires ${plan.from.label} → it`)
+  else if (plan.createFrom) bits.push(`adds ${article(CATALOG[plan.createFrom].name)} ${CATALOG[plan.createFrom].name} in front of it`)
+  if (plan.to) bits.push(`wires it → ${plan.to.label}`)
+  else if (plan.createTo) bits.push(`adds ${article(CATALOG[plan.createTo].name)} ${CATALOG[plan.createTo].name} after it`)
+  return bits.join(' and ')
+}
+
+// Execute a wiring plan (re-resolved against the live graph by id/type)
+function runPlan(nodes, edges, targetId, want) {
+  const target = nodes.find(n => n.id === targetId)
+  if (!target) return null
+  const plan = planWiring(nodes, edges, target, want)
+  let ns = nodes, es = edges, focus = targetId
+  if (plan.createFrom) {
+    const r = attach(ns, es, { type: plan.createFrom, x: target.x - NODE_W - 60, y: target.y, toIds: [targetId] })
+    if (r) { ns = r.nodes; es = r.edges; focus = r.focus }
+  } else if (plan.from) es = connect(ns, es, plan.from.id, targetId)
+  if (plan.createTo) {
+    const r = attach(ns, es, { type: plan.createTo, x: target.x + NODE_W + 60, y: target.y, fromIds: [targetId] })
+    if (r) { ns = r.nodes; es = r.edges; focus = focus === targetId ? r.focus : focus }
+  } else if (plan.to) es = connect(ns, es, targetId, plan.to.id)
+  if (ns === nodes && es === edges) return null
+  return { nodes: ns, edges: es, focus }
+}
+
 // ---------- the rules ----------
 export function review(nodes, edges, rps) {
   const out = []
@@ -284,14 +407,30 @@ export function review(nodes, edges, rps) {
     })
   }
 
-  // 12. dead ends: a store nothing reads, or compute nothing calls
+  // 12. orphans — nothing routes to it, so it carries no traffic
   for (const n of nodes) {
     if (CATALOG[n.type]?.source || n.type === 'scheduler') continue  // cron triggers itself
-    if (into(n.id).length === 0) push({
-      id: 'orphan:' + n.id, icon: '🔌', severity: 'low',
-      title: `${n.label} is not wired up`,
-      detail: `Nothing routes to ${n.label}, so it takes no traffic in the simulation. Connect it from the component that should call it (drag its ● port), or delete it.`,
-      noApply: true,
+    if (into(n.id).length) continue
+    const plan = planWiring(nodes, edges, n, 'in')
+    if (!plan.from && !plan.createFrom) continue
+    push({
+      id: 'orphan:' + n.id, icon: '🔌', severity: 'med',
+      title: `Wire up ${n.label}`,
+      detail: `Nothing routes to ${n.label}, so it sits at 0 rps and contributes nothing to latency or availability. Quick fix ${describe(plan)}.`,
+      apply: (ns, es) => runPlan(ns, es, n.id, 'in'),
+    })
+  }
+
+  // 13. dead ends — a routing component that forwards nowhere
+  for (const n of nodes) {
+    if (!PASSTHROUGH.includes(n.type) || outOf(n.id).length) continue
+    const plan = planWiring(nodes, edges, n, 'out')
+    if (!plan.to && !plan.createTo) continue
+    push({
+      id: 'deadend:' + n.id, icon: '🚧', severity: 'med',
+      title: `${n.label} forwards nowhere`,
+      detail: `${n.label} is a ${CATALOG[n.type].name} with no downstream, so traffic reaching it is a dead end. Quick fix ${describe(plan)}.`,
+      apply: (ns, es) => runPlan(ns, es, n.id, 'out'),
     })
   }
 

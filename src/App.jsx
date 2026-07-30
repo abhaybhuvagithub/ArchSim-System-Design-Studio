@@ -457,11 +457,11 @@ function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty }) {
       ) : (
         <>
           <div className="muted" style={{ marginBottom: 8 }}>
-            {sugs.length} finding{sugs.length > 1 ? 's' : ''}. Applying one drops the component in and wires it into the right place.
+            {sugs.length} finding{sugs.length > 1 ? 's' : ''}. Every one has a quick fix that drops the component in and wires it into the right place.
           </div>
           {actionable.length > 1 && (
             <button className="btn primary" style={{ width: '100%', marginBottom: 10 }} onClick={onApplyAll}>
-              ✨ Apply all {actionable.length}
+              ⚡ Quick fix all {actionable.length}
             </button>
           )}
           {sugs.map(s => (
@@ -471,11 +471,9 @@ function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty }) {
                 <span className={`pill ${s.severity === 'high' ? 'bad' : s.severity === 'med' ? 'warn' : 'ok'}`}>{s.severity}</span>
               </div>
               <div className="sug-d">{s.detail}</div>
-              {s.apply ? (
-                <button className="btn" style={{ marginTop: 7 }} onClick={() => onApply(s)}>
-                  {applied.includes(s.id) ? 'Apply again' : 'Apply'}
-                </button>
-              ) : <div className="sug-manual">manual fix</div>}
+              <button className="btn quick" style={{ marginTop: 7 }} onClick={() => onApply(s)}>
+                ⚡ {applied.includes(s.id) ? 'Quick fix again' : 'Quick fix'}
+              </button>
             </div>
           ))}
         </>
