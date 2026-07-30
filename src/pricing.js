@@ -149,6 +149,45 @@ export function costReport(nodes, sim, mult = 1) {
   return { rows, total, fixed, usage, byGroup, perMillion, reqMillions, hourly: total / HOURS }
 }
 
+// ---- scaling helpers used by the cost panel ----
+
+// Replica count that puts a node at `target` utilization for the traffic it sees.
+// Never drops a live tier below 2 — a single instance is a single point of failure,
+// which is exactly what the advisor tells you off for.
+export function rightSizeReplicas(node, inRps, target = 0.55) {
+  const spec = CATALOG[node.type]
+  if (!spec || spec.source || !spec.cap) return node.replicas || 1
+  if (inRps <= 0) return Math.min(node.replicas || 1, 2)
+  const floor = 2
+  return Math.max(floor, Math.min(64, Math.ceil(inRps / (spec.cap * target))))
+}
+
+// Plan a right-size across the whole design: what changes, and what it saves.
+export function rightSizePlan(nodes, sim, mult = 1, target = 0.55) {
+  const changes = []
+  let before = 0, after = 0
+  for (const n of nodes) {
+    if (CATALOG[n.type]?.source) continue
+    const inRps = sim?.stats?.[n.id]?.in || 0
+    const to = rightSizeReplicas(n, inRps, target)
+    const from = n.replicas || 1
+    before += nodeCost(n, inRps, mult).total
+    after += nodeCost({ ...n, replicas: to }, inRps, mult).total
+    if (to !== from) changes.push({ id: n.id, label: n.label, from, to })
+  }
+  return { changes, before, after, delta: after - before }
+}
+
+// Multiply every non-source tier's replicas, keeping at least one instance.
+export function scaleAll(nodes, factor) {
+  return nodes.map(n => {
+    if (CATALOG[n.type]?.source) return n
+    const cur = n.replicas || 1
+    const next = factor >= 1 ? Math.ceil(cur * factor) : Math.floor(cur * factor)
+    return { ...n, replicas: Math.max(1, Math.min(64, next)) }
+  })
+}
+
 export const money = v =>
   v >= 1e9 ? '$' + (v / 1e9).toFixed(1) + 'B'
   : v >= 1e6 ? '$' + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + 'M'

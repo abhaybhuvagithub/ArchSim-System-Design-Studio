@@ -6,11 +6,12 @@ import { review, applyAll } from './advisor.js'
 import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL } from './theme.js'
 import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
-import { costReport, nodeCost, money, HOURS } from './pricing.js'
+import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
 import { FAULTS, FAULT_GROUPS, faultById, pickTarget, compileFaults } from './faults.js'
 import { describeArchitecture } from './describe.js'
+import { countVisit, formatVisitors } from './visitors.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -44,10 +45,12 @@ export default function App() {
   const [panelW, setPanelW] = useState({ left: 168, right: 280 })
   const [floatPanel, setFloatPanel] = useState({ left: null, right: null }) // {x,y,w,h} when detached
   const [faults, setFaults] = useState([])       // [{key, faultId, targetId, until}]
+  const [visitors, setVisitors] = useState(null)
   const resizeRef = useRef(null)
   const cloudInfo = cloudById(cloud)
 
   useEffect(() => { saveCloud(cloud) }, [cloud])
+  useEffect(() => { countVisit().then(v => { if (v != null) setVisitors(v) }) }, [])
   const T = THEMES[theme]
 
   useEffect(() => { document.documentElement.dataset.theme = theme; saveTheme(theme) }, [theme])
@@ -131,6 +134,17 @@ export default function App() {
   }
   const clearFault = key => setFaults(fs => fs.filter(x => x.key !== key))
   const recoverAll = () => { setFaults([]); setDown({}); setChaosOn(false) }
+
+  // ---- capacity scaling from the cost panel ----
+  const rightSize = () => {
+    const plan = rightSizePlan(nodes, sim, cloudInfo.mult)
+    if (!plan.changes.length) return
+    const map = Object.fromEntries(plan.changes.map(c => [c.id, c.to]))
+    setNodes(ns => ns.map(n => (map[n.id] ? { ...n, replicas: map[n.id] } : n)))
+  }
+  const scaleEverything = factor => setNodes(ns => scaleAll(ns, factor))
+  const setReplicas = (id, next) =>
+    setNodes(ns => ns.map(n => (n.id === id ? { ...n, replicas: Math.max(1, Math.min(64, next)) } : n)))
 
   const arrange = () => {
     if (!nodes.length) return
@@ -424,6 +438,11 @@ export default function App() {
         <button className={`btn ${steps ? 'active' : ''}`} onClick={() => setSteps(s => !s)}
           title="Number the connections in request order, like a walkthrough diagram">①②③ Steps</button>
         <div className="spacer" />
+        {visitors != null && (
+          <span className="visitors" title={`${visitors.toLocaleString()} visits to this studio`}>
+            👥 {formatVisitors(visitors)}
+          </span>
+        )}
         <button className="btn"
           onClick={() => setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length])}
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
@@ -580,7 +599,9 @@ export default function App() {
             <Chaos faults={faults} nodes={nodes} sel={sel} onInject={injectFault}
               onClear={clearFault} onRecoverAll={recoverAll} sim={sim} fx={fx} />
           ) : tab === 'cost' ? (
-            <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} cloud={cloudInfo} />
+            <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} cloud={cloudInfo}
+              plan={rightSizePlan(nodes, sim, cloudInfo.mult)}
+              onRightSize={rightSize} onScaleAll={scaleEverything} onSetReplicas={setReplicas} />
           ) : tab === 'learn' ? (
             <Learn done={doneSteps} />
           ) : tab === 'improve' ? (
@@ -818,7 +839,7 @@ function Chaos({ faults, nodes, sel, onInject, onClear, onRecoverAll, sim, fx })
   )
 }
 
-function Cost({ cost, onHover, empty, cloud }) {
+function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSetReplicas }) {
   const [detail, setDetail] = useState(null)
   if (empty) return (
     <section>
@@ -840,6 +861,32 @@ function Cost({ cost, onHover, empty, cloud }) {
         <span>Usage (per-request) <b>{money(cost.usage)}</b></span>
       </div>
 
+      <h3 style={{ marginTop: 14 }}>Scale</h3>
+      {plan?.changes?.length > 0 ? (
+        <button className="btn primary" style={{ width: '100%', marginBottom: 6 }} onClick={onRightSize}>
+          ⇅ Right-size {plan.changes.length} tier{plan.changes.length > 1 ? 's' : ''} ·{' '}
+          {plan.delta < 0 ? `save ${money(-plan.delta)}/mo` : `+${money(plan.delta)}/mo`}
+        </button>
+      ) : (
+        <div className="muted" style={{ fontSize: 11, marginBottom: 6 }}>
+          Every tier is already sized for about 55% utilization at this traffic.
+        </div>
+      )}
+      {plan?.changes?.length > 0 && (
+        <div className="muted" style={{ fontSize: 10.5, marginBottom: 8, lineHeight: 1.5 }}>
+          {plan.changes.slice(0, 4).map(c => `${c.label} ${c.from}→${c.to}×`).join(' · ')}
+          {plan.changes.length > 4 ? ` · +${plan.changes.length - 4} more` : ''}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+        <button className="btn" style={{ flex: 1 }} onClick={() => onScaleAll(0.5)}>▼ Scale down ½×</button>
+        <button className="btn" style={{ flex: 1 }} onClick={() => onScaleAll(2)}>▲ Scale up 2×</button>
+      </div>
+      <div className="muted" style={{ fontSize: 10.5, marginBottom: 4, lineHeight: 1.5 }}>
+        Right-size targets ~55% utilization per tier — enough headroom for a spike and an instance loss.
+        Scaling changes the simulation too, so watch p99 and success rate move with the bill.
+      </div>
+
       <h3 style={{ marginTop: 14 }}>By area</h3>
       {cost.byGroup.map(([g, v]) => (
         <div key={g} className="row">
@@ -857,9 +904,18 @@ function Cost({ cost, onHover, empty, cloud }) {
             <span>{money(r.total)}</span>
           </div>
           <div className="util-bar"><i style={{ width: `${(r.total / max) * 100}%`, background: 'var(--accent)' }} /></div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-            {r.replicas}× {r.typeName}
-            {r.usage > 0 && <> · {money(r.fixed)} fixed + {money(r.usage)} usage</>}
+          <div className="cost-foot">
+            <span>
+              {r.typeName}
+              {r.usage > 0 && <> · {money(r.fixed)} fixed + {money(r.usage)} usage</>}
+            </span>
+            {r.type !== 'client' && (
+              <span className="repl" onClick={e => e.stopPropagation()}>
+                <button title="Scale down" onClick={() => onSetReplicas(r.id, r.replicas - 1)}>−</button>
+                <b>{r.replicas}×</b>
+                <button title="Scale up" onClick={() => onSetReplicas(r.id, r.replicas + 1)}>+</button>
+              </span>
+            )}
           </div>
           {detail === r.id && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, lineHeight: 1.5 }}>{r.rate.note}</div>}
         </div>
