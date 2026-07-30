@@ -145,6 +145,14 @@ select.btn { appearance: auto; }
 .btn.quick { border-color: var(--accent); color: var(--accent); }
 .btn.quick:hover { background: var(--accent); color: #fff; }
 
+/* Cost panel */
+.cost-big { font-size: 26px; font-weight: 800; letter-spacing: -.5px; line-height: 1.1; }
+.cost-big span { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+.cost-sub { font-size: 11.5px; color: var(--muted); margin: 3px 0 9px; line-height: 1.5; }
+.cost-split { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--muted); }
+.cost-split b { color: var(--text); float: right; }
+.cost-split span { display: block; }
+
 /* Learn panel */
 .tabs.sub button { font-size: 11px; padding: 4px 6px; }
 .progress { height: 5px; border-radius: 3px; background: var(--panel2); overflow: hidden; margin-bottom: 10px; }

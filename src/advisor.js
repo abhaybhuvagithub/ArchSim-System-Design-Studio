@@ -4,6 +4,7 @@
 // folded one after another (Apply all) without going stale.
 import { CATALOG } from './catalog.js'
 import { simulate, capacityReport } from './sim.js'
+import { nodeCost, money } from './pricing.js'
 
 const NODE_W = 118, NODE_H = 46
 let seq = 0
@@ -442,6 +443,24 @@ export function review(nodes, edges, rps) {
       title: 'Add monitoring and alerting',
       detail: `Nothing collects metrics, logs or alerts here — you would learn about an outage from users. Attaches a monitoring tier fed by your ${anchors.length} busiest components.`,
       apply: (ns, es) => attach(ns, es, { type: 'monitor', label: 'Monitoring', x: rightOf(), y: bottomOf(), fromIds: anchors.filter(id => ns.some(n => n.id === id)) }),
+    })
+  }
+
+  // ── cost: tiers paying for capacity they never use ──
+  for (const r of cap.rows) {
+    if (r.replicas < 3 || r.util >= 0.2 || r.down) continue
+    const n = byId[r.id]
+    if (!n || NO_SCALE.includes(n.type)) continue
+    const target = Math.max(2, Math.ceil(r.in / (CATALOG[n.type].cap * 0.5)))
+    if (target >= r.replicas) continue
+    const now = nodeCost(n, r.in).total
+    const then = nodeCost({ ...n, replicas: target }, r.in).total
+    if (now - then < 20) continue
+    push({
+      id: 'cost:' + r.id, icon: '💵', severity: 'low',
+      title: `Scale ${r.label} down to ${target}× — saves ${money(now - then)}/mo`,
+      detail: `${r.label} runs ${r.replicas}× at only ${(r.util * 100).toFixed(0)}% utilization, so you are paying ${money(now)}/mo for capacity nothing uses. ${target}× still leaves it around 50% with room for a spike and an instance loss.`,
+      apply: (ns, es) => scaleTo(ns, es, r.id, target),
     })
   }
 

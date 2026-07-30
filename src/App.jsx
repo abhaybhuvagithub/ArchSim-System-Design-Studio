@@ -5,6 +5,8 @@ import { simulate, capacityReport } from './sim.js'
 import { review, applyAll } from './advisor.js'
 import { THEMES, readTheme, saveTheme } from './theme.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
+import { costReport, nodeCost, money, HOURS } from './pricing.js'
+import { autoArrange } from './layout.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -42,6 +44,14 @@ export default function App() {
   const sim = useMemo(() => simulate(nodes, edges, rps, downSet), [nodes, edges, rps, downSet])
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
+  const cost = useMemo(() => costReport(nodes, sim), [nodes, sim])
+
+  const arrange = () => {
+    if (!nodes.length) return
+    const laid = autoArrange(nodes, edges)
+    setNodes(laid)
+    requestAnimationFrame(() => fitView(laid))
+  }
 
   // context the guided lesson checks itself against
   const lessonCtx = useMemo(() => ({
@@ -328,6 +338,7 @@ export default function App() {
         <button className={`timer ${timer !== null && timer < 300 ? 'hot' : ''}`} onClick={() => setTimer(t => t === null ? 35 * 60 : null)} title="35-min interview timer">
           ⏱ {timer === null ? '35:00' : `${String(Math.floor(timer / 60)).padStart(2, '0')}:${String(timer % 60).padStart(2, '0')}`}
         </button>
+        <button className="btn" onClick={arrange} title="Auto-arrange into clean left-to-right layers with fewer crossing lines">⧉ Arrange</button>
         <button className="btn" onClick={() => fitView(nodes)} title="Fit the whole diagram in view">⤢ Fit</button>
         <button className="btn" onClick={exportPNG}>PNG</button>
         <button className="btn" onClick={exportJSON}>JSON ↓</button>
@@ -400,6 +411,7 @@ export default function App() {
               <div className="chip">p99 <b>{Math.round(sim.p99)} ms</b></div>
               <div className={`chip ${sim.successRate < 0.99 ? 'bad' : 'ok'}`}>success <b>{(sim.successRate * 100).toFixed(2)}%</b></div>
               <div className="chip">availability <b>{(sim.sysAvail * 100).toFixed(3)}%</b></div>
+              <div className="chip" title="Estimated monthly cloud cost at this traffic level">cost <b>{money(cost.total)}/mo</b></div>
               {sim.totalDropped > 1 && <div className="chip bad">dropping <b>{fmt(sim.totalDropped)}/s</b></div>}
               {Object.keys(down).length > 0 && <div className="chip bad">🐒 down: <b>{Object.keys(down).length}</b></div>}
             </div>
@@ -414,12 +426,17 @@ export default function App() {
             <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
               ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
             </button>
+            <button className={tab === 'cost' ? 'on' : ''} onClick={() => { setTab('cost'); setSel(null) }}>
+              💵 {money(cost.total)}
+            </button>
             <button className={tab === 'learn' ? 'on' : ''} onClick={() => { setTab('learn'); setSel(null) }}>
-              🎓 Learn ({doneSteps.filter(Boolean).length}/{LESSON.length})
+              🎓 {doneSteps.filter(Boolean).length}/{LESSON.length}
             </button>
           </div>
 
-          {tab === 'learn' ? (
+          {tab === 'cost' ? (
+            <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} />
+          ) : tab === 'learn' ? (
             <Learn done={doneSteps} />
           ) : tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
@@ -527,6 +544,62 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
         </>
       )}
     </g>
+  )
+}
+
+function Cost({ cost, onHover, empty }) {
+  const [detail, setDetail] = useState(null)
+  if (empty) return (
+    <section>
+      <h3>Running cost</h3>
+      <div className="empty">Nothing to price yet. Add components and the estimate updates live — it reacts to both replica counts and the traffic actually flowing through each node.</div>
+    </section>
+  )
+  const max = cost.rows[0]?.total || 1
+  return (
+    <section>
+      <h3>Running cost</h3>
+      <div className="cost-big">{money(cost.total)}<span>/month</span></div>
+      <div className="cost-sub">
+        {money(cost.hourly)}/hour · {money(cost.perMillion)} per million requests
+        {cost.reqMillions > 0 && <> · {cost.reqMillions.toFixed(0)}M req/mo</>}
+      </div>
+      <div className="cost-split">
+        <span>Fixed (instances, licences) <b>{money(cost.fixed)}</b></span>
+        <span>Usage (per-request) <b>{money(cost.usage)}</b></span>
+      </div>
+
+      <h3 style={{ marginTop: 14 }}>By area</h3>
+      {cost.byGroup.map(([g, v]) => (
+        <div key={g} className="row">
+          <span>{g}</span>
+          <span className="v">{money(v)} · {((v / cost.total) * 100).toFixed(0)}%</span>
+        </div>
+      ))}
+
+      <h3 style={{ marginTop: 14 }}>Biggest line items</h3>
+      {cost.rows.filter(r => r.total > 0).slice(0, 14).map(r => (
+        <div key={r.id} className="cap-row" onMouseEnter={() => onHover(r.id)} onMouseLeave={() => onHover(null)}
+          onClick={() => setDetail(detail === r.id ? null : r.id)} style={{ cursor: 'pointer' }}>
+          <div className="t">
+            <span>{r.label}</span>
+            <span>{money(r.total)}</span>
+          </div>
+          <div className="util-bar"><i style={{ width: `${(r.total / max) * 100}%`, background: 'var(--accent)' }} /></div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+            {r.replicas}× {r.typeName}
+            {r.usage > 0 && <> · {money(r.fixed)} fixed + {money(r.usage)} usage</>}
+          </div>
+          {detail === r.id && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, lineHeight: 1.5 }}>{r.rate.note}</div>}
+        </div>
+      ))}
+
+      <div className="muted" style={{ fontSize: 10.5, marginTop: 10, lineHeight: 1.55 }}>
+        Order-of-magnitude on-demand US list prices, {HOURS} h/month, no reserved or committed-use discounts.
+        Per-request costs scale with the traffic the simulation routes through each node, so raising the
+        traffic slider or adding replicas moves this number immediately. Click a line item for its assumption.
+      </div>
+    </section>
   )
 }
 
@@ -704,6 +777,7 @@ function HoverCard({ n, sim, simOn }) {
           <span>{fmt(spec.cap * (n.replicas || 1))} rps capacity</span>
           <span>{spec.lat} ms base</span>
           {simOn && s && <span style={{ color: utilColor(s.util) }}>{(s.util * 100).toFixed(0)}% used</span>}
+          <span>{money(nodeCost(n, s?.in || 0).total)}/mo</span>
           {simOn && s?.dropped > 0 && <span style={{ color: '#ef4444' }}>dropping {fmt(s.dropped)}/s</span>}
         </div>
       )}
@@ -741,6 +815,15 @@ function Inspector({ n, sim, setNodes }) {
           <div className="row"><span>Availability</span><span className="v">{(s.avail * 100).toFixed(3)}%</span></div>
         </>
       )}
+      {!spec.source && (() => {
+        const c = nodeCost(n, s?.in || 0)
+        return (
+          <>
+            <div className="row"><span>Cost</span><span className="v">{money(c.total)}/mo</span></div>
+            <div className="muted" style={{ fontSize: 10.5, marginTop: 4, lineHeight: 1.5 }}>{c.rate.note}</div>
+          </>
+        )
+      })()}
       <div className="muted" style={{ marginTop: 10, fontSize: 11 }}>Tip: press Delete to remove this node.</div>
     </section>
   )
