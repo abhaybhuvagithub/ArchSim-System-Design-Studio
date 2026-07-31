@@ -72,7 +72,9 @@ export async function exportPdf(report, image) {
       const props = doc.getImageProperties(image)
       const h = Math.min(300, (CW * props.height) / props.width)
       p.room(h + 30)
-      doc.addImage(image, 'PNG', M, p.y, CW, h)
+      // 'FAST' = FlateDecode; without it jsPDF embeds raw RGB and a single
+      // screenshot balloons the file to several megabytes
+      doc.addImage(image, 'PNG', M, p.y, CW, h, undefined, 'FAST')
       doc.setDrawColor(225).setLineWidth(0.5).rect(M, p.y, CW, h)
       p.y += h + 8
       doc.setFont('helvetica', 'italic').setFontSize(8).setTextColor(140)
