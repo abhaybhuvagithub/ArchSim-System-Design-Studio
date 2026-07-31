@@ -403,6 +403,9 @@ select.btn { appearance: auto; }
 
 /* About comparison table — three columns must fit the analysis panel. */
 .about-cmp table { table-layout: fixed; width: 100%; }
-.about-cmp td.k { white-space: normal; width: 38%; }
+/* table-layout: fixed takes column widths from the header row, so size the th */
+.about-cmp th:first-child { width: 31%; }
+.about-cmp th:nth-child(2) { width: 27%; }
+.about-cmp td.k { white-space: normal; }
 /* wrap between words, never mid-word */
 .about-cmp th, .about-cmp td { overflow-wrap: break-word; word-break: normal; hyphens: none; }
