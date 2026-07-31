@@ -12,6 +12,7 @@ import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from 
 import { FAULTS, FAULT_GROUPS, faultById, faultOnNode, pickTarget, compileFaults } from './faults.js'
 import { describeArchitecture } from './describe.js'
 import { countVisit, formatVisitors } from './visitors.js'
+import { ABOUT, ABOUT_COMPARE } from './about.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -717,6 +718,7 @@ export default function App() {
               ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
             </button>
             <button className={tab === 'brief' ? 'on' : ''} onClick={() => setTab('brief')} title="Written description of this architecture">Brief</button>
+            <button className={tab === 'about' ? 'on' : ''} onClick={() => setTab('about')} title="What this simulator is and how it differs">About</button>
             <button className={`${tab === 'chaos' ? 'on' : ''} ${faults.length ? 'alarm' : ''}`}
               onClick={() => setTab('chaos')}>
               Chaos{faults.length ? ` (${faults.length})` : ''}
@@ -729,7 +731,9 @@ export default function App() {
             </button>
           </div>
 
-          {tab === 'brief' ? (
+          {tab === 'about' ? (
+            <About />
+          ) : tab === 'brief' ? (
             <Brief brief={brief} />
           ) : tab === 'chaos' ? (
             <Chaos faults={faults} nodes={nodes} sel={sel} onInject={injectFault}
@@ -888,12 +892,42 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
   )
 }
 
-// Renders **bold** spans inside a generated line.
+// Renders **bold** and [text](url) inside a generated line.
 function RichLine({ text }) {
-  const parts = String(text).split(/(\*\*[^*]+\*\*)/g)
-  return <>{parts.map((p, i) => p.startsWith('**') && p.endsWith('**')
-    ? <b key={i}>{p.slice(2, -2)}</b>
-    : <span key={i}>{p}</span>)}</>
+  const parts = String(text).split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g)
+  return <>{parts.map((p, i) => {
+    if (p.startsWith('**') && p.endsWith('**')) return <b key={i}>{p.slice(2, -2)}</b>
+    const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(p)
+    if (link) return <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer">{link[1]} ↗</a>
+    return <span key={i}>{p}</span>
+  })}</>
+}
+
+function About() {
+  return (
+    <section>
+      <h3>About ArchSim</h3>
+      {ABOUT.map(sec => (
+        <div key={sec.title} className="brief-sec">
+          <div className="brief-h">{sec.title}</div>
+          {sec.lines.map((l, i) => <p key={i} className="brief-p"><RichLine text={l} /></p>)}
+        </div>
+      ))}
+      <div className="brief-sec">
+        <div className="brief-h">Honestly compared</div>
+        <div className="cmp">
+          <table>
+            <thead><tr><th />{ABOUT_COMPARE.cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+            <tbody>
+              {ABOUT_COMPARE.rows.map((r, i) => (
+                <tr key={i}><td className="k">{r[0]}</td>{r.slice(1).map((v, j) => <td key={j}>{v}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function Brief({ brief }) {
