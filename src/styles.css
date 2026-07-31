@@ -400,3 +400,8 @@ select.btn { appearance: auto; }
 /* About panel links */
 .brief-p a { color: var(--accent); text-decoration: none; }
 .brief-p a:hover { text-decoration: underline; }
+
+/* About comparison table — three columns must fit the analysis panel. */
+.about-cmp table { table-layout: fixed; width: 100%; }
+.about-cmp td.k { white-space: normal; width: 34%; }
+.about-cmp th, .about-cmp td { word-break: break-word; }
