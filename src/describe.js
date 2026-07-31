@@ -92,7 +92,7 @@ export function describeArchitecture(ctx) {
     .filter(n => !CATALOG[n.type]?.source && sim.stats[n.id]?.in > 0)
     .sort((a, b) => (sim.stats[b.id]?.latency || 0) - (sim.stats[a.id]?.latency || 0))[0]
   add(simOn ? 'How it is behaving right now' : 'How it would behave', [
-    `End to end this lands around **${Math.round(sim.p50)} ms at p50 and ${Math.round(sim.p99)} ms at p99**, with **${pct(sim.successRate)} of requests succeeding** and a modelled availability of **${pct(sim.sysAvail)}**.`,
+    `End to end this lands around **${Math.round(sim.p50)} ms at p50, ${Math.round(sim.p95)} ms at p95 and ${Math.round(sim.p99)} ms at p99**, with **${pct(sim.successRate)} of requests succeeding** and a modelled availability of **${pct(sim.sysAvail)}**.`,
     busiest ? `The busiest component is **${busiest.label}** at ${(busiest.util * 100).toFixed(0)}% of capacity, taking ${fmt(busiest.in)} rps across ${busiest.replicas} replicas.` : null,
     slowest ? `**${slowest.label}** contributes the most latency on the path at ${Math.round(sim.stats[slowest.id].latency)} ms.` : null,
     hot.length
@@ -109,13 +109,14 @@ export function describeArchitecture(ctx) {
       return `**${spec.icon} ${spec.name}**${target ? ` on ${target.label}` : ' (system-wide)'} — ${spec.desc}`
     })
     const dSucc = baseSim ? sim.successRate - baseSim.successRate : 0
+    const dP95 = baseSim ? sim.p95 - baseSim.p95 : 0
     const dP99 = baseSim ? sim.p99 - baseSim.p99 : 0
     const dAvail = baseSim ? sim.sysAvail - baseSim.sysAvail : 0
     const blast = Object.keys(fx?.node || {}).length
     add('Chaos in progress', [
       `${faults.length} fault${faults.length > 1 ? 's are' : ' is'} injected right now, touching ${blast} component${blast === 1 ? '' : 's'}.`,
       ...lines,
-      baseSim ? `Against the healthy baseline that is **${dSucc < -0.0001 ? (dSucc * 100).toFixed(1) + ' points of success rate' : 'no measurable success-rate loss'}**, **p99 ${dP99 >= 0 ? '+' : ''}${Math.round(dP99)} ms**, and **availability ${(dAvail * 100).toFixed(2)} points**.` : null,
+      baseSim ? `Against the healthy baseline that is **${dSucc < -0.0001 ? (dSucc * 100).toFixed(1) + ' points of success rate' : 'no measurable success-rate loss'}**, **p95 ${dP95 >= 0 ? '+' : ''}${Math.round(dP95)} ms, p99 ${dP99 >= 0 ? '+' : ''}${Math.round(dP99)} ms**, and **availability ${(dAvail * 100).toFixed(2)} points**.` : null,
       fx?.rpsMul !== 1 ? `Incoming traffic is multiplied **${fx.rpsMul}×** by the injected event.` : null,
       'Every fault heals itself when its timer runs out, or you can recover them all from the chaos panel.',
     ])

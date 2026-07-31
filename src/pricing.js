@@ -188,11 +188,48 @@ export function scaleAll(nodes, factor) {
   })
 }
 
-export const money = v =>
-  v >= 1e9 ? '$' + (v / 1e9).toFixed(1) + 'B'
-  : v >= 1e6 ? '$' + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + 'M'
-  : v >= 100000 ? '$' + (v / 1000).toFixed(0) + 'k'
-  : v >= 1000 ? '$' + (v / 1000).toFixed(1) + 'k'
-  : v >= 10 ? '$' + v.toFixed(0)
-  : v > 0 ? '$' + v.toFixed(2)
-  : '$0'
+// ---- currency ----
+// Rates are static approximations, refreshed by hand. The underlying model is
+// priced in USD; this is a display conversion, not a live FX feed.
+export const CURRENCIES = [
+  { code: 'USD', symbol: '$',   rate: 1 },
+  { code: 'INR', symbol: '₹',   rate: 88 },
+  { code: 'EUR', symbol: '€',   rate: 0.92 },
+  { code: 'GBP', symbol: '£',   rate: 0.78 },
+  { code: 'JPY', symbol: '¥',   rate: 155 },
+  { code: 'AUD', symbol: 'A$',  rate: 1.52 },
+  { code: 'CAD', symbol: 'C$',  rate: 1.38 },
+  { code: 'SGD', symbol: 'S$',  rate: 1.34 },
+  { code: 'AED', symbol: 'AED ', rate: 3.67 },
+]
+export const currencyByCode = c => CURRENCIES.find(x => x.code === c) || CURRENCIES[0]
+
+let ACTIVE = CURRENCIES[0]
+export const setCurrency = code => { ACTIVE = currencyByCode(code) }
+export const activeCurrency = () => ACTIVE
+export const readCurrency = () => {
+  try { const v = localStorage.getItem('archsim.currency'); if (CURRENCIES.some(c => c.code === v)) return v } catch {}
+  return 'USD'
+}
+export const saveCurrency = v => { try { localStorage.setItem('archsim.currency', v) } catch {} }
+
+// Formats a USD amount in the active currency. Indian users get lakh/crore.
+export const money = (usd, code) => {
+  const c = code ? currencyByCode(code) : ACTIVE
+  const v = usd * c.rate
+  const s = c.symbol
+  if (c.code === 'INR') {
+    return v >= 1e7 ? s + (v / 1e7).toFixed(v >= 1e8 ? 0 : 1) + ' Cr'
+      : v >= 1e5 ? s + (v / 1e5).toFixed(1) + ' L'
+      : v >= 1000 ? s + (v / 1000).toFixed(1) + 'k'
+      : v >= 10 ? s + v.toFixed(0)
+      : v > 0 ? s + v.toFixed(2) : s + '0'
+  }
+  return v >= 1e9 ? s + (v / 1e9).toFixed(1) + 'B'
+    : v >= 1e6 ? s + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + 'M'
+    : v >= 100000 ? s + (v / 1000).toFixed(0) + 'k'
+    : v >= 1000 ? s + (v / 1000).toFixed(1) + 'k'
+    : v >= 10 ? s + v.toFixed(0)
+    : v > 0 ? s + v.toFixed(2)
+    : s + '0'
+}

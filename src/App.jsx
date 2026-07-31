@@ -6,7 +6,7 @@ import { review, applyAll } from './advisor.js'
 import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL } from './theme.js'
 import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
-import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas } from './pricing.js'
+import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
 import { FAULTS, FAULT_GROUPS, faultById, pickTarget, compileFaults } from './faults.js'
@@ -47,13 +47,26 @@ export default function App() {
   const [faults, setFaults] = useState([])       // [{key, faultId, targetId, until}]
   const [visitors, setVisitors] = useState(null)
   const [vw, setVw] = useState(() => (typeof window === 'undefined' ? 1400 : window.innerWidth))
+  const [currency, setCur] = useState(readCurrency)
+  const [toasts, setToasts] = useState([])
+  const toastId = useRef(0)
+  const alerted = useRef({ drop: false, hot: false })
   const [drawer, setDrawer] = useState(null)     // 'left' | 'right' | null on small screens
   const compact = vw < 1100        // tablet and below: panels become drawers
   const mobile = vw < 700
   const resizeRef = useRef(null)
   const cloudInfo = cloudById(cloud)
+  setCurrency(currency)
 
   useEffect(() => { saveCloud(cloud) }, [cloud])
+  useEffect(() => { setCurrency(currency); saveCurrency(currency) }, [currency])
+
+  // ---- notifications ----
+  const notify = useCallback((msg, kind = 'info') => {
+    const id = ++toastId.current
+    setToasts(t => [...t.slice(-3), { id, msg, kind }])
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4200)
+  }, [])
   useEffect(() => { countVisit().then(v => { if (v != null) setVisitors(v) }) }, [])
   useEffect(() => {
     const onResize = () => setVw(window.innerWidth)
@@ -77,6 +90,26 @@ export default function App() {
   const brief = useMemo(() => describeArchitecture({
     nodes, edges, sim, baseSim, cap, cost, sugs, faults, fx, rps, template, cloud, simOn,
   }), [nodes, edges, sim, baseSim, cap, cost, sugs, faults, fx, rps, template, cloud, simOn])
+
+  // Warn once when the design crosses a threshold, and once when it recovers.
+  useEffect(() => {
+    if (!simOn || !nodes.length) { alerted.current = { drop: false, hot: false }; return }
+    const dropping = sim.successRate < 0.995
+    if (dropping && !alerted.current.drop) {
+      notify(`Dropping traffic — success rate ${(sim.successRate * 100).toFixed(1)}%`, 'bad')
+      alerted.current.drop = true
+    } else if (!dropping && alerted.current.drop) {
+      notify('Success rate back to normal', 'ok')
+      alerted.current.drop = false
+    }
+    const hot = cap.rows.filter(r => r.util > 0.9)
+    if (hot.length && !alerted.current.hot) {
+      notify(`${hot[0].label} at ${(hot[0].util * 100).toFixed(0)}% — needs ${hot[0].needed}× replicas`, 'warn')
+      alerted.current.hot = true
+    } else if (!hot.length && alerted.current.hot) {
+      alerted.current.hot = false
+    }
+  }, [simOn, sim.successRate, cap, nodes.length, notify])
 
   // ---- panel resize / detach ----
   const startResize = (side, e) => {
@@ -128,6 +161,10 @@ export default function App() {
       setReqLog(l => ({ ...l, [i]: { added: r.added, scaled: r.scaled, prevRps: r.prevRps } }))
       if (r.focus) { setSel(r.focus); setHover(r.focus) }
       fitView(r.nodes)
+      const added = r.added?.length
+      notify(added ? `Requirement applied — added ${added} component${added > 1 ? 's' : ''}`
+        : r.rps ? `Traffic set to ${r.rps >= 1000 ? (r.rps / 1000).toFixed(1) + 'k' : r.rps} rps from the estimate`
+        : 'Requirement applied — scaled a tier', 'ok')
     }
   }
 
@@ -141,9 +178,13 @@ export default function App() {
       until: Date.now() + f.secs * 1000,
     }])
     if (target) setHover(target.id)
+    notify(`${f.icon} ${f.name} injected${target ? ` on ${target.label}` : ''} — heals in ${f.secs}s`, 'bad')
   }
   const clearFault = key => setFaults(fs => fs.filter(x => x.key !== key))
-  const recoverAll = () => { setFaults([]); setDown({}); setChaosOn(false) }
+  const recoverAll = () => {
+    if (faults.length) notify(`Recovered ${faults.length} fault${faults.length > 1 ? 's' : ''}`, 'ok')
+    setFaults([]); setDown({}); setChaosOn(false)
+  }
 
   // ---- capacity scaling from the cost panel ----
   const rightSize = () => {
@@ -151,8 +192,12 @@ export default function App() {
     if (!plan.changes.length) return
     const map = Object.fromEntries(plan.changes.map(c => [c.id, c.to]))
     setNodes(ns => ns.map(n => (map[n.id] ? { ...n, replicas: map[n.id] } : n)))
+    notify(`Right-sized ${plan.changes.length} tier${plan.changes.length > 1 ? 's' : ''} · ${plan.delta < 0 ? 'saving ' + money(-plan.delta) : '+' + money(plan.delta)}/mo`, 'ok')
   }
-  const scaleEverything = factor => setNodes(ns => scaleAll(ns, factor))
+  const scaleEverything = factor => {
+    setNodes(ns => scaleAll(ns, factor))
+    notify(factor >= 1 ? `Scaled every tier up ${factor}×` : `Scaled every tier down to ${Math.round(factor * 100)}%`, 'info')
+  }
   const setReplicas = (id, next) =>
     setNodes(ns => ns.map(n => (n.id === id ? { ...n, replicas: Math.max(1, Math.min(64, next)) } : n)))
 
@@ -161,6 +206,7 @@ export default function App() {
     const laid = autoArrange(nodes, edges)
     setNodes(laid)
     requestAnimationFrame(() => fitView(laid))
+    notify('Diagram auto-arranged into layers', 'info')
   }
 
   // context the guided lesson checks itself against
@@ -193,6 +239,7 @@ export default function App() {
     setApplied(a => [...a, s.id])
     if (r.focus) { setSel(r.focus); setHover(r.focus) }
     fitView(r.nodes)
+    notify(`⚡ ${s.title}`, 'ok')
   }
   const applyEvery = () => {
     const actionable = sugs.filter(s => s.apply)
@@ -201,6 +248,7 @@ export default function App() {
     setApplied(a => [...a, ...actionable.map(s => s.id)])
     if (r.focus) setSel(r.focus)
     fitView(r.nodes)
+    notify(`⚡ Applied ${actionable.length} quick fix${actionable.length > 1 ? 'es' : ''}`, 'ok')
   }
 
   // animation + chaos + recovery loop
@@ -391,6 +439,7 @@ export default function App() {
     setTemplate(t); setChecks({}); setSel(null); setDown({}); setApplied([])
     setRps(t.rps)
     requestAnimationFrame(() => fitView(t.nodes))
+    notify(`Loaded ${t.name} — ${t.nodes.length} components at ${t.rps >= 1000 ? (t.rps / 1000).toFixed(1) + 'k' : t.rps} rps`, 'info')
   }
   const clearAll = blank
 
@@ -483,6 +532,10 @@ export default function App() {
         <select className={`btn ${cloud !== 'generic' ? 'active' : ''}`} value={cloud} onChange={e => setCloud(e.target.value)}
           title="Show the equivalent managed service on each cloud, and price accordingly">
           {CLOUDS.map(c => <option key={c.id} value={c.id}>{c.id === 'generic' ? '☁ Generic' : '☁ ' + c.name}</option>)}
+        </select>
+        <select className="btn" value={currency} onChange={e => setCur(e.target.value)}
+          title="Display costs in this currency (static conversion from USD list prices)">
+          {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.symbol.trim()} {c.code}</option>)}
         </select>
         <button className={`btn ${steps ? 'active' : ''}`} onClick={() => setSteps(s => !s)}
           title="Number the connections in request order, like a walkthrough diagram">①②③ Steps</button>
@@ -601,6 +654,7 @@ export default function App() {
           {simOn && (
             <div className="statbar">
               <div className="chip">p50 <b>{Math.round(sim.p50)} ms</b></div>
+              <div className="chip">p95 <b>{Math.round(sim.p95)} ms</b></div>
               <div className="chip">p99 <b>{Math.round(sim.p99)} ms</b></div>
               <div className={`chip ${sim.successRate < 0.99 ? 'bad' : 'ok'}`}>success <b>{(sim.successRate * 100).toFixed(2)}%</b></div>
               <div className="chip">availability <b>{(sim.sysAvail * 100).toFixed(3)}%</b></div>
@@ -710,6 +764,10 @@ export default function App() {
           )}
         </div>
         {compact && drawer && <div className="scrim" onClick={() => setDrawer(null)} />}
+      </div>
+
+      <div className="toasts">
+        {toasts.map(t => <div key={t.id} className={`toast ${t.kind}`}>{t.msg}</div>)}
       </div>
 
       <footer className="foot">
@@ -868,6 +926,7 @@ function Chaos({ faults, nodes, sel, onInject, onClear, onRecoverAll, sim, fx })
                   {(sim.successRate * 100).toFixed(1)}%
                 </span>
               </div>
+              <div className="row"><span>p95</span><span className="v">{Math.round(sim.p95)} ms</span></div>
               <div className="row"><span>p99</span><span className="v">{Math.round(sim.p99)} ms</span></div>
               <div className="row"><span>Availability</span><span className="v">{(sim.sysAvail * 100).toFixed(2)}%</span></div>
               {fx.cut?.size > 0 && <div className="row"><span>Severed links</span><span className="v">{fx.cut.size}</span></div>}
