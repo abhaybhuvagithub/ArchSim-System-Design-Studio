@@ -373,3 +373,109 @@ export const NUMBERS = [
     ['Replication factor 3', '3× raw storage cost'],
   ]},
 ]
+
+// Popular tips and tricks. Interview-process advice reflects what hiring guides
+// converge on; the engineering rules of thumb are the ones you can check right
+// here on the canvas, which is why each carries a "try it" line.
+export const TIPS = [
+  {
+    group: 'Before you draw anything',
+    items: [
+      {
+        tip: 'Spend the first five minutes on requirements, not boxes',
+        why: 'The most common failure in a design interview is designing before knowing what is being designed. "Design Twitter" is not a spec — read/write ratio, freshness tolerance and consistency needs are, and they decide almost every box you are about to draw.',
+        try: 'Load a template and read its requirements list before looking at the diagram.',
+      },
+      {
+        tip: 'Non-functional requirements pick your components, not features',
+        why: 'Features tell you what to build; latency budget, availability target, traffic shape and consistency model tell you whether you need a cache, a queue, sharding or replication. Get these first and the architecture mostly falls out.',
+        try: 'Change the traffic slider before adding anything — watch which tier turns orange first.',
+      },
+      {
+        tip: 'Do the arithmetic out loud',
+        why: 'Back-of-the-envelope numbers stop you designing a distributed system for 50 rps or a single box for 500k. Requests per second, bytes per request, storage per year, and reads versus writes — four numbers that settle most arguments.',
+        try: 'Open Learn → Numbers for the figures worth memorising.',
+      },
+    ],
+  },
+  {
+    group: 'While you design',
+    items: [
+      {
+        tip: 'Narrate the trade-off, not the diagram',
+        why: 'A finished diagram produced in silence scores badly. The interviewer is buying your reasoning, so say why the queue is there and what you gave up to have it — durability and back-pressure bought at the cost of end-to-end latency and an at-least-once contract.',
+        try: 'Open the Brief tab — it narrates your design the way you should.',
+      },
+      {
+        tip: 'Commit to a choice and defend it',
+        why: '"It depends" is fine once. By the third time it reads as not knowing. Pick Postgres or Cassandra, say which property made you pick it, and name the condition that would change your mind.',
+        try: 'Learn → Compare has the head-to-head tables for the usual pairs.',
+      },
+      {
+        tip: 'Do not over-engineer for scale nobody asked for',
+        why: 'Reaching for Kafka, a service mesh and multi-region at 100 rps signals poor judgement just as loudly as a single server at 100k rps does. Match the machinery to the number you were given.',
+        try: 'Watch the cost tab as you add components — the bill is the honest reviewer.',
+      },
+      {
+        tip: 'Cache the read path before you shard the write path',
+        why: 'Most consumer systems are read-heavy by an order of magnitude. A cache at an 80% hit ratio removes four fifths of the load for a fraction of the effort of resharding, and it is reversible if you get it wrong.',
+        try: 'Improve → "Cache reads in front of…" inserts one and you can watch the database load drop.',
+      },
+      {
+        tip: 'Two of everything on the live path',
+        why: 'A single instance is not a capacity decision, it is an availability decision. One box at 99.9% costs you about 43 minutes a month; two behind a load balancer costs seconds. This is the cheapest reliability you will ever buy.',
+        try: 'The Capacity tab flags every single instance under "Needs attention".',
+      },
+    ],
+  },
+  {
+    group: 'Numbers that keep you honest',
+    items: [
+      {
+        tip: 'Latency goes vertical around 70–80% utilisation',
+        why: 'Queueing delay follows roughly 1/(1−utilisation), so the last 20% of capacity costs more latency than the first 80% combined. Size for about 55% and you have somewhere to put a spike.',
+        try: 'Push traffic until a tier passes 80% and watch p99 move long before anything is dropped.',
+      },
+      {
+        tip: 'Design against p99, report p50',
+        why: 'Averages hide the users who are leaving. If one page makes 20 backend calls, roughly one in five page loads hits your p95 — the tail is the typical experience for a fan-out request.',
+        try: 'The stat bar shows p50, p95 and p99 side by side; compare their ratio at low and high load.',
+      },
+      {
+        tip: 'Availability multiplies, redundancy exponentiates',
+        why: 'Five components at 99.9% in series give you 99.5%, not 99.9%. Adding a second instance turns 1−a into (1−a)², which is why two mediocre replicas beat one excellent server.',
+        try: 'Add a replica to your worst tier and watch the modelled availability move.',
+      },
+      {
+        tip: 'Estimate the bill before the architecture review does',
+        why: 'Cost is now an explicit interview criterion, not a bonus. Egress, per-request pricing and always-on instances are where designs quietly become unaffordable — CDN egress alone often dominates a read-heavy system.',
+        try: 'Open the cost tab and sort by line item — the top row is rarely the one people guess.',
+      },
+    ],
+  },
+  {
+    group: 'Before you call it done',
+    items: [
+      {
+        tip: 'Kill something on purpose',
+        why: 'Walking your own design through failure modes out loud is graded explicitly now. Name what happens when the cache dies cold, when a zone goes, when the queue backs up, and when a dependency gets slow rather than failing outright.',
+        try: 'The Chaos tab has 28 named faults — grey failure and retry storm are the ones people forget.',
+      },
+      {
+        tip: 'Slow is worse than dead',
+        why: 'A dependency that fails fast sheds load; one that hangs holds your threads and takes the whole service with it. Timeouts, bulkheads and a circuit breaker are what separate a degraded feature from an outage.',
+        try: 'Inject "Grey Failure" or "Thread Pool Exhaustion" and compare the p99 to a clean kill.',
+      },
+      {
+        tip: 'Retries need jitter, or they become the outage',
+        why: 'Synchronised retries after a blip are indistinguishable from a DDoS you built yourself. Exponential backoff with jitter, a retry budget, and never retrying a non-idempotent write.',
+        try: 'Inject "Retry Storm" and watch traffic multiply against a tier that was already struggling.',
+      },
+      {
+        tip: 'Say what you would build first',
+        why: 'Closing with a phased plan — the smallest thing that works, then what you would add at 10× — shows judgement about sequencing, which is most of the job. It also gracefully covers anything you did not have time to design.',
+        try: 'Untick every requirement, then re-tick them one at a time to see the design grow.',
+      },
+    ],
+  },
+]

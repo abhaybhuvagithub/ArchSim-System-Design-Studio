@@ -2,6 +2,3 @@ node_modules
 dist
 *.local
 .DS_Store
-
-# scratch verification scripts
-src/__*.mjs

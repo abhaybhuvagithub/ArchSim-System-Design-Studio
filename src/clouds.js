@@ -89,6 +89,12 @@ export const CLOUD_MAP = {
   mft: ['AWS Transfer Family', 'Storage Transfer Service', 'Data Factory SFTP / Logic Apps', 'OCI Object Storage + MFT partner', 'iCloud Drive / CloudKit Assets'],
   partner: ['PrivateLink / partner API', 'Private Service Connect / partner API', 'Private Link / partner API', 'Private Endpoint / partner API', 'Apple Pay / third-party API'],
   hsm: ['CloudHSM', 'Cloud HSM', 'Managed HSM / Dedicated HSM', 'OCI Key Management (HSM)', 'Secure Enclave / HSM-backed keys'],
+  tls: ['ACM on ALB / CloudFront', 'Certificate Manager on Cloud LB', 'App Gateway / Front Door TLS', 'OCI Certificates on LB', 'Apple edge TLS termination'],
+  crypto: ['KMS envelope encryption', 'Cloud KMS + Tink', 'Key Vault / Managed HSM keys', 'OCI Vault (AES-256)', 'CryptoKit + Data Protection classes'],
+  hash: ['Cognito / app-side Argon2id', 'Identity Platform / app-side Argon2id', 'Entra ID / app-side Argon2id', 'IDCS / app-side Argon2id', 'Secure Enclave-backed SRP'],
+  digest: ['Application SHA-256 / S3 checksums', 'Application SHA-256 / GCS CRC32C', 'Application SHA-256 / Blob MD5', 'Application SHA-256 / OCI checksums', 'CryptoKit SHA-256'],
+  sign: ['KMS asymmetric sign / SigV4', 'Cloud KMS asymmetric sign', 'Key Vault signing keys', 'OCI Vault signing keys', 'App Attest / DeviceCheck'],
+  e2ee: ['Wickr / client-side libsodium', 'client-side Tink + Cloud KMS', 'client-side MSAL + Key Vault', 'client-side libsodium + OCI Vault', 'iMessage / Advanced Data Protection'],
   // quality & testing
   e2e:        ['CodeBuild + Selenium Grid', 'Cloud Build + Playwright', 'Azure Pipelines + Playwright', 'OCI DevOps + Selenium', 'XCTest / Xcode Cloud'],
   apitest:    ['CodeBuild + Newman', 'Cloud Build + Newman', 'Azure Pipelines + REST Assured', 'OCI DevOps + Newman', 'XCTest network tests'],

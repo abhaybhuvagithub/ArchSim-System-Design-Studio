@@ -122,6 +122,13 @@ const UPSTREAM = {
   mock: ['apitest', 'e2e', 'contract', 'micro'], testdata: ['apitest', 'e2e', 'cicd'],
   devicefarm: ['e2e'], testops: ['e2e', 'apitest', 'load', 'contract', 'dast'],
   audit: ['app', 'micro', 'saga', 'gateway'], siem: ['logs', 'audit', 'waf', 'iam'],
+  // cryptography
+  tls: ['gslb', 'waf', 'cdn', 'edge', 'lb', 'client'],
+  crypto: ['app', 'micro', 'worker', 'saga', 'gateway'],
+  hash: ['iam', 'gateway', 'bff', 'app', 'micro'],
+  digest: ['blob', 'worker', 'app', 'micro', 'cdn'],
+  sign: ['iam', 'gateway', 'app', 'micro', 'partner'],
+  e2ee: ['gateway', 'ws', 'bff', 'app', 'micro'],
 }
 // What a component of this type should normally call.
 const DOWNSTREAM = {
@@ -154,11 +161,18 @@ const DOWNSTREAM = {
   cicd: ['qgate', 'apitest', 'e2e', 'k8s', 'micro', 'app'],
   qgate: ['apitest'], apitest: ['mock', 'testops'], e2e: ['devicefarm', 'mock', 'testops'],
   load: ['testops'], contract: ['testops'], dast: ['testops'],
+  // cryptography
+  tls: ['lb', 'gateway', 'app', 'micro', 'web'],
+  crypto: ['secrets', 'hsm', 'blob', 'sql', 'nosql'],
+  hash: ['iam', 'sql', 'nosql'],
+  digest: ['blob', 'nosql', 'sql'],
+  sign: ['secrets', 'hsm', 'iam'],
+  e2ee: ['secrets', 'nosql', 'blob'],
 }
 // Types that are wrong as a dead end — they exist to route traffic onward.
 const PASSTHROUGH = ['dns', 'cdn', 'lb', 'ratelimiter', 'gateway', 'bff', 'mesh', 'saga', 'queue', 'kafka', 'cdc', 'etl', 'scheduler',
   'gslb', 'waf', 'edge', 'graphql', 'tenant', 'k8s', 'mq', 'esb', 'otel', 'cicd', 'synthetic',
-  'qgate', 'apitest', 'e2e', 'load', 'contract', 'dast']
+  'qgate', 'apitest', 'e2e', 'load', 'contract', 'dast', 'tls']
 // Components that generate their own work rather than being called.
 const SELF_TRIGGER = ['scheduler', 'synthetic', 'cicd']
 // Vendor or legacy systems you cannot simply add instances to.
@@ -172,6 +186,7 @@ const CREATE_DOWN = {
   gslb: 'waf', waf: 'lb', edge: 'app', graphql: 'micro', tenant: 'micro', k8s: 'micro',
   mq: 'worker', esb: 'erp', otel: 'monitor', cicd: 'qgate', synthetic: 'gateway',
   qgate: 'apitest', apitest: 'testops', e2e: 'testops', load: 'testops', contract: 'testops', dast: 'testops',
+  tls: 'lb',
 }
 const article = name => (/^[AEIOU]/i.test(name) ? 'an' : 'a')
 
@@ -522,6 +537,24 @@ export function review(nodes, edges, rps) {
       title: 'Probe from outside the network',
       detail: `All your signals are internal, so a DNS, TLS or edge failure looks perfectly healthy from the inside. Adds synthetic probes hitting ${edgeNode.label}.`,
       apply: (ns, es) => attach(ns, es, { type: 'synthetic', label: 'Synthetic Probes', x: byId[edgeNode.id].x - 40, y: bottomOf(), toIds: [edgeNode.id] }),
+    })
+  }
+
+  // ── cryptography: only for designs that already handle regulated data ──
+  if (has('pii') || has('hsm')) {
+    const anchorNode = all('pii')[0] || all('hsm')[0]
+    if (!has('crypto')) push({
+      id: 'crypto:rest', icon: '🔐', severity: 'high',
+      title: 'Encrypt the data at rest, not just the tokens',
+      detail: 'This design tokenises or holds key material, so it is in scope for PCI or GDPR — but the records behind it are stored in the clear. '
+        + 'Adds an envelope-encryption service: AES-256-GCM data keys wrapped by a KEK in KMS, so a stolen backup is ciphertext and key rotation does not mean re-encrypting everything.',
+      apply: (ns, es) => attach(ns, es, { type: 'crypto', label: 'Encryption (AES-256-GCM)', x: byId[anchorNode.id].x, y: bottomOf(), fromIds: [anchorNode.id] }),
+    })
+    if (!has('audit')) push({
+      id: 'crypto:audit', icon: '📜', severity: 'med',
+      title: 'Record who decrypted what',
+      detail: 'Key material is in play but nothing keeps a tamper-evident record of access, which is the first thing an auditor asks for and the first thing you want after an incident. Adds an append-only audit log.',
+      apply: (ns, es) => attach(ns, es, { type: 'audit', label: 'Audit Log', x: byId[anchorNode.id].x + 160, y: bottomOf(), fromIds: [anchorNode.id] }),
     })
   }
 

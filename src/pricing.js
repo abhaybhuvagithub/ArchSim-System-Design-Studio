@@ -89,6 +89,13 @@ export const RATES = {
   mft:         { hourly: 0,     base: 400,  perM: 0,    note: 'MFT/EDI platform licence' },
   partner:     { hourly: 0,     base: 0,    perM: 50,   note: 'per-transaction fee charged by the partner (bank, switch, GDS)' },
   hsm:         { hourly: 1.20,  base: 0,    perM: 0,    note: 'dedicated HSM instance — expensive and usually needs a pair' },
+  // cryptography
+  tls:         { hourly: 0.03,  base: 0,    perM: 0.008, note: 'certificate management is free; you pay for the handshake CPU' },
+  crypto:      { hourly: 0,     base: 1,    perM: 0.03,  note: 'KMS: $1/key-month plus $0.03 per 10k requests — envelope encryption keeps this tiny' },
+  hash:        { hourly: 0.10,  base: 0,    perM: 0,     note: 'CPU-bound by design — Argon2 memory-hardness is what you are paying for' },
+  digest:      { hourly: 0.02,  base: 0,    perM: 0,     note: 'pure CPU, effectively free next to everything around it' },
+  sign:        { hourly: 0,     base: 1,    perM: 0.03,  note: 'KMS asymmetric sign; verification is usually done locally for free' },
+  e2ee:        { hourly: 0.06,  base: 0,    perM: 0.02,  note: 'key-distribution service plus ciphertext relay' },
   // quality & testing
   e2e:         { hourly: 0.08,  base: 0,    perM: 0,    note: 'CI runners executing the UI suite' },
   apitest:     { hourly: 0.02,  base: 0,    perM: 0,    note: 'cheap, fast runners — the layer to invest in' },
@@ -117,6 +124,7 @@ const GROUP_OF = {
   otel: 'Observability', monitor: 'Observability', logs: 'Observability', tracing: 'Observability',
   slo: 'Observability', alert: 'Observability', synthetic: 'Observability', apm: 'Observability',
   iam: 'Security', secrets: 'Security', pii: 'Security', audit: 'Security', siem: 'Security', hsm: 'Security',
+  tls: 'Security', crypto: 'Security', hash: 'Security', digest: 'Security', sign: 'Security', e2ee: 'Security',
   partner: 'Enterprise',
   e2e: 'Quality', apitest: 'Quality', load: 'Quality', contract: 'Quality', mock: 'Quality',
   testdata: 'Quality', qgate: 'Quality', dast: 'Quality', devicefarm: 'Quality', testops: 'Quality',

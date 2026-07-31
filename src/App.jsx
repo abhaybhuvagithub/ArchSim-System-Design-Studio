@@ -5,7 +5,7 @@ import { simulate, capacityReport } from './sim.js'
 import { review, applyAll, addComponent, insertBefore } from './advisor.js'
 import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL } from './theme.js'
 import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
-import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
+import { LESSON, COMPARISONS, QUIZ, NUMBERS, TIPS } from './learn.js'
 import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
@@ -14,6 +14,7 @@ import { describeArchitecture } from './describe.js'
 import { countVisit, formatVisitors } from './visitors.js'
 import { ABOUT, ABOUT_COMPARE } from './about.js'
 import { buildReport } from './report.js'
+import { diagnoseAll, diagnose, healthChip } from './health.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -202,6 +203,24 @@ export default function App() {
   }
   const setReplicas = (id, next) =>
     setNodes(ns => ns.map(n => (n.id === id ? { ...n, replicas: Math.max(1, Math.min(64, next)) } : n)))
+
+  // Every unhealthy tier, worst first — shared by the capacity panel, the
+  // hover card and the exported document.
+  const health = useMemo(() => diagnoseAll(cap, nodes, sim, fx, faults), [cap, nodes, sim, fx, faults])
+
+  // The one-click fix for a diagnosis.
+  const healFix = d => {
+    const n = nodes.find(x => x.id === d.id)
+    if (!n) return
+    if (d.fix.kind === 'recover') {
+      setFaults(fs => fs.filter(x => x.targetId !== d.id))
+      setDown(dn => { const next = { ...dn }; delete next[d.id]; return next })
+      notify(`${n.label} is back online`, 'ok')
+      return
+    }
+    setNodes(ns => ns.map(x => (x.id === d.id ? { ...x, replicas: d.fix.to } : x)))
+    notify(`${n.label} scaled ${n.replicas || 1}× → ${d.fix.to}× — ${d.level === 'spof' ? 'no longer a single point of failure' : 'back inside its capacity'}`, 'ok')
+  }
 
   // Apply the fix a fault suggests, on the node it is hurting.
   const mitigate = (row, fault) => {
@@ -495,18 +514,49 @@ export default function App() {
     e.target.value = ''
   }
   // Rasterise the canvas once; both the PNG export and the documents use it.
+  // A cloned SVG carries no stylesheet, so anything the CSS was responsible for
+  // has to be written onto the clone as presentation attributes — otherwise the
+  // curved connectors default to fill:black and the export fills with blobs.
   const renderPNG = () => new Promise(resolve => {
-    if (!svgRef.current) return resolve(null)
+    if (!svgRef.current || !nodes.length) return resolve(null)
     const svg = svgRef.current.cloneNode(true)
-    svg.setAttribute('width', 1600); svg.setAttribute('height', 1000)
+
+    for (const p of svg.querySelectorAll('path')) {
+      if (!p.getAttribute('fill')) p.setAttribute('fill', 'none')
+      if (p.getAttribute('stroke') === 'transparent') p.remove()   // invisible hit targets
+    }
+    for (const r of svg.querySelectorAll('rect.body')) {
+      if (!r.getAttribute('stroke-width')) r.setAttribute('stroke-width', '1.5')
+    }
+    for (const t of svg.querySelectorAll('text')) {
+      if (!t.getAttribute('font-family')) {
+        t.setAttribute('font-family', '-apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif')
+      }
+    }
+    // frame the whole design rather than whatever happens to be in view
+    const PAD = 56
+    const minX = Math.min(...nodes.map(n => n.x)) - PAD
+    const minY = Math.min(...nodes.map(n => n.y)) - PAD
+    const boxW = Math.max(...nodes.map(n => n.x)) + NODE_W + PAD - minX
+    const boxH = Math.max(...nodes.map(n => n.y)) + NODE_H + PAD - minY
+    const content = svg.querySelector('g')
+    if (content) content.removeAttribute('transform')
+    svg.setAttribute('viewBox', `${minX} ${minY} ${boxW} ${boxH}`)
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+
+    // ~2x for a crisp figure in print, capped so the data URL stays sane
+    const scale = Math.min(2.4, Math.max(1, 1700 / boxW))
+    const W = Math.round(boxW * scale), H = Math.round(boxH * scale)
+    svg.setAttribute('width', W); svg.setAttribute('height', H)
+
     const s = new XMLSerializer().serializeToString(svg)
     const img = new Image()
     img.onload = () => {
       const c = document.createElement('canvas')
-      c.width = 1600; c.height = 1000
+      c.width = W; c.height = H
       const g = c.getContext('2d')
-      g.fillStyle = T.canvasBg; g.fillRect(0, 0, c.width, c.height)
-      g.drawImage(img, 0, 0)
+      g.fillStyle = T.canvasBg; g.fillRect(0, 0, W, H)
+      g.drawImage(img, 0, 0, W, H)
       resolve(c.toDataURL('image/png'))
     }
     img.onerror = () => resolve(null)
@@ -727,7 +777,10 @@ export default function App() {
             </g>
           </svg>
 
-          {hoverNode && !selNode && <HoverCard n={hoverNode} sim={sim} simOn={simOn} cloud={cloud} cloudName={cloudInfo.name} />}
+          {hoverNode && !selNode && (
+            <HoverCard n={hoverNode} sim={sim} simOn={simOn} cloud={cloud} cloudName={cloudInfo.name}
+              diag={health.find(h => h.id === hoverNode.id) || null} />
+          )}
 
           {simOn && (
             <div className="statbar">
@@ -803,8 +856,21 @@ export default function App() {
               <h3>Capacity report</h3>
               {cap.rows.length === 0 && <div className="empty">Nothing on the canvas yet. Load a template or drag components in, then hit ▶ Simulate.</div>}
               {cap.bottlenecks.length > 0 && (
-                <div className="cap-row" style={{ background: '#3f1d1d', marginBottom: 10 }}>
+                <div className="cap-alert">
                   ⚠️ <b>{cap.bottlenecks.length} bottleneck{cap.bottlenecks.length > 1 ? 's' : ''}</b> — {cap.bottlenecks.map(b => b.label).join(', ')}
+                </div>
+              )}
+              {health.length > 0 && (
+                <div className="health">
+                  <div className="health-h">Needs attention ({health.length})</div>
+                  {health.map(d => (
+                    <div key={d.id} className={`diag ${d.level}`}
+                      onMouseEnter={() => setHover(d.id)} onMouseLeave={() => setHover(null)}>
+                      <div className="diag-t">{d.icon} {d.title}</div>
+                      <div className="diag-w">{d.why}</div>
+                      <button className="btn quick" onClick={() => healFix(d)}>⚡ {d.fix.label}</button>
+                    </div>
+                  ))}
                 </div>
               )}
               {cap.rows.slice(0, 12).map(r => {
@@ -1185,7 +1251,7 @@ function Learn({ done }) {
   return (
     <section>
       <div className="tabs sub">
-        {[['steps', 'Steps'], ['clouds', 'Clouds'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
+        {[['steps', 'Steps'], ['tips', 'Tips'], ['clouds', 'Clouds'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
           <button key={k} className={sub === k ? 'on' : ''} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
@@ -1205,6 +1271,28 @@ function Learn({ done }) {
               </div>
               <div className="lesson-do">→ {s.do}</div>
               <div className="lesson-why">{s.why}</div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {sub === 'tips' && (
+        <>
+          <h3>Popular tips &amp; tricks</h3>
+          <div className="muted" style={{ marginBottom: 10 }}>
+            {TIPS.reduce((n, g) => n + g.items.length, 0)} things that separate a design that reviews well from one that
+            does not — each with something you can try on the canvas right now.
+          </div>
+          {TIPS.map(g => (
+            <div key={g.group} className="tip-g">
+              <div className="tip-gh">{g.group}</div>
+              {g.items.map(t => (
+                <div key={t.tip} className="tip">
+                  <div className="tip-t">{t.tip}</div>
+                  <div className="tip-w">{t.why}</div>
+                  <div className="tip-try">▸ {t.try}</div>
+                </div>
+              ))}
             </div>
           ))}
         </>
@@ -1372,7 +1460,7 @@ function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty }) {
   )
 }
 
-function HoverCard({ n, sim, simOn, cloud, cloudName }) {
+function HoverCard({ n, sim, simOn, cloud, cloudName, diag = null }) {
   const spec = CATALOG[n.type]
   const s = sim.stats[n.id]
   const svc = serviceName(n.type, cloud)
@@ -1388,7 +1476,13 @@ function HoverCard({ n, sim, simOn, cloud, cloudName }) {
           <span>{spec.lat} ms base</span>
           {simOn && s && <span style={{ color: utilColor(s.util) }}>{(s.util * 100).toFixed(0)}% used</span>}
           <span>{money(nodeCost(n, s?.in || 0).total)}/mo</span>
-          {simOn && s?.dropped > 0 && <span style={{ color: '#ef4444' }}>dropping {fmt(s.dropped)}/s</span>}
+          {simOn && s?.dropped > 0 && <span className="hc-drop">dropping {fmt(s.dropped)}/s</span>}
+        </div>
+      )}
+      {diag && (
+        <div className={`hc-diag ${diag.level}`}>
+          <b>{diag.icon} {healthChip(diag)}</b>
+          <span>Open the Capacity tab for the one-click fix: {diag.fix.label.toLowerCase()}.</span>
         </div>
       )}
     </div>

@@ -88,6 +88,13 @@ export const CATALOG = {
   testops:     { name: 'Test Reporting',   glyph: '🧰', color: '#f97316', cap: 10000, lat: 20,  avail: 0.999,  desc: 'Allure/TestRail/Xray — results, history, flake tracking. A red build nobody can interpret is a build nobody fixes.' },
   billing:     { name: 'Metering & Billing', glyph: '🧮', color: '#10b981', cap: 4000, lat: 30,  avail: 0.999,  desc: 'Usage metering, rating and invoicing. Must never lose or double-count an event.' },
   backup:      { name: 'Backup & Archive', glyph: '💾', color: '#10b981', cap: 6000,  lat: 200, avail: 0.99999, desc: 'PITR snapshots and archival with a tested restore path — replication is not backup.' },
+  // ---- cryptography ----
+  tls:      { name: 'TLS Termination',   glyph: '🔒', color: '#14b8a6', cap: 180000, lat: 2,  avail: 0.99995, desc: 'TLS 1.3 handshake and record layer — ECDHE key exchange, AES-128-GCM or ChaCha20-Poly1305, session resumption and OCSP stapling. Offloads crypto from the app tier.' },
+  crypto:   { name: 'Encryption Service', glyph: '🔐', color: '#14b8a6', cap: 45000,  lat: 4,  avail: 0.9999,  desc: 'Envelope encryption at rest — AES-256-GCM data keys wrapped by a KEK in KMS. One KMS call per key, then bulk encryption locally.' },
+  hash:     { name: 'Password Hashing',  glyph: '🧂', color: '#14b8a6', cap: 900,    lat: 120, avail: 0.9999,  desc: 'Argon2id (or bcrypt / scrypt) with a per-user salt. Deliberately slow — the cost that stops offline cracking is the same cost you pay per login, so it caps out early.' },
+  digest:   { name: 'Hashing / Checksum', glyph: '#️⃣', color: '#14b8a6', cap: 250000, lat: 1,  avail: 0.99995, desc: 'SHA-256, SHA-3 or BLAKE3 for integrity, dedup keys and content addressing. Fast and collision-resistant — never for passwords.' },
+  sign:     { name: 'Signing / JWT',     glyph: '✍️', color: '#14b8a6', cap: 60000,  lat: 3,  avail: 0.9999,  desc: 'Issues and verifies signatures — Ed25519 or ECDSA P-256 for tokens and webhooks, HMAC-SHA256 where both sides share a secret. Verification is far cheaper than signing.' },
+  e2ee:     { name: 'End-to-End Crypto', glyph: '🕵️‍♀️', color: '#14b8a6', cap: 35000, lat: 6, avail: 0.9995, desc: 'Client-held keys — X3DH agreement plus the Double Ratchet for forward secrecy. The server relays ciphertext it cannot read, so search and moderation move to the device.' },
 }
 
 export const PALETTE_GROUPS = [
@@ -99,6 +106,7 @@ export const PALETTE_GROUPS = [
   { label: 'AI / ML',       types: ['ml', 'embed', 'vector', 'llm', 'guard'] },
   { label: 'Observability', types: ['otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
   { label: 'Security',      types: ['iam', 'secrets', 'hsm', 'pii', 'audit', 'siem'] },
+  { label: 'Cryptography',  types: ['tls', 'crypto', 'hash', 'digest', 'sign', 'e2ee'] },
   { label: 'Enterprise',    types: ['partner', 'erp', 'crm', 'mainframe', 'mft', 'billing', 'cicd'] },
   { label: 'Quality',       types: ['apitest', 'e2e', 'contract', 'load', 'mock', 'testdata', 'qgate', 'dast', 'devicefarm', 'testops'] },
   { label: 'Platform',      types: ['registry', 'mesh', 'config', 'zk'] },
