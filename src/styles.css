@@ -404,8 +404,10 @@ select.btn { appearance: auto; }
 /* About comparison table — three columns must fit the analysis panel. */
 .about-cmp table { table-layout: fixed; width: 100%; }
 /* table-layout: fixed takes column widths from the header row, so size the th */
-.about-cmp th:first-child { width: 31%; }
-.about-cmp th:nth-child(2) { width: 27%; }
+.about-cmp th:first-child { width: 30%; }
+.about-cmp th:nth-child(2) { width: 28%; }
+.about-cmp th { word-break: keep-all; }
+.about-cmp .cmp-note { font-size: 10px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
 .about-cmp td.k { white-space: normal; }
 /* wrap between words, never mid-word */
 .about-cmp th, .about-cmp td { overflow-wrap: break-word; word-break: normal; hyphens: none; }
