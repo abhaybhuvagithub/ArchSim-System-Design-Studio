@@ -915,7 +915,7 @@ function About() {
       ))}
       <div className="brief-sec">
         <div className="brief-h">Honestly compared</div>
-        <div className="cmp">
+        <div className="cmp about-cmp">
           <table>
             <thead><tr><th />{ABOUT_COMPARE.cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
             <tbody>
