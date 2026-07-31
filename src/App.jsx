@@ -519,7 +519,7 @@ export default function App() {
           ))}
         </select>
         <button className={`btn ${simOn ? 'active' : ''}`} onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
-        <button className={`btn ${chaosOn ? 'danger' : ''}`} onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">🐒 Chaos {chaosOn ? 'ON' : 'off'}</button>
+        <button className={`btn ${chaosOn ? 'danger' : ''}`} onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">Chaos {chaosOn ? 'ON' : 'off'}</button>
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
           title="Review the design and suggest components to add, wired in automatically">
           ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
@@ -660,7 +660,7 @@ export default function App() {
               <div className="chip">availability <b>{(sim.sysAvail * 100).toFixed(3)}%</b></div>
               <div className="chip" title="Estimated monthly cloud cost at this traffic level">cost <b>{money(cost.total)}/mo</b></div>
               {sim.totalDropped > 1 && <div className="chip bad">dropping <b>{fmt(sim.totalDropped)}/s</b></div>}
-              {Object.keys(down).length > 0 && <div className="chip bad">🐒 down: <b>{Object.keys(down).length}</b></div>}
+              {Object.keys(down).length > 0 && <div className="chip bad">down: <b>{Object.keys(down).length}</b></div>}
               {faults.length > 0 && <div className="chip bad">faults <b>{faults.length}</b></div>}
             </div>
           )}
@@ -686,10 +686,10 @@ export default function App() {
             <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
               ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
             </button>
-            <button className={tab === 'brief' ? 'on' : ''} onClick={() => setTab('brief')} title="Written description of this architecture">📄</button>
+            <button className={tab === 'brief' ? 'on' : ''} onClick={() => setTab('brief')} title="Written description of this architecture">Brief</button>
             <button className={`${tab === 'chaos' ? 'on' : ''} ${faults.length ? 'alarm' : ''}`}
               onClick={() => setTab('chaos')}>
-              🐒{faults.length ? ` ${faults.length}` : ''}
+              Chaos{faults.length ? ` (${faults.length})` : ''}
             </button>
             <button className={tab === 'cost' ? 'on' : ''} onClick={() => { setTab('cost'); setSel(null) }}>
               💵 {money(cost.total)}
