@@ -51,6 +51,7 @@ A visitor count is shown in the toolbar. It counts one visit per browser session
   - *Network:* network partition, cross-region loss, packet loss, high latency, bandwidth throttle, connection flap, load balancer degradation, blocked backend port, health-check flapping, expired TLS certificate, DNS resolution failure
   - *Application:* memory leak, out of memory, thread-pool exhaustion, deadlock, cache stampede (hit ratio → 0, full load on the origin), error storm with retry amplification
   - *Global:* traffic surge (5×)
+  - **Mitigation hints in the capacity report:** while a fault is running, any tier it is actually degrading grows an inline hint naming the fault, explaining what to do about it, and a **⚡ quick fix** that does it — add capacity sized for the *degraded* throughput, restore a severed link, splice in a cache or rate limiter, or attach backup/synthetic probes. Every one of the 28 faults carries its own mitigation, e.g. *"CPU is saturated. Scale out — you cannot make a single instance faster."*
   - Node faults aim at the selected component, or at the busiest sensible one. Live panel shows blast radius, countdown per fault, and success rate / p99 / availability while it burns. Verified: all **952 fault×template combinations** measurably change the simulation and recover to the exact baseline.
 - **Capacity report** — live bottleneck detection with the replica count each tier actually needs at current traffic.
 - **Template library — 48 pre-wired designs**, each with its own requirements checklist:

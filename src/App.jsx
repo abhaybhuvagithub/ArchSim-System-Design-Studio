@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import { TEMPLATES } from './templates.js'
 import { simulate, capacityReport } from './sim.js'
-import { review, applyAll } from './advisor.js'
+import { review, applyAll, addComponent, insertBefore } from './advisor.js'
 import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL } from './theme.js'
 import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS } from './learn.js'
 import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
-import { FAULTS, FAULT_GROUPS, faultById, pickTarget, compileFaults } from './faults.js'
+import { FAULTS, FAULT_GROUPS, faultById, faultOnNode, pickTarget, compileFaults } from './faults.js'
 import { describeArchitecture } from './describe.js'
 import { countVisit, formatVisitors } from './visitors.js'
 
@@ -200,6 +200,36 @@ export default function App() {
   }
   const setReplicas = (id, next) =>
     setNodes(ns => ns.map(n => (n.id === id ? { ...n, replicas: Math.max(1, Math.min(64, next)) } : n)))
+
+  // Apply the fix a fault suggests, on the node it is hurting.
+  const mitigate = (row, fault) => {
+    const n = nodes.find(x => x.id === row.id)
+    if (!n || !fault) return
+    const f = fault.fix || { kind: 'scale' }
+    if (f.kind === 'restore') {
+      const gone = faults.filter(x => x.faultId === fault.id)
+      setFaults(fs => fs.filter(x => x.faultId !== fault.id))
+      notify(`Restored ${gone.length || 1} severed link${gone.length > 1 ? 's' : ''} — ${fault.name} cleared`, 'ok')
+      return
+    }
+    if (f.kind === 'insert' || f.kind === 'attach') {
+      const r = f.kind === 'insert'
+        ? insertBefore(nodes, edges, n.id, f.type)
+        : addComponent(nodes, edges, f.type, undefined)
+      if (!r) return
+      setNodes(r.nodes); setEdges(r.edges)
+      if (r.focus) { setSel(r.focus); setHover(r.focus) }
+      notify(`Added ${CATALOG[f.type].name} to mitigate ${fault.name}`, 'ok')
+      return
+    }
+    // scale: size for the load it is actually seeing, degraded capacity included
+    const spec = CATALOG[n.type]
+    const degraded = (fx.node?.[n.id]?.capMul ?? 1) || 0.25
+    const target = Math.max((n.replicas || 1) + 1,
+      Math.min(64, Math.ceil((row.in || 0) / (spec.cap * 0.55 * Math.max(degraded, 0.15)))))
+    setNodes(ns => ns.map(x => (x.id === n.id ? { ...x, replicas: target } : x)))
+    notify(`${n.label} scaled to ${target}× to ride out ${fault.name}`, 'ok')
+  }
 
   const arrange = () => {
     if (!nodes.length) return
@@ -726,7 +756,10 @@ export default function App() {
                   ⚠️ <b>{cap.bottlenecks.length} bottleneck{cap.bottlenecks.length > 1 ? 's' : ''}</b> — {cap.bottlenecks.map(b => b.label).join(', ')}
                 </div>
               )}
-              {cap.rows.slice(0, 12).map(r => (
+              {cap.rows.slice(0, 12).map(r => {
+                const rowFault = faults.length && (r.util > 0.75 || r.down || (sim.stats[r.id]?.dropped || 0) > 0.5 || faults.some(f => f.targetId === r.id))
+                  ? faultOnNode(faults, r.id) : null
+                return (
                 <div key={r.id} className="cap-row">
                   <div className="t">
                     <span>{r.label}{r.down && <span className="pill bad">DOWN</span>}</span>
@@ -736,8 +769,20 @@ export default function App() {
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
                     {fmt(r.in)}/s in · {r.replicas}× replicas{r.needed > r.replicas ? ` · needs ${r.needed}×` : ''}
                   </div>
+                  {rowFault && (
+                    <div className="mitig">
+                      <div className="mitig-t">{rowFault.icon} {rowFault.name} is hitting this</div>
+                      <div className="mitig-h">{rowFault.hint}</div>
+                      <button className="btn quick" onClick={() => mitigate(r, rowFault)}>
+                        ⚡ {rowFault.fix.kind === 'restore' ? 'Restore the link'
+                          : rowFault.fix.kind === 'scale' ? 'Add capacity'
+                          : `Add ${CATALOG[rowFault.fix.type].name}`}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+                )
+              })}
             </section>
           )}
 
