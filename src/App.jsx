@@ -13,6 +13,7 @@ import { FAULTS, FAULT_GROUPS, faultById, faultOnNode, pickTarget, compileFaults
 import { describeArchitecture } from './describe.js'
 import { countVisit, formatVisitors } from './visitors.js'
 import { ABOUT, ABOUT_COMPARE } from './about.js'
+import { buildReport } from './report.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -493,7 +494,9 @@ export default function App() {
     r.readAsText(f)
     e.target.value = ''
   }
-  const exportPNG = () => {
+  // Rasterise the canvas once; both the PNG export and the documents use it.
+  const renderPNG = () => new Promise(resolve => {
+    if (!svgRef.current) return resolve(null)
     const svg = svgRef.current.cloneNode(true)
     svg.setAttribute('width', 1600); svg.setAttribute('height', 1000)
     const s = new XMLSerializer().serializeToString(svg)
@@ -501,12 +504,45 @@ export default function App() {
     img.onload = () => {
       const c = document.createElement('canvas')
       c.width = 1600; c.height = 1000
-      const ctx = c.getContext('2d')
-      ctx.fillStyle = T.canvasBg; ctx.fillRect(0, 0, c.width, c.height)
-      ctx.drawImage(img, 0, 0)
-      dl(c.toDataURL('image/png'), 'archsim-design.png')
+      const g = c.getContext('2d')
+      g.fillStyle = T.canvasBg; g.fillRect(0, 0, c.width, c.height)
+      g.drawImage(img, 0, 0)
+      resolve(c.toDataURL('image/png'))
     }
+    img.onerror = () => resolve(null)
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(s)))
+  })
+  const exportPNG = async () => {
+    const png = await renderPNG()
+    if (png) dl(png, 'archsim-design.png')
+  }
+
+  // PDF / DOCX / DOC. The renderers are code-split, so nothing heavy loads
+  // until someone actually asks for a document.
+  const [exporting, setExporting] = useState(null)
+  const exportDocument = async kind => {
+    if (!nodes.length) { notify('Nothing to export yet — load a template or draw a design first', 'warn'); return }
+    setExporting(kind)
+    try {
+      const report = buildReport({ nodes, edges, sim, baseSim, cap, cost, sugs, faults, fx, rps, template, cloud, currency, checks })
+      const image = await renderPNG()
+      const ex = await import('./exporters.js')
+      if (kind === 'pdf') await ex.exportPdf(report, image)
+      else if (kind === 'docx') await ex.exportDocx(report, image)
+      else ex.exportDoc(report, image)
+      notify(`${kind.toUpperCase()} exported — ${report.sections.length} sections, ${nodes.length} components`, 'ok')
+    } catch (err) {
+      notify(`Export failed: ${err.message}`, 'bad')
+    } finally {
+      setExporting(null)
+    }
+  }
+  const onExportPick = e => {
+    const v = e.target.value
+    e.target.value = ''
+    if (v === 'png') exportPNG()
+    else if (v === 'json') exportJSON()
+    else if (v) exportDocument(v)
   }
   const dl = (href, name) => { const a = document.createElement('a'); a.href = href; a.download = name; a.click() }
 
@@ -583,8 +619,19 @@ export default function App() {
         </button>
         <button className="btn" onClick={arrange} title="Auto-arrange into clean left-to-right layers with fewer crossing lines">⧉ Arrange</button>
         <button className="btn" onClick={() => fitView(nodes)} title="Fit the whole diagram in view">⤢ Fit</button>
-        <button className="btn" onClick={exportPNG}>PNG</button>
-        <button className="btn" onClick={exportJSON}>JSON ↓</button>
+        <select className={`btn ${exporting ? 'active' : ''}`} value="" onChange={onExportPick} disabled={!!exporting}
+          title="Export the design — documents include every table, finding and figure on screen">
+          <option value="">{exporting ? `⏳ Building ${exporting.toUpperCase()}…` : '⤓ Export…'}</option>
+          <optgroup label="Full architecture document">
+            <option value="pdf">📄 PDF report</option>
+            <option value="docx">📝 Word document (.docx)</option>
+            <option value="doc">📝 Word / Docs (.doc)</option>
+          </optgroup>
+          <optgroup label="Raw">
+            <option value="png">🖼 Diagram (.png)</option>
+            <option value="json">⌗ Design (.json)</option>
+          </optgroup>
+        </select>
         <label className="btn">JSON ↑<input type="file" accept=".json" style={{ display: 'none' }} onChange={importJSON} /></label>
         <button className="btn" onClick={clearAll}>Clear</button>
       </div>

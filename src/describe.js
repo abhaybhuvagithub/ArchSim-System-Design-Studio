@@ -117,7 +117,7 @@ export function describeArchitecture(ctx) {
       `${faults.length} fault${faults.length > 1 ? 's are' : ' is'} injected right now, touching ${blast} component${blast === 1 ? '' : 's'}.`,
       ...lines,
       baseSim ? `Against the healthy baseline that is **${dSucc < -0.0001 ? (dSucc * 100).toFixed(1) + ' points of success rate' : 'no measurable success-rate loss'}**, **p95 ${dP95 >= 0 ? '+' : ''}${Math.round(dP95)} ms, p99 ${dP99 >= 0 ? '+' : ''}${Math.round(dP99)} ms**, and **availability ${(dAvail * 100).toFixed(2)} points**.` : null,
-      fx?.rpsMul !== 1 ? `Incoming traffic is multiplied **${fx.rpsMul}×** by the injected event.` : null,
+      fx?.rpsMul && fx.rpsMul !== 1 ? `Incoming traffic is multiplied **${fx.rpsMul}×** by the injected event.` : null,
       'Every fault heals itself when its timer runs out, or you can recover them all from the chaos panel.',
     ])
   }
