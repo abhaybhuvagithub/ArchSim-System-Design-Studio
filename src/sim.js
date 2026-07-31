@@ -79,7 +79,11 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
   }
   let p50 = 0
   for (const s of sources) p50 = Math.max(p50, pathLat(s.id, new Set()))
-  const p99 = p50 * 3
+  // Tail spread widens with load: a busy system has a much longer tail than an idle
+  // one at the same median. At ~20% utilization this lands near the classic 3× p99.
+  const busiest = Math.min(1, Math.max(0, ...Object.values(stats).map(s => s.util || 0)))
+  const p95 = p50 * (1.5 + 0.8 * busiest)
+  const p99 = p50 * (2.4 + 2.6 * busiest)
 
   // availability along the critical (max-latency) chain: product of node avail
   let sysAvail = 1
@@ -92,7 +96,7 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
   const totalDropped = Object.values(stats).reduce((a, s) => a + s.dropped, 0)
   const successRate = totalIn ? Math.max(0, 1 - totalDropped / totalIn) : 1
 
-  return { stats, flowOnEdge, p50, p99, sysAvail, totalDropped, successRate }
+  return { stats, flowOnEdge, p50, p95, p99, sysAvail, totalDropped, successRate }
 }
 
 function topoOrder(nodes, edges) {
