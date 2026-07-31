@@ -65,7 +65,7 @@ export const ABOUT = [
 
 // Honest positioning against the tools people actually reach for instead.
 export const ABOUT_COMPARE = {
-  cols: ['ArchSim', 'Diagram', 'Calculator'],
+  cols: ['ArchSim', 'Diagram', 'Pricing'],
   rows: [
     ['Draws the architecture', 'Yes', 'Yes', 'No'],
     ['Tells you it will fall over', 'Yes — utilization, drops, p99', 'No', 'No'],
@@ -75,5 +75,5 @@ export const ABOUT_COMPARE = {
     ['Teaches the reasoning', 'Lesson, tables, quiz', 'No', 'No'],
     ['Ready-made designs', `${templates} templates`, 'Shape libraries', 'No'],
   ],
-  note: 'Diagram = a drawing tool such as Lucidchart or draw.io. Calculator = a cloud pricing calculator.',
+  note: 'Diagram = a drawing tool such as Lucidchart or draw.io. Pricing = a cloud pricing calculator.',
 }
