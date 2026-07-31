@@ -4,7 +4,7 @@ import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import { TEMPLATES } from './templates.js'
 import { FAULTS } from './faults.js'
 import { CLOUDS } from './clouds.js'
-import { LESSON, COMPARISONS, QUIZ } from './learn.js'
+import { LESSON, COMPARISONS, QUIZ, TIPS } from './learn.js'
 
 const components = Object.keys(CATALOG).length
 const templates = TEMPLATES.length
@@ -12,6 +12,7 @@ const groups = [...new Set(TEMPLATES.map(t => t.group))].length
 const faults = FAULTS.length
 const clouds = CLOUDS.length - 1
 const requirements = TEMPLATES.reduce((n, t) => n + t.checklist.length, 0)
+const tips = TIPS.reduce((n, g) => n + g.items.length, 0)
 
 export const ABOUT = [
   {
@@ -29,7 +30,7 @@ export const ABOUT = [
       '**The advice is executable, not a checklist.** The advisor reads your actual graph and every finding carries a one-click fix that edits the diagram — splicing a cache between a service and its database, putting a queue in front of a synchronously-called worker, shielding a mainframe behind enterprise MQ. Nothing is a link to an article.',
       `**Chaos is a first-class mode, not a slide.** ${faults} named failures — availability zone, grey failure, cache stampede, expired TLS certificate, thread-pool exhaustion, retry storm — each compiled into real capacity, latency, drop and partition effects, each with a mitigation hint and a quick fix, each healing itself.`,
       '**Cost is wired to the simulation.** Per-request pricing is driven by the traffic actually routed through each node, so the bill reacts to the traffic slider and to every replica change. It tells you things a diagram cannot: that the URL shortener costs $13.7k/mo at 1k rps and $1.33M at 100k because CDN egress dominates, or that an LLM API is $184 per million requests and essentially all of it is inference.',
-      `**It teaches while you build.** A ${LESSON.length}-step walkthrough that grades itself against your live canvas, ${COMPARISONS.length} "difference between" tables, ${QUIZ.length} interview questions with explanations, and ${requirements} requirement checkboxes across the template library — each of which edits the architecture when you tick it.`,
+      `**It teaches while you build.** A ${LESSON.length}-step walkthrough that grades itself against your live canvas, ${tips} tips and tricks each with something to try on the canvas, ${COMPARISONS.length} "difference between" tables, ${QUIZ.length} interview questions with explanations, and ${requirements} requirement checkboxes across the template library — each of which edits the architecture when you tick it.`,
       `**Multi-cloud is concrete.** Every component maps to a named managed service on ${clouds} clouds, the diagram relabels itself, and the estimate reprices. Where a cloud genuinely has no equivalent it says "no public equivalent" rather than inventing one.`,
       '**It writes the design up for you.** The Brief tab narrates the architecture in prose — request path, live behaviour, chaos impact against a healthy baseline, outstanding findings, risk and cost — and exports as markdown.',
     ],
@@ -72,7 +73,7 @@ export const ABOUT_COMPARE = {
     ['Costs it', 'Yes, driven by simulated traffic', 'No', 'Yes, from a form'],
     ['Fixes it for you', 'One-click quick fixes', 'No', 'No'],
     ['Fails it on purpose', `${faults} chaos faults`, 'No', 'No'],
-    ['Teaches the reasoning', 'Lesson, tables, quiz', 'No', 'No'],
+    ['Teaches the reasoning', `Lesson, ${tips} tips, quiz`, 'No', 'No'],
     ['Ready-made designs', `${templates} templates`, 'Shape libraries', 'No'],
   ],
   note: 'Diagram = a drawing tool such as Lucidchart or draw.io. Pricing = a cloud pricing calculator.',

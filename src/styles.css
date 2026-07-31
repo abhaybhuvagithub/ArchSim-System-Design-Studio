@@ -294,9 +294,9 @@ select.btn { appearance: auto; }
 .quiz-o.wrong { border-color: var(--bad); color: var(--bad); }
 .quiz-why { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 5px; padding-left: 2px; }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; margin-left: 6px; }
-.pill.ok { background: #14532d; color: #86efac; }
-.pill.warn { background: #713f12; color: #fde047; }
-.pill.bad { background: #7f1d1d; color: #fca5a5; }
+.pill.ok { background: var(--ok); color: #fff; font-weight: 600; }
+.pill.warn { background: var(--warn); color: #fff; font-weight: 600; }
+.pill.bad { background: var(--bad); color: #fff; font-weight: 600; }
 .empty { color: var(--muted); font-size: 12px; line-height: 1.6; padding: 8px 0; }
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
@@ -414,3 +414,60 @@ select.btn { appearance: auto; }
 .about-cmp td.k { white-space: normal; }
 /* wrap between words, never mid-word */
 .about-cmp th, .about-cmp td { overflow-wrap: break-word; word-break: normal; hyphens: none; }
+
+
+/* Bottleneck banner — solid accent bar, readable in both themes */
+.cap-alert {
+  background: var(--bad); color: #fff; border-radius: 12px;
+  padding: 8px 12px; font-size: 12px; line-height: 1.45; margin-bottom: 10px;
+}
+.cap-alert b { font-weight: 700; }
+
+/* Needs-attention list: why a tier is red, and the edit that fixes it */
+.health { margin-bottom: 12px; }
+.health-h {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin: 2px 2px 6px;
+}
+.diag {
+  border: 1px solid var(--border); border-left: 3px solid var(--muted);
+  border-radius: 12px; padding: 9px 11px; margin-bottom: 8px; background: var(--panel2);
+}
+.diag.down, .diag.critical { border-left-color: var(--bad); }
+.diag.warn { border-left-color: var(--warn); }
+.diag.spof { border-left-color: var(--accent); }
+.diag-t { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.diag.down .diag-t, .diag.critical .diag-t { color: var(--bad); }
+.diag.warn .diag-t { color: var(--warn); }
+.diag.spof .diag-t { color: var(--accent); }
+.diag-w { font-size: 11px; color: var(--muted); line-height: 1.55; margin-bottom: 7px; }
+.diag .btn { padding: 4px 11px; font-size: 11px; }
+
+/* Health warning inside the hover card */
+.hc-diag {
+  margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--border);
+  font-size: 10.5px; line-height: 1.45; display: flex; flex-direction: column; gap: 2px;
+}
+.hc-diag b { font-size: 11px; }
+.hc-diag.down b, .hc-diag.critical b { color: var(--bad); }
+.hc-diag.warn b { color: var(--warn); }
+.hc-diag.spof b { color: var(--accent); }
+.hc-diag span { color: var(--muted); }
+.hc-drop { color: var(--bad); }
+
+/* Tips & tricks */
+.tip-g { margin-bottom: 16px; }
+.tip-gh {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin: 0 2px 7px;
+}
+.tip {
+  border: 1px solid var(--border); border-radius: 14px;
+  padding: 10px 12px; margin-bottom: 8px; background: var(--panel2);
+}
+.tip-t { font-size: 12.5px; font-weight: 600; margin-bottom: 5px; line-height: 1.35; }
+.tip-w { font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+.tip-try {
+  font-size: 11px; color: var(--accent); margin-top: 7px;
+  padding-top: 6px; border-top: 1px dashed var(--border); line-height: 1.45;
+}
