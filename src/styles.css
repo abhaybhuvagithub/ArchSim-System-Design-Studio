@@ -396,3 +396,7 @@ select.btn { appearance: auto; }
 .mitig-t { font-size: 11px; font-weight: 600; color: var(--bad); margin-bottom: 3px; }
 .mitig-h { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 6px; }
 .mitig .btn { padding: 4px 10px; font-size: 11px; }
+
+/* About panel links */
+.brief-p a { color: var(--accent); text-decoration: none; }
+.brief-p a:hover { text-decoration: underline; }
