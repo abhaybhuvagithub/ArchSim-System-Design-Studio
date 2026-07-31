@@ -924,6 +924,7 @@ function About() {
               ))}
             </tbody>
           </table>
+          {ABOUT_COMPARE.note && <div className="cmp-note">{ABOUT_COMPARE.note}</div>}
         </div>
       </div>
     </section>
