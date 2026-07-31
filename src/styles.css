@@ -403,5 +403,6 @@ select.btn { appearance: auto; }
 
 /* About comparison table — three columns must fit the analysis panel. */
 .about-cmp table { table-layout: fixed; width: 100%; }
-.about-cmp td.k { white-space: normal; width: 34%; }
-.about-cmp th, .about-cmp td { word-break: break-word; }
+.about-cmp td.k { white-space: normal; width: 38%; }
+/* wrap between words, never mid-word */
+.about-cmp th, .about-cmp td { overflow-wrap: break-word; word-break: normal; hyphens: none; }
