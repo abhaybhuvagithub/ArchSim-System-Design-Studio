@@ -388,3 +388,11 @@ select.btn { appearance: auto; }
   .toasts { right: 8px; left: 8px; bottom: 44px; align-items: stretch; }
   .toast { max-width: none; font-size: 11.5px; }
 }
+
+/* Chaos mitigation hint inside a capacity row */
+.mitig {
+  margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--border);
+}
+.mitig-t { font-size: 11px; font-weight: 600; color: var(--bad); margin-bottom: 3px; }
+.mitig-h { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 6px; }
+.mitig .btn { padding: 4px 10px; font-size: 11px; }

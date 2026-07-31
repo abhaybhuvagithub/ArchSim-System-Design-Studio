@@ -645,6 +645,14 @@ export function addComponent(nodes, edges, type, label) {
   return { ...g, focus: seed.focus, added: g.nodes.filter(n => !nodes.some(o => o.id === n.id)).map(n => n.id) }
 }
 
+// Splice a component onto the busiest inbound link of a node (used by the
+// capacity panel's chaos mitigations).
+export function insertBefore(nodes, edges, nodeId, type, label) {
+  const inbound = edges.filter(e => e.to === nodeId)
+  if (!inbound.length) return addComponent(nodes, edges, type, label)
+  return insertOnEdge(nodes, edges, inbound[0].from, nodeId, type, label)
+}
+
 // Fold every applicable suggestion into one graph
 export function applyAll(suggestions, nodes, edges) {
   let g = { nodes, edges, focus: null }
