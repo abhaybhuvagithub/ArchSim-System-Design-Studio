@@ -585,6 +585,39 @@ export const TEMPLATES = [
     'Multi-lane free flow and GNSS tolling remove the barrier entirely and turn enforcement into a pure data problem',
   ], 'India · fintech'),
 
+  // ─────────────── quality & testing ───────────────
+  T('Continuous Testing Platform', 'Shift-left pipeline: gates, suites, environments', 500, [
+    ['dev', 'client', 'Developers / PRs', 40, 320, 1, 0.8],
+    ['sched', 'scheduler', 'Nightly / Scheduled', 40, 500, 1, 0.2],
+    ['ci', 'cicd', 'CI/CD Pipeline', 185, 400, 6],
+    ['qgate', 'qgate', 'Quality Gate (SAST)', 325, 190, 4],
+    ['unit', 'apitest', 'Unit + API Suite', 325, 320, 12],
+    ['contract', 'contract', 'Contract Tests', 325, 450, 4],
+    ['e2e', 'e2e', 'UI Journeys', 325, 580, 8],
+    ['dast', 'dast', 'Security Scan (DAST)', 325, 700, 3],
+    ['mock', 'mock', 'Service Virtualization', 465, 250, 6],
+    ['data', 'testdata', 'Test Data Mgmt', 465, 380, 6],
+    ['env', 'k8s', 'Ephemeral Test Env', 605, 320, 4],
+    ['sut', 'micro', 'System Under Test', 745, 320, 8],
+    ['sutdb', 'sql', 'Seeded Database', 885, 320, 3],
+    ['grid', 'devicefarm', 'Device / Browser Grid', 465, 580, 8],
+    ['load', 'load', 'Load & Perf Test', 465, 700, 3],
+    ['ops', 'testops', 'Test Reporting', 745, 580, 4],
+    ['mon', 'monitor', 'Env Health', 885, 580, 2],
+  ], [['dev','ci'],['sched','ci'],['ci','qgate'],['ci','unit'],['ci','contract'],['ci','e2e'],['ci','dast'],
+      ['unit','mock'],['unit','data'],['e2e','grid'],['e2e','env'],['unit','env'],['env','sut'],['sut','sutdb'],
+      ['load','env'],['e2e','ops'],['unit','ops'],['contract','ops'],['load','ops'],['dast','ops'],['env','mon']], [
+    'Test pyramid, not an ice-cream cone: most coverage in fast API and unit tests, a thin layer of UI journeys on top',
+    'Every layer must be able to fail the build — a test suite nobody blocks on is documentation',
+    'Ephemeral environments per pull request beat one shared staging that is always broken by someone else',
+    'Virtualize third parties: a suite that calls a partner sandbox is slow, rate-limited and red for reasons that are not yours',
+    'Test data is the top cause of flake — seed it per run, mask production data, never share mutable fixtures',
+    'Contract tests catch a breaking API change at build time; without them you find it when the consumer deploys',
+    'Track flake rate as a first-class metric and quarantine flaky tests, because a suite people re-run on red is a suite people ignore',
+    'Load test against a production-like environment — results from a half-sized environment are worse than no results',
+    'Shift left for speed and shift right for truth: synthetic probes and real-user monitoring keep testing after release',
+  ], 'Quality & testing'),
+
   // ─────────────── travel & booking ───────────────
   T('Booking.com', 'Hotel availability, pricing and reservation', 40000, [
     ['u', 'client', 'Travellers', 40, 280], ['gslb', 'gslb', 'Global Traffic Mgr', 170, 280],

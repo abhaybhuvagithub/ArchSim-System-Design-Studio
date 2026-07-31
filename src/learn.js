@@ -49,7 +49,7 @@ export const LESSON = [
   },
   {
     title: 'Run the simulation and read the numbers',
-    do: 'Press ▶ Simulate and watch p50, p99, success rate and per-node utilization.',
+    do: 'Press ▶ Simulate and watch p50, p95, p99, success rate and per-node utilization.',
     why: 'A diagram cannot be wrong, which is why diagrams teach you nothing. Numbers can be wrong. Queueing delay rises sharply past ~70% utilization — that is why p99 explodes long before a tier hits 100%.',
     check: c => c.simOn,
   },
@@ -61,7 +61,7 @@ export const LESSON = [
   },
   {
     title: 'Break it on purpose',
-    do: 'Turn on 🐒 Chaos while simulating and watch what the failure does to success rate.',
+    do: 'Open the Chaos tab, inject a fault while simulating, and watch what it does to success rate.',
     why: 'Redundancy you have never tested is a guess. If losing one instance moves your numbers, you found a single point of failure before production did.',
     check: c => c.chaosUsed,
   },
@@ -210,6 +210,26 @@ export const COMPARISONS = [
     ],
   },
   {
+    title: 'Unit vs Integration vs E2E', left: 'Unit / API tests', right: 'End-to-end UI tests',
+    rows: [
+      ['Speed', 'Milliseconds to seconds', 'Minutes'],
+      ['Stability', 'Deterministic', 'Flaky by nature — real browsers, real timing'],
+      ['Scope', 'One unit or one endpoint', 'A whole user journey'],
+      ['When it fails', 'Points at the change', 'Points at "something broke"'],
+      ['How many', 'Thousands', 'Tens — critical journeys only'],
+    ],
+  },
+  {
+    title: 'Shift-left vs Shift-right', left: 'Shift left', right: 'Shift right',
+    rows: [
+      ['When', 'Before merge', 'After release'],
+      ['Examples', 'Static analysis, unit, contract, API tests', 'Synthetic probes, RUM, canary, chaos'],
+      ['Catches', 'Defects, regressions, breaking contracts', 'Reality: real data, real load, real users'],
+      ['Cost of a find', 'Minutes', 'An incident'],
+      ['Verdict', 'Do both — neither replaces the other', 'Do both'],
+    ],
+  },
+  {
     title: 'Latency vs Throughput', left: 'Latency', right: 'Throughput',
     rows: [
       ['Measures', 'Time for one request', 'Requests per second'],
@@ -298,6 +318,18 @@ export const QUIZ = [
     options: ['Every CPU spike', 'Symptoms and SLO burn rate', 'Each individual host going unhealthy', 'Every error in the logs'],
     answer: 1,
     why: 'Cause-based alerts create pager fatigue and get muted. Page on user-visible symptoms and error-budget burn; keep causes on dashboards.',
+  },
+  {
+    q: 'Your suite is 80% UI tests and 20% API tests. What is wrong?',
+    options: ['Nothing, coverage is coverage', 'It is an inverted pyramid — slow, flaky, and it points at "something broke"', 'UI tests are more accurate', 'You need more UI tests'],
+    answer: 1,
+    why: 'The ice-cream cone. UI tests are slow and flaky, so the suite gets re-run on red and eventually ignored. Push coverage down into fast API and unit tests and keep UI for critical journeys.',
+  },
+  {
+    q: 'A test fails intermittently with no code change. The most common root cause is:',
+    options: ['A real race condition in production code', 'Shared mutable test data or timing assumptions', 'A slow CI runner', 'A browser bug'],
+    answer: 1,
+    why: 'Shared fixtures and implicit waits dominate flake reports. Seed data per run and wait on conditions rather than sleeping — and track flake rate so bad tests get quarantined, not re-run.',
   },
   {
     q: 'Why front SAP or a mainframe with a queue instead of adding replicas?',

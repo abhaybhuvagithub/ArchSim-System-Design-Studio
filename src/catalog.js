@@ -74,6 +74,18 @@ export const CATALOG = {
   mft:         { name: 'File Transfer / EDI', glyph: '📤', color: '#eab308', cap: 2000, lat: 40, avail: 0.999,  desc: 'Managed file transfer and B2B EDI batches — still how most partners integrate.' },
   partner:     { name: 'Partner / Bank API', glyph: '⛓️', color: '#10b981', cap: 2000, lat: 250, avail: 0.995, desc: 'Third-party dependency you do not control — bank, acquirer, NPCI switch, GDS, supplier. Rate-limited, slow, and the least available thing in your design.' },
   hsm:         { name: 'HSM (PIN / Keys)', glyph: '🔏', color: '#ef4444', cap: 8000, lat: 15, avail: 0.9999, desc: 'Hardware security module — PIN block translation, key custody, signing. Mandated for card and UPI flows.' },
+
+  // ─── quality & testing ───
+  e2e:         { name: 'UI Test Automation', glyph: '🕹️', color: '#8b5cf6', cap: 200,   lat: 400, avail: 0.99,   desc: 'Selenium/Playwright/Cypress. Slowest and flakiest layer — keep it thin and reserve it for critical journeys.' },
+  apitest:     { name: 'API Test Suite',   glyph: '🔬', color: '#8b5cf6', cap: 2000,  lat: 50,  avail: 0.999,  desc: 'REST Assured / Postman-Newman / pytest. The workhorse layer: fast, stable, and where most coverage should live.' },
+  load:        { name: 'Load & Perf Test', glyph: '🏋️', color: '#f59e0b', cap: 50000, lat: 10,  avail: 0.999,  desc: 'JMeter / k6 / Gatling / Locust — generates the traffic this simulator only models. Run it against a production-like environment or it lies.' },
+  contract:    { name: 'Contract Testing', glyph: '📋', color: '#06b6d4', cap: 3000,  lat: 20,  avail: 0.999,  desc: 'Pact-style consumer-driven contracts — catches a breaking API change at build time instead of in production.' },
+  mock:        { name: 'Service Virtualization', glyph: '🪞', color: '#06b6d4', cap: 20000, lat: 5, avail: 0.999, desc: 'WireMock/MockServer — stands in for a partner or an unavailable dependency so tests are deterministic and free.' },
+  testdata:    { name: 'Test Data Mgmt',   glyph: '🗃️', color: '#10b981', cap: 5000,  lat: 30,  avail: 0.999,  desc: 'Seeded, masked, reproducible data sets. Shared mutable test data is the most common source of flaky suites.' },
+  qgate:       { name: 'Quality Gate (SAST)', glyph: '✅', color: '#a855f7', cap: 500, lat: 120, avail: 0.999, desc: 'SonarQube-style static analysis, coverage and lint thresholds that can fail the build.' },
+  dast:        { name: 'Security Testing (DAST)', glyph: '🔎', color: '#ef4444', cap: 200, lat: 300, avail: 0.999, desc: 'OWASP ZAP-style dynamic scanning against a running build, plus dependency and secret scanning.' },
+  devicefarm:  { name: 'Device / Browser Grid', glyph: '📱', color: '#8b5cf6', cap: 300, lat: 800, avail: 0.99, desc: 'Real devices and browser matrix — the long pole in any UI suite, so parallelise and shard.' },
+  testops:     { name: 'Test Reporting',   glyph: '🧰', color: '#f97316', cap: 10000, lat: 20,  avail: 0.999,  desc: 'Allure/TestRail/Xray — results, history, flake tracking. A red build nobody can interpret is a build nobody fixes.' },
   billing:     { name: 'Metering & Billing', glyph: '🧮', color: '#10b981', cap: 4000, lat: 30,  avail: 0.999,  desc: 'Usage metering, rating and invoicing. Must never lose or double-count an event.' },
   backup:      { name: 'Backup & Archive', glyph: '💾', color: '#10b981', cap: 6000,  lat: 200, avail: 0.99999, desc: 'PITR snapshots and archival with a tested restore path — replication is not backup.' },
 }
@@ -88,5 +100,6 @@ export const PALETTE_GROUPS = [
   { label: 'Observability', types: ['otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
   { label: 'Security',      types: ['iam', 'secrets', 'hsm', 'pii', 'audit', 'siem'] },
   { label: 'Enterprise',    types: ['partner', 'erp', 'crm', 'mainframe', 'mft', 'billing', 'cicd'] },
+  { label: 'Quality',       types: ['apitest', 'e2e', 'contract', 'load', 'mock', 'testdata', 'qgate', 'dast', 'devicefarm', 'testops'] },
   { label: 'Platform',      types: ['registry', 'mesh', 'config', 'zk'] },
 ]
