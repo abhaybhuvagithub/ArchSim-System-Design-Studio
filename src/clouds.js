@@ -89,6 +89,17 @@ export const CLOUD_MAP = {
   mft: ['AWS Transfer Family', 'Storage Transfer Service', 'Data Factory SFTP / Logic Apps', 'OCI Object Storage + MFT partner', 'iCloud Drive / CloudKit Assets'],
   partner: ['PrivateLink / partner API', 'Private Service Connect / partner API', 'Private Link / partner API', 'Private Endpoint / partner API', 'Apple Pay / third-party API'],
   hsm: ['CloudHSM', 'Cloud HSM', 'Managed HSM / Dedicated HSM', 'OCI Key Management (HSM)', 'Secure Enclave / HSM-backed keys'],
+  // quality & testing
+  e2e:        ['CodeBuild + Selenium Grid', 'Cloud Build + Playwright', 'Azure Pipelines + Playwright', 'OCI DevOps + Selenium', 'XCTest / Xcode Cloud'],
+  apitest:    ['CodeBuild + Newman', 'Cloud Build + Newman', 'Azure Pipelines + REST Assured', 'OCI DevOps + Newman', 'XCTest network tests'],
+  load:       ['Distributed Load Testing on AWS', 'k6 / JMeter on GKE', 'Azure Load Testing', 'k6 / JMeter on OCI Compute', 'no public equivalent'],
+  contract:   ['Pact Broker on ECS', 'Pact Broker on Cloud Run', 'Pact Broker on Container Apps', 'Pact Broker on OKE', 'no public equivalent'],
+  mock:       ['API Gateway mock integrations', 'Apigee mock targets', 'APIM mock policies', 'OCI API Gateway stock responses', 'no public equivalent'],
+  testdata:   ['RDS snapshots + Glue masking', 'Cloud SQL clones + DLP masking', 'Azure SQL copy + Purview masking', 'Autonomous DB clone + Data Safe', 'no public equivalent'],
+  qgate:      ['CodeGuru + SonarQube', 'Cloud Build + SonarQube', 'Azure DevOps code analysis', 'OCI DevOps + SonarQube', 'Xcode static analyzer'],
+  dast:       ['Inspector + OWASP ZAP', 'Web Security Scanner', 'Defender for Cloud DAST', 'OCI Vulnerability Scanning', 'no public equivalent'],
+  devicefarm: ['AWS Device Farm', 'Firebase Test Lab', 'Azure Test Plans + BrowserStack', 'BrowserStack on OCI', 'Xcode Cloud test devices'],
+  testops:    ['CodeBuild test reports', 'Cloud Build + Looker', 'Azure Test Plans', 'OCI DevOps reports', 'Xcode Cloud test reports'],
 }
 
 const IDX = { aws: 0, gcp: 1, azure: 2, oci: 3, apple: 4 }

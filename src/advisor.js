@@ -117,6 +117,10 @@ const UPSTREAM = {
   partner: ['mq', 'queue', 'kafka', 'esb', 'saga', 'worker', 'micro', 'app'],
   hsm: ['micro', 'app', 'gateway', 'worker'],
   secrets: ['app', 'micro', 'worker', 'k8s'], pii: ['app', 'micro', 'saga', 'gateway'],
+  // quality & testing
+  e2e: ['cicd'], apitest: ['cicd'], load: ['cicd'], contract: ['cicd'], dast: ['cicd'], qgate: ['cicd'],
+  mock: ['apitest', 'e2e', 'contract', 'micro'], testdata: ['apitest', 'e2e', 'cicd'],
+  devicefarm: ['e2e'], testops: ['e2e', 'apitest', 'load', 'contract', 'dast'],
   audit: ['app', 'micro', 'saga', 'gateway'], siem: ['logs', 'audit', 'waf', 'iam'],
 }
 // What a component of this type should normally call.
@@ -147,11 +151,14 @@ const DOWNSTREAM = {
   // observability & security fan-out
   otel: ['monitor', 'logs', 'tracing'], monitor: ['alert', 'slo'], slo: ['alert'],
   logs: ['siem', 'search'], siem: ['alert'], synthetic: ['gslb', 'waf', 'cdn', 'lb', 'gateway'],
-  cicd: ['k8s', 'micro', 'app'],
+  cicd: ['qgate', 'apitest', 'e2e', 'k8s', 'micro', 'app'],
+  qgate: ['apitest'], apitest: ['mock', 'testops'], e2e: ['devicefarm', 'mock', 'testops'],
+  load: ['testops'], contract: ['testops'], dast: ['testops'],
 }
 // Types that are wrong as a dead end — they exist to route traffic onward.
 const PASSTHROUGH = ['dns', 'cdn', 'lb', 'ratelimiter', 'gateway', 'bff', 'mesh', 'saga', 'queue', 'kafka', 'cdc', 'etl', 'scheduler',
-  'gslb', 'waf', 'edge', 'graphql', 'tenant', 'k8s', 'mq', 'esb', 'otel', 'cicd', 'synthetic']
+  'gslb', 'waf', 'edge', 'graphql', 'tenant', 'k8s', 'mq', 'esb', 'otel', 'cicd', 'synthetic',
+  'qgate', 'apitest', 'e2e', 'load', 'contract', 'dast']
 // Components that generate their own work rather than being called.
 const SELF_TRIGGER = ['scheduler', 'synthetic', 'cicd']
 // Vendor or legacy systems you cannot simply add instances to.
@@ -163,7 +170,8 @@ const CREATE_DOWN = {
   mesh: 'micro', saga: 'micro', queue: 'worker', kafka: 'worker', cdc: 'kafka',
   etl: 'warehouse', scheduler: 'worker',
   gslb: 'waf', waf: 'lb', edge: 'app', graphql: 'micro', tenant: 'micro', k8s: 'micro',
-  mq: 'worker', esb: 'erp', otel: 'monitor', cicd: 'k8s', synthetic: 'gateway',
+  mq: 'worker', esb: 'erp', otel: 'monitor', cicd: 'qgate', synthetic: 'gateway',
+  qgate: 'apitest', apitest: 'testops', e2e: 'testops', load: 'testops', contract: 'testops', dast: 'testops',
 }
 const article = name => (/^[AEIOU]/i.test(name) ? 'an' : 'a')
 
@@ -515,6 +523,56 @@ export function review(nodes, edges, rps) {
       detail: `All your signals are internal, so a DNS, TLS or edge failure looks perfectly healthy from the inside. Adds synthetic probes hitting ${edgeNode.label}.`,
       apply: (ns, es) => attach(ns, es, { type: 'synthetic', label: 'Synthetic Probes', x: byId[edgeNode.id].x - 40, y: bottomOf(), toIds: [edgeNode.id] }),
     })
+  }
+
+  // ── quality: only once the design says it has a pipeline ──
+  if (has('cicd')) {
+    const pipe = all('cicd')[0]
+    const testish = ['apitest', 'e2e', 'load', 'contract', 'dast'].filter(t => has(t))
+    if (!testish.length) {
+      push({
+        id: 'qa:none', icon: '🔬', severity: 'high',
+        title: 'The pipeline ships without testing anything',
+        detail: 'There is a CI/CD pipeline but no test stage, so the only verification is production. Attaches an API test suite — the fast, stable layer where most coverage belongs.',
+        apply: (ns, es) => attach(ns, es, { type: 'apitest', label: 'API Test Suite', replicas: 2, x: byId[pipe.id].x + 160, y: bottomOf(), fromIds: [pipe.id] }),
+      })
+    }
+    if (!has('qgate')) push({
+      id: 'qa:gate', icon: '✅', severity: 'med',
+      title: 'Add a quality gate to the build',
+      detail: 'Nothing fails the build on coverage, lint or a new vulnerability, so quality drifts one merge at a time. Attaches static analysis with thresholds that can block a merge.',
+      apply: (ns, es) => attach(ns, es, { type: 'qgate', label: 'Quality Gate', x: byId[pipe.id].x, y: bottomOf(), fromIds: [pipe.id] }),
+    })
+    if (!has('load')) push({
+      id: 'qa:load', icon: '🏋️', severity: 'med',
+      title: 'Load test before production does it for you',
+      detail: `This design is modelled at ${fmt(rps)} rps, but nothing generates that traffic against a real build. Attaches a load and performance testing stage.`,
+      apply: (ns, es) => attach(ns, es, { type: 'load', label: 'Load & Perf Test', x: byId[pipe.id].x + 320, y: bottomOf(), fromIds: [pipe.id] }),
+    })
+    if (microCount >= 3 && !has('contract')) push({
+      id: 'qa:contract', icon: '📋', severity: 'med',
+      title: 'Add contract testing between services',
+      detail: `${microCount} services deploy independently, so a breaking change is only found when the consumer runs. Consumer-driven contracts catch it at build time instead.`,
+      apply: (ns, es) => attach(ns, es, { type: 'contract', label: 'Contract Testing', x: byId[pipe.id].x + 160, y: bottomOf(), fromIds: [pipe.id] }),
+    })
+    if (has('partner') && !has('mock')) {
+      const p = all('partner')[0]
+      push({
+        id: 'qa:mock', icon: '🪞', severity: 'med',
+        title: `Virtualize ${p.label} for testing`,
+        detail: `Tests that call ${p.label} are slow, rate-limited and fail when the partner has a bad day. A virtual service makes them deterministic and free.`,
+        apply: (ns, es) => attach(ns, es, { type: 'mock', label: 'Service Virtualization', replicas: 2, x: byId[p.id].x, y: bottomOf(), toIds: [p.id] }),
+      })
+    }
+    if (testish.length && !has('testops')) {
+      const anchor = all(testish[0])[0]
+      push({
+        id: 'qa:report', icon: '🧰', severity: 'low',
+        title: 'Nowhere to read the test results',
+        detail: 'Tests run but results are not collected, so nobody can see history, flake rates or which suite is rotting. Attaches test reporting.',
+        apply: (ns, es) => attach(ns, es, { type: 'testops', label: 'Test Reporting', x: byId[anchor.id].x + 160, y: bottomOf(), fromIds: [anchor.id] }),
+      })
+    }
   }
 
   // ── enterprise hardening ──

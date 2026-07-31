@@ -89,6 +89,17 @@ export const RATES = {
   mft:         { hourly: 0,     base: 400,  perM: 0,    note: 'MFT/EDI platform licence' },
   partner:     { hourly: 0,     base: 0,    perM: 50,   note: 'per-transaction fee charged by the partner (bank, switch, GDS)' },
   hsm:         { hourly: 1.20,  base: 0,    perM: 0,    note: 'dedicated HSM instance — expensive and usually needs a pair' },
+  // quality & testing
+  e2e:         { hourly: 0.08,  base: 0,    perM: 0,    note: 'CI runners executing the UI suite' },
+  apitest:     { hourly: 0.02,  base: 0,    perM: 0,    note: 'cheap, fast runners — the layer to invest in' },
+  load:        { hourly: 0.20,  base: 0,    perM: 0,    note: 'load generators, billed only while a test runs' },
+  contract:    { hourly: 0,     base: 30,   perM: 0,    note: 'contract broker hosting' },
+  mock:        { hourly: 0.05,  base: 0,    perM: 0,    note: 'mock/virtualization instances' },
+  testdata:    { hourly: 0.10,  base: 0,    perM: 0,    note: 'snapshot, clone and masking jobs' },
+  qgate:       { hourly: 0,     base: 120,  perM: 0,    note: 'static-analysis platform licence' },
+  dast:        { hourly: 0,     base: 250,  perM: 0,    note: 'dynamic scanning platform licence' },
+  devicefarm:  { hourly: 0,     base: 200,  perM: 0,    note: 'real-device / browser grid seats' },
+  testops:     { hourly: 0,     base: 90,   perM: 0,    note: 'test management seats' },
 }
 
 const FALLBACK = { hourly: 0.08, base: 0, perM: 0, note: 'generic compute estimate' }
@@ -107,6 +118,8 @@ const GROUP_OF = {
   slo: 'Observability', alert: 'Observability', synthetic: 'Observability', apm: 'Observability',
   iam: 'Security', secrets: 'Security', pii: 'Security', audit: 'Security', siem: 'Security', hsm: 'Security',
   partner: 'Enterprise',
+  e2e: 'Quality', apitest: 'Quality', load: 'Quality', contract: 'Quality', mock: 'Quality',
+  testdata: 'Quality', qgate: 'Quality', dast: 'Quality', devicefarm: 'Quality', testops: 'Quality',
   registry: 'Platform', mesh: 'Platform', config: 'Platform', zk: 'Platform', cicd: 'Platform',
   erp: 'Enterprise', crm: 'Enterprise', mainframe: 'Enterprise', mft: 'Enterprise',
 }
