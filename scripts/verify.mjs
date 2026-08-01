@@ -222,6 +222,40 @@ try {
     check('extraction of an empty container is safe', sp.extractSpeech(null).length === 0);
 
     check('reading speeds are offered', sp.RATES.length >= 4 && sp.RATES.includes(1));
+
+    // ── voice selection ──────────────────────────────────────────────────────
+    const box = (list) => ({ getVoices: () => list });
+    const mixed = [
+      { name: 'Microsoft David - English (United States)', lang: 'en-US', localService: true },
+      { name: 'Daniel', lang: 'en-GB', localService: true },
+      { name: 'Samantha', lang: 'en-US', localService: true },
+      { name: 'Microsoft Sonia Online (Natural) - English (United Kingdom)', lang: 'en-GB' },
+      { name: 'Google Deutsch', lang: 'de-DE' },
+    ];
+    check('a female voice is chosen over a male one',
+      /Sonia|Samantha/.test(sp.pickVoice(box(mixed)).name));
+    check('a natural voice wins over an older female one',
+      sp.pickVoice(box(mixed)).name.includes('Sonia'));
+    // Isolates the female preference itself: identical language, locality and
+    // quality, with the neutral name sorting first alphabetically, so only the
+    // gender signal can decide it. Without that signal this test fails.
+    check('a female name is preferred over an otherwise identical neutral one',
+      sp.pickVoice(box([
+        { name: 'Alpha', lang: 'en-GB', localService: true },
+        { name: 'Zoe', lang: 'en-GB', localService: true },
+      ])).name === 'Zoe');
+    check('non-English voices are never offered',
+      !sp.listVoices(box(mixed)).some((v) => v.lang.startsWith('de')));
+    check('male voices are still offered, just ranked last',
+      sp.listVoices(box(mixed)).slice(-2).every((v) => /David|Daniel/.test(v.name)));
+    check('an explicit choice is honoured', sp.pickVoice(box(mixed), 'Samantha').name === 'Samantha');
+    check('a saved voice that has gone away falls back to the best available',
+      sp.pickVoice(box(mixed), 'Vanished').name.includes('Sonia'));
+    check('a machine with only male voices still speaks',
+      !!sp.pickVoice(box([{ name: 'Daniel', lang: 'en-GB', localService: true }])));
+    check('no voices at all does not throw', sp.pickVoice(box([])) === null);
+    check('the voice is warmer than default pitch', sp.PROSODY.pitch > 1 && sp.PROSODY.pitch < 1.2);
+    check('there is a pause between paragraphs', sp.BLOCK_PAUSE_MS >= 120);
   }
 
   // Take the entry point from the built index.html. A single build emits
@@ -242,7 +276,10 @@ try {
   // render. Utterances complete asynchronously, like the real thing.
   const spoken = [];
   class FakeUtterance {
-    constructor(text) { this.text = text; this.rate = 1; this.onend = null; this.onerror = null }
+    constructor(text) {
+      this.text = text; this.rate = 1; this.pitch = 1; this.volume = 1;
+      this.voice = null; this.lang = ''; this.onend = null; this.onerror = null
+    }
   }
   win.SpeechSynthesisUtterance = FakeUtterance;
   global.SpeechSynthesisUtterance = FakeUtterance;
@@ -252,7 +289,13 @@ try {
     cancel() { this.speaking = false },
     pause() { this.paused = true },
     resume() { this.paused = false },
-    getVoices() { return [{ name: 'Test', lang: 'en-GB', localService: true }] },
+    getVoices() { return [
+      { name: 'Microsoft David - English (United States)', lang: 'en-US', localService: true },
+      { name: 'Daniel', lang: 'en-GB', localService: true },
+      { name: 'Samantha', lang: 'en-US', localService: true },
+      { name: 'Microsoft Sonia Online (Natural) - English (United Kingdom)', lang: 'en-GB' },
+      { name: 'Google Deutsch', lang: 'de-DE' },
+    ] },
     addEventListener() {}, removeEventListener() {},
   };
   global.speechSynthesis = win.speechSynthesis;
@@ -336,6 +379,24 @@ try {
     const rateSel = doc.querySelector('.ra-rate select');
     check('reading speed can be changed', !!rateSel && rateSel.options.length >= 4);
     check('the speed control is labelled', !!rateSel.getAttribute('aria-label'));
+    check('a voice picker is offered', !!doc.querySelector('.ra-voice'));
+    check('the voice picker is labelled', !!doc.querySelector('.ra-voice')?.getAttribute('aria-label'));
+    check('the picker leads with a female voice',
+      /Sonia|Samantha/.test(doc.querySelector('.ra-voice')?.options[0]?.textContent || ''));
+    check('platform noise is stripped from voice names',
+      !/English \(United Kingdom\)|^Microsoft /.test(doc.querySelector('.ra-voice')?.options[0]?.textContent || ''));
+
+    spoken.length = 0;
+    click(byText('.readaloud button', 'Listen'));
+    await wait(200);
+    check('utterances carry the chosen female voice',
+      spoken.length > 0 && /Sonia|Samantha/.test(spoken[0].voice?.name || ''));
+    check('utterances carry the warm pitch', spoken[0].pitch > 1);
+    check('the utterance language matches its voice',
+      spoken[0].lang === spoken[0].voice?.lang);
+    click(byText('.readaloud button', 'Stop'));
+    await wait(100);
+
     check('the player is excluded from its own narration',
       ra().hasAttribute('data-no-speech'));
   }
