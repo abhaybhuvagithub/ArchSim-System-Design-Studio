@@ -141,6 +141,89 @@ try {
     check('no single template is made much worse', regressed.length === 0);
   }
 
+  // ── speech preparation, as pure functions ──────────────────────────────────
+  {
+    const sp = await import(pathToFileURL(path.join(root, 'src/speech.js')).href);
+
+    // Run the preparation over everything the app will ever read aloud. This is
+    // what caught "~2 TB", "12K/s" and "277ms" reading as gibberish.
+    {
+      const { TEMPLATES } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+      const { breakdownFor } = await import(pathToFileURL(path.join(root, 'src/breakdown.js')).href);
+      const { scalingFor } = await import(pathToFileURL(path.join(root, 'src/scaling.js')).href);
+      const SPOKEN = new Set(['p', 'steps', 'bul', 'note', 'warn', 'calc', 'h']);
+      const strings = [];
+      for (const t of TEMPLATES) {
+        const b = breakdownFor(t);
+        for (const sec of b.sections) {
+          strings.push(sec.title);
+          for (const bl of sec.blocks || []) {
+            if (!SPOKEN.has(bl[0])) continue;               // code, API and diagrams are not read
+            Array.isArray(bl[1]) ? strings.push(...bl[1]) : strings.push(bl[1]);
+          }
+        }
+        const sc = scalingFor(t);
+        strings.push(sc.constraint, sc.wall.t, sc.wall.d,
+          ...sc.ladder.map(r => r[2]), ...sc.levers.map(l => l.t + '. ' + l.d));
+      }
+      const leftovers = {};
+      for (const str of strings.filter(x => typeof x === 'string')) {
+        const out = sp.speakableText(str);
+        // a slash that begins a URL path is correct as "slash", so allow it
+        const cleaned = out.replace(/\s\/\w/g, ' ');
+        for (const ch of cleaned.match(/[^\w\s.,;:'"()?!%$£₹+=<>—-]/gu) || []) leftovers[ch] = (leftovers[ch] || 0) + 1;
+        for (const m of cleaned.match(/\b\d+\s*(K|M|B|TB|GB|MB|KB|ms)\b/g) || []) leftovers[m] = (leftovers[m] || 0) + 1;
+      }
+      const found = Object.entries(leftovers);
+      if (found.length) log('  ! unspoken: ' + found.map(([k, v]) => JSON.stringify(k) + ' x' + v).join(' '));
+      log(`speech: ${strings.length} spoken strings prepared`);
+      check('nothing in the written content reads as a raw symbol or unconverted unit', found.length === 0);
+    }
+
+    check('speech is reported unsupported when the browser has none', sp.speechSupported() === false);
+
+    const say = sp.speakableText;
+    check('abbreviations are expanded, not spelled out badly',
+      say('12K rps at p99') === '12 thousand requests per second at p 99');
+    check('units become words', say('~2 TB of data') === 'about 2 terabytes of data');
+    check('rates become words', say('~12K/s') === 'about 12 thousand per second');
+    check('units glued to a digit are still caught', say('p99 at 277ms') === 'p 99 at 277 milliseconds');
+    check('slashes between words become a pause, not "slash"', say('read/write ratio') === 'read write ratio');
+    check('a URL path keeps its slash', /GET \/shortCode/.test(say('GET /{shortCode}')));
+    check('single-star emphasis is unwrapped', say('a *connected* client') === 'a connected client');
+    check('ampersands are spoken', say('full-text & geo') === 'full-text and geo');
+    check('ratios are read as ratios', say('100:1 read heavy') === '100 to 1 read heavy');
+    check('arrows become speech', /then/.test(say('client → cache')));
+    check('decorative symbols are dropped', !/[·✓→⚠]/.test(say('a · b ✓ c → d ⚠ e')));
+    check('markdown bold is not read out', say('**strong** point') === 'strong point');
+    check('cash on delivery is expanded', /cash on delivery/.test(say('COD orders')));
+
+    const chunks = sp.chunkText('One. Two. ' + 'Three. '.repeat(60));
+    check('long text is chunked for reliability', chunks.length > 1);
+    check('chunks stay under the limit', chunks.every((c) => c.length <= 260));
+    check('short text stays as one chunk', sp.chunkText('Just this.').length === 1);
+
+    // extraction must ignore diagrams, code, navigation and controls
+    const host = doc.createElement('div');
+    host.innerHTML = `
+      <div class="bd-toc"><button class="bd-toc-i">Contents entry</button></div>
+      <p class="bd-p">Real prose worth hearing.</p>
+      <pre class="bd-code">SELECT * FROM noise;</pre>
+      <svg><text>svg label noise</text></svg>
+      <div class="bd-dia"><svg><text>diagram noise</text></svg></div>
+      <p class="bd-p">Second paragraph.</p>
+      <button>Spotlight</button>`;
+    const got = sp.extractSpeech(host).map((b) => b.text);
+    check('extraction keeps the prose', got.length === 2 && /Real prose/.test(got[0]));
+    check('extraction skips code, svg, diagrams, contents and buttons',
+      !got.join(' ').match(/noise|Contents entry|Spotlight/));
+    check('extraction returns the element for highlighting',
+      sp.extractSpeech(host).every((b) => !!b.el));
+    check('extraction of an empty container is safe', sp.extractSpeech(null).length === 0);
+
+    check('reading speeds are offered', sp.RATES.length >= 4 && sp.RATES.includes(1));
+  }
+
   // Take the entry point from the built index.html. A single build emits
   // several chunks with identical mtimes, so picking by mtime or size will
   // sooner or later load a vendor chunk instead of the app — which is exactly
@@ -155,6 +238,25 @@ try {
   if (!fs.existsSync(entryPath)) {
     throw new Error(`entry ${path.basename(m[1])} referenced by index.html is missing from dist/assets`);
   }
+  // A minimal speech engine, installed before the bundle mounts so the controls
+  // render. Utterances complete asynchronously, like the real thing.
+  const spoken = [];
+  class FakeUtterance {
+    constructor(text) { this.text = text; this.rate = 1; this.onend = null; this.onerror = null }
+  }
+  win.SpeechSynthesisUtterance = FakeUtterance;
+  global.SpeechSynthesisUtterance = FakeUtterance;
+  win.speechSynthesis = {
+    speaking: false, paused: false, _queue: [],
+    speak(u) { spoken.push(u); this.speaking = true; setTimeout(() => { this.speaking = false; u.onend && u.onend() }, 5) },
+    cancel() { this.speaking = false },
+    pause() { this.paused = true },
+    resume() { this.paused = false },
+    getVoices() { return [{ name: 'Test', lang: 'en-GB', localService: true }] },
+    addEventListener() {}, removeEventListener() {},
+  };
+  global.speechSynthesis = win.speechSynthesis;
+
   log('bundle: ' + path.basename(entryPath) + '  (from dist/index.html)');
   await import(pathToFileURL(entryPath).href);
   await wait(700);
@@ -178,6 +280,65 @@ try {
 
   // ── no template header before anything is loaded ───────────────────────────
   check('no template header on a blank canvas', !doc.querySelector('.tpl-header'));
+
+  // ── read aloud ─────────────────────────────────────────────────────────────
+  {
+    const goTab = async (name) => { click(byText('.tabs button', name)); await wait(200) };
+    const ra = () => doc.querySelector('.readaloud');
+
+    // Breakdown correctly shows a "pick a design" fallback with nothing loaded,
+    // and a fallback has no prose to read — so load one first.
+    const picker = [...doc.querySelectorAll('select')].find((s) =>
+      [...s.options].some((o) => o.textContent.includes('WhatsApp')));
+    picker.value = [...picker.options].find((o) => o.textContent.includes('WhatsApp')).value;
+    picker.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await wait(300);
+
+    for (const t of ['Brief', 'About', 'Breakdown']) {
+      await goTab(t);
+      check(`${t} offers Listen`, !!ra() && /Listen/.test(ra().textContent));
+    }
+    await goTab('Capacity');
+    check('tabs without prose do not offer Listen', !ra());
+
+    await goTab('Breakdown');
+    spoken.length = 0;
+    click(byText('.readaloud button', 'Listen'));
+    await wait(200);
+    check('pressing Listen speaks', spoken.length > 0);
+    check('spoken text is prepared, not raw markdown', !spoken.some((u) => /\*\*/.test(u.text)));
+    check('the block being read is highlighted', !!doc.querySelector('.speaking'));
+    check('progress is shown', /\d+\/\d+/.test(ra().textContent));
+    check('Pause and Stop appear while playing',
+      /Pause/.test(ra().textContent) && /Stop/.test(ra().textContent));
+
+    click(byText('.readaloud button', 'Pause'));
+    await wait(80);
+    check('pausing offers Resume', /Resume/.test(ra().textContent));
+    check('pause reaches the engine', win.speechSynthesis.paused === true);
+
+    click(byText('.readaloud button', 'Stop'));
+    await wait(120);
+    check('stopping returns to Listen', /Listen/.test(ra().textContent));
+    check('stopping clears the highlight', !doc.querySelector('.speaking'));
+
+    // leaving the tab must not leave a voice reading a panel nobody can see
+    click(byText('.readaloud button', 'Listen'));
+    await wait(120);
+    let cancelled = 0;
+    const realCancel = win.speechSynthesis.cancel.bind(win.speechSynthesis);
+    win.speechSynthesis.cancel = () => { cancelled++; realCancel() };
+    await goTab('Capacity');
+    check('switching tabs stops the narration', cancelled > 0);
+    win.speechSynthesis.cancel = realCancel;
+
+    await goTab('Breakdown');
+    const rateSel = doc.querySelector('.ra-rate select');
+    check('reading speed can be changed', !!rateSel && rateSel.options.length >= 4);
+    check('the speed control is labelled', !!rateSel.getAttribute('aria-label'));
+    check('the player is excluded from its own narration',
+      ra().hasAttribute('data-no-speech'));
+  }
 
   // ── components panel ───────────────────────────────────────────────────────
   {

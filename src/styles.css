@@ -778,3 +778,37 @@ select.btn { appearance: auto; }
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
 .pal-search:focus { border-color: var(--accent); }
+
+/* ---- Read aloud ---- */
+.readaloud {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin: 0 0 12px; padding: 7px 9px;
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 12px;
+}
+.readaloud button {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 980px; padding: 3px 10px; font-size: 11px; cursor: pointer;
+  font-family: inherit;
+}
+.readaloud button:hover { border-color: var(--accent); color: var(--accent); }
+.readaloud .ra-play { background: var(--accent); border-color: var(--accent); color: #fff; }
+.readaloud .ra-play:hover { opacity: .9; color: #fff; }
+.ra-prog { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ra-rate { margin-left: auto; }
+.ra-rate select {
+  background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 980px; padding: 3px 6px; font-size: 10.5px; font-family: inherit; cursor: pointer;
+}
+.readaloud button:focus-visible, .ra-rate select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* the block currently being read */
+.speaking {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 6px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
