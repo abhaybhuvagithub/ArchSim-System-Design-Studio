@@ -204,9 +204,34 @@ const FEMALE = new RegExp([
   // Microsoft, including the Natural/Online neural set
   'zira', 'hazel', 'linda', 'eva', 'aria', 'jenny', 'sonia', 'libby', 'michelle',
   'clara', 'natasha', 'yan', 'heera', 'neerja', 'kalpana', 'emily', 'amber', 'ana',
+  // India — Microsoft, Google and Apple ship these across the major languages
+  'heera', 'neerja', 'kalpana', 'swara', 'aditi', 'priya', 'veena', 'lekha',
+  'sangeeta', 'shruti', 'pallavi', 'charu', 'anjali', 'kavya', 'yashica',
   // Google and Android
   'google uk english female', 'google us english', 'female',
 ].join('|'), 'i')
+
+// macOS ships a set of joke voices — Albert, Bad News, Zarvox, Bubbles — that
+// are unusable for reading a technical document, and Ventura added a family of
+// character voices on top. They are excluded outright rather than ranked low:
+// nobody scrolling a voice list wants to find Deranged in it. Matched on the
+// exact name rather than a pattern, so Fredrick is never mistaken for Fred.
+const NOVELTY_NAMES = new Set([
+  // classic macOS novelty set
+  'albert', 'bad news', 'good news', 'bahh', 'bells', 'boing', 'bubbles',
+  'cellos', 'deranged', 'hysterical', 'jester', 'junior', 'kathy', 'organ',
+  'princess', 'ralph', 'superstar', 'trinoids', 'whisper', 'wobble', 'zarvox',
+  // Ventura+ character voices
+  'grandma', 'grandpa', 'rocko', 'eddy',
+  // early formant voices — not jokes, but they sound machine-generated
+  'fred', 'bruce', 'agnes', 'vicki', 'ralph',
+])
+
+export function isNoveltyVoice(v) {
+  const raw = String((v && v.name) || '').trim().toLowerCase()
+  // names arrive as 'Albert' or 'Albert (English (US))' depending on platform
+  return NOVELTY_NAMES.has(raw) || NOVELTY_NAMES.has(raw.split(' (')[0].trim())
+}
 
 const MALE = /\b(daniel|alex|fred|thomas|oliver|george|james|david|mark|guy|ryan|tom|rishi|prabhat|ravi|male|man)\b/i
 
@@ -218,19 +243,77 @@ const NATURAL = /natural|neural|premium|enhanced|online|siri/i
 export function scoreVoice(v) {
   const name = v?.name || ''
   const lang = v?.lang || ''
-  if (!/^en([-_]|$)/i.test(lang)) return -1        // English only, whatever else it offers
+  if (!lang) return -1
+  if (isNoveltyVoice(v)) return -1                 // never offer a joke voice
   // A base keeps male voices in the picker — they simply rank last, rather than
   // being hidden from someone who would rather have one.
   let s = 100
   if (FEMALE.test(name)) s += 100
   else if (MALE.test(name)) s -= 60
   if (NATURAL.test(name)) s += 40                  // the single biggest quality jump
-  if (/en[-_]GB/i.test(lang)) s += 8
-  else if (/en[-_]IN/i.test(lang)) s += 7
-  else if (/en[-_]US/i.test(lang)) s += 6
+
+  // The written content is English, so English voices pronounce it correctly
+  // and rank first. Other languages are still offered — an Indian-language
+  // voice reading English gives a familiar accent, which several people
+  // prefer — but they never outrank a voice that matches the text.
+  if (/^en([-_]|$)/i.test(lang)) {
+    s += 60
+    if (/en[-_]IN/i.test(lang) && INDIAN_LOCALE) s += 12   // Indian English, Indian browser
+    else if (/en[-_]GB/i.test(lang)) s += 8
+    else if (/en[-_]IN/i.test(lang)) s += 7
+    else if (/en[-_]US/i.test(lang)) s += 6
+  } else if (INDIAN_LANGS.test(lang)) {
+    s += 20                                        // ahead of unrelated languages
+  }
   if (v.localService) s += 3                       // no network hiccup mid-sentence
   if (v.default) s += 1
   return s
+}
+
+// The scheduled languages, plus the codes browsers actually report.
+const INDIAN_LANGS = /^(hi|bn|ta|te|mr|gu|kn|ml|pa|or|as|ur|ne|si|sd|ks|kok|mai|doi|sat|brx|mni)([-_]|$)/i
+
+const INDIAN_LOCALE = (() => {
+  try {
+    const l = (typeof navigator !== 'undefined' && (navigator.language || '')) || ''
+    return /[-_]IN$/i.test(l) || INDIAN_LANGS.test(l)
+  } catch (e) { return false }
+})()
+
+const LANG_NAMES = {
+  hi: 'Hindi', bn: 'Bengali', ta: 'Tamil', te: 'Telugu', mr: 'Marathi',
+  gu: 'Gujarati', kn: 'Kannada', ml: 'Malayalam', pa: 'Punjabi', or: 'Odia',
+  as: 'Assamese', ur: 'Urdu', ne: 'Nepali', si: 'Sinhala', kok: 'Konkani',
+  mai: 'Maithili', sat: 'Santali', brx: 'Bodo', mni: 'Manipuri', doi: 'Dogri',
+  sd: 'Sindhi', ks: 'Kashmiri', en: 'English',
+}
+
+// 'hi-IN' becomes 'Hindi (India)'. Intl knows most of these; the map covers
+// the Indian languages some engines still do not.
+export function languageLabel(lang) {
+  const parts = String(lang || '').replace('_', '-').split('-')
+  const base = parts[0], region = parts[1]
+  let name = LANG_NAMES[base ? base.toLowerCase() : '']
+  if (!name) {
+    try { name = new Intl.DisplayNames(['en'], { type: 'language' }).of(base) } catch (e) { /* older engine */ }
+  }
+  name = name || base || 'Other'
+  if (region && base === 'en') return name + ' (' + region.toUpperCase() + ')'
+  if (region && region.toUpperCase() !== 'IN') return name + ' (' + region.toUpperCase() + ')'
+  return INDIAN_LANGS.test(lang) ? name + ' (India)' : name
+}
+
+// Grouped for the picker: English first, then Indian languages, then the rest.
+export function voicesByLanguage(synth) {
+  const groups = new Map()
+  for (const v of listVoices(synth)) {
+    const key = languageLabel(v.lang)
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(v)
+  }
+  const known = Object.keys(LANG_NAMES).map(k => LANG_NAMES[k])
+  const rank = label => (/^English/.test(label) ? 0 : known.some(n => label.indexOf(n) === 0) ? 1 : 2)
+  return Array.from(groups.entries()).sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))
 }
 
 // Every usable voice, best first — this is what the picker shows.
