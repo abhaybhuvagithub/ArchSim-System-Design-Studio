@@ -230,6 +230,12 @@ try {
       { name: 'Daniel', lang: 'en-GB', localService: true },
       { name: 'Samantha', lang: 'en-US', localService: true },
       { name: 'Microsoft Sonia Online (Natural) - English (United Kingdom)', lang: 'en-GB' },
+      { name: 'Microsoft Heera - English (India)', lang: 'en-IN', localService: true },
+      { name: 'Microsoft Swara Online (Natural) - Hindi (India)', lang: 'hi-IN' },
+      { name: 'Veena', lang: 'ta-IN', localService: true },
+      { name: 'Albert', lang: 'en-US', localService: true },
+      { name: 'Bad News', lang: 'en-US', localService: true },
+      { name: 'Grandma (English (US))', lang: 'en-US', localService: true },
       { name: 'Google Deutsch', lang: 'de-DE' },
     ];
     check('a female voice is chosen over a male one',
@@ -244,10 +250,17 @@ try {
         { name: 'Alpha', lang: 'en-GB', localService: true },
         { name: 'Zoe', lang: 'en-GB', localService: true },
       ])).name === 'Zoe');
-    check('non-English voices are never offered',
-      !sp.listVoices(box(mixed)).some((v) => v.lang.startsWith('de')));
-    check('male voices are still offered, just ranked last',
-      sp.listVoices(box(mixed)).slice(-2).every((v) => /David|Daniel/.test(v.name)));
+    // Other languages are offered deliberately now — the content is English so
+    // an English voice still leads, but Hindi or Tamil is a valid choice.
+    check('other languages are offered, below English',
+      sp.listVoices(box(mixed)).some((v) => v.lang.startsWith('de')) &&
+      /^en/i.test(sp.listVoices(box(mixed))[0].lang));
+    check('male voices rank below female ones in the same language', (() => {
+      const en = sp.listVoices(box(mixed)).filter((v) => /^en/i.test(v.lang));
+      const lastFemale = en.map((v) => /Sonia|Samantha/.test(v.name)).lastIndexOf(true);
+      const firstMale = en.map((v) => /David|Daniel/.test(v.name)).indexOf(true);
+      return lastFemale >= 0 && firstMale >= 0 && lastFemale < firstMale;
+    })());
     check('an explicit choice is honoured', sp.pickVoice(box(mixed), 'Samantha').name === 'Samantha');
     check('a saved voice that has gone away falls back to the best available',
       sp.pickVoice(box(mixed), 'Vanished').name.includes('Sonia'));
@@ -255,6 +268,46 @@ try {
       !!sp.pickVoice(box([{ name: 'Daniel', lang: 'en-GB', localService: true }])));
     check('no voices at all does not throw', sp.pickVoice(box([])) === null);
     check('the voice is warmer than default pitch', sp.PROSODY.pitch > 1 && sp.PROSODY.pitch < 1.2);
+
+    // ── novelty voices ───────────────────────────────────────────────────────
+    const joke = [
+      { name: 'Albert', lang: 'en-US', localService: true },
+      { name: 'Bad News', lang: 'en-US', localService: true },
+      { name: 'Grandma (English (US))', lang: 'en-US', localService: true },
+      { name: 'Zarvox', lang: 'en-US', localService: true },
+      { name: 'Bubbles', lang: 'en-US', localService: true },
+      { name: 'Samantha', lang: 'en-US', localService: true },
+    ];
+    const jokeNames = sp.listVoices(box(joke)).map((x) => x.name);
+    check('novelty voices are excluded outright', jokeNames.length === 1 && jokeNames[0] === 'Samantha');
+    check('a platform-suffixed novelty name is still caught', sp.isNoveltyVoice({ name: 'Grandma (English (US))' }));
+    check('a real name that merely starts like one is kept', !sp.isNoveltyVoice({ name: 'Fredrika' }));
+    check('a machine with only novelty voices still speaks',
+      !!sp.pickVoice(box([{ name: 'Albert', lang: 'en-US' }])));
+
+    // ── Indian languages ─────────────────────────────────────────────────────
+    const indian = [
+      { name: 'Microsoft Sonia Online (Natural)', lang: 'en-GB' },
+      { name: 'Microsoft Heera - English (India)', lang: 'en-IN', localService: true },
+      { name: 'Microsoft Swara Online (Natural) - Hindi', lang: 'hi-IN' },
+      { name: 'Veena', lang: 'ta-IN', localService: true },
+      { name: 'Google Deutsch', lang: 'de-DE' },
+    ];
+    const langs = sp.voicesByLanguage(box(indian)).map(([l]) => l);
+    check('Indian language voices are offered', langs.some((l) => /Hindi/.test(l)) && langs.some((l) => /Tamil/.test(l)));
+    check('languages are named, not shown as codes', !langs.some((l) => /^(hi|ta|bn)\b/.test(l)));
+    check('English is grouped first, since the content is English', /^English/.test(langs[0]));
+    check('an English voice is still the default for English content', /^en/i.test(sp.pickVoice(box(indian)).lang));
+    check('a Hindi voice can be chosen explicitly',
+      sp.pickVoice(box(indian), 'Microsoft Swara Online (Natural) - Hindi').lang === 'hi-IN');
+    check('language labels read properly',
+      sp.languageLabel('hi-IN') === 'Hindi (India)' && sp.languageLabel('ta-IN') === 'Tamil (India)');
+    // Isolates the Indian boost: neutral names, matched quality, and the
+    // non-Indian one sorting first alphabetically, so only that signal decides.
+    // Without it this passes on the female bonus alone, which is how the
+    // equivalent hole hid the female preference earlier.
+    check('an Indian language outranks an unrelated one, all else equal',
+      sp.listVoices(box([{ name: 'Alpha', lang: 'de-DE' }, { name: 'Zeta', lang: 'hi-IN' }]))[0].lang === 'hi-IN');
     check('there is a pause between paragraphs', sp.BLOCK_PAUSE_MS >= 120);
   }
 
@@ -381,6 +434,12 @@ try {
     check('the speed control is labelled', !!rateSel.getAttribute('aria-label'));
     check('a voice picker is offered', !!doc.querySelector('.ra-voice'));
     check('the voice picker is labelled', !!doc.querySelector('.ra-voice')?.getAttribute('aria-label'));
+    check('the voice picker groups by language',
+      (doc.querySelector('.ra-voice')?.querySelectorAll('optgroup').length || 0) >= 2);
+    check('Indian languages appear in the picker',
+      /Hindi|Tamil/.test(doc.querySelector('.ra-voice')?.innerHTML || ''));
+    check('no novelty voice reaches the picker',
+      !/Albert|Bad News|Grandma/.test(doc.querySelector('.ra-voice')?.innerHTML || ''));
     check('the picker leads with a female voice',
       /Sonia|Samantha/.test(doc.querySelector('.ra-voice')?.options[0]?.textContent || ''));
     check('platform noise is stripped from voice names',
@@ -399,6 +458,33 @@ try {
 
     check('the player is excluded from its own narration',
       ra().hasAttribute('data-no-speech'));
+  }
+
+  // ── accessibility ──────────────────────────────────────────────────────────
+  {
+    check('there is a skip link', !!doc.querySelector('.skip-link'));
+    check('the toolbar is a banner landmark', !!doc.querySelector('header.toolbar'));
+    check('the components list is a labelled landmark',
+      doc.querySelector('nav.palette')?.getAttribute('aria-label') === 'Components');
+    check('the canvas is the main landmark', !!doc.querySelector('main.canvas-wrap'));
+    check('the analysis panel is a labelled landmark',
+      doc.querySelector('aside.side')?.getAttribute('aria-label') === 'Analysis');
+    check('there is a polite live region', !!doc.querySelector('[role="status"][aria-live="polite"]'));
+
+    const desc = doc.querySelector('[aria-label="Diagram described as text"]');
+    check('the diagram has a text equivalent', !!desc);
+    check('the text equivalent lists components and what they feed',
+      !!desc && /Sends to|Endpoint/.test(desc.textContent));
+    check('the text equivalent is hidden from sighted users',
+      !!desc && desc.className.includes('sr-only'));
+
+    const a11yBtn = byText('.toolbar button', 'A11y');
+    check('there is an accessibility mode toggle', !!a11yBtn);
+    check('the toggle reports its state', a11yBtn.getAttribute('aria-pressed') === 'false');
+    click(a11yBtn); await wait(150);
+    check('turning it on is reflected on the document', doc.documentElement.className.includes('a11y'));
+    click(byText('.toolbar button', 'A11y')); await wait(150);
+    check('it can be turned off again', !doc.documentElement.className.includes('a11y'));
   }
 
   // ── components panel ───────────────────────────────────────────────────────
