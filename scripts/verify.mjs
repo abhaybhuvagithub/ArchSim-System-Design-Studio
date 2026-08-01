@@ -19,7 +19,10 @@ const log = (...a) => OUT.push(a.join(' '));
 const results = [];
 const check = (n, ok) => results.push([n, !!ok]);
 
-const win = new Window({ url: 'http://localhost/' });
+// happy-dom defaults to 1024px, which is below the app's 1100px breakpoint — so
+// without this the whole suite silently exercises the tablet drawer layout and
+// never sees the docked panels, splitters or their controls at all.
+const win = new Window({ url: 'http://localhost/', width: 1440, height: 900 });
 const doc = win.document;
 doc.body.innerHTML = '<div id="root"></div>';
 global.window = win;
@@ -168,6 +171,51 @@ try {
 
   // ── no template header before anything is loaded ───────────────────────────
   check('no template header on a blank canvas', !doc.querySelector('.tpl-header'));
+
+  // ── panel maximise / restore ───────────────────────────────────────────────
+  {
+    const palette = () => doc.querySelector('.palette');
+    const side = () => doc.querySelector('.side');
+    const maxBtns = [...doc.querySelectorAll('.panel-bar .panel-max')];
+    check('both panels have a maximise button', maxBtns.length === 2);
+    check('neither panel starts maximised',
+      !palette()?.className.includes('maxed') && !side()?.className.includes('maxed'));
+
+    // maximise the components panel
+    click(maxBtns[0]);
+    await wait(120);
+    check('maximising the components panel applies it', palette().className.includes('maxed'));
+    check('a maximised panel drops its inline width so CSS can size it',
+      !/width:\s*\d/.test(palette().getAttribute('style') || ''));
+    check('the button switches to Restore',
+      /Restore/.test(doc.querySelectorAll('.panel-bar .panel-max')[0].textContent));
+
+    // maximising the other one releases the first — both at once leaves no canvas
+    click([...doc.querySelectorAll('.panel-bar .panel-max')][1]);
+    await wait(120);
+    check('maximising the analysis panel restores the components panel',
+      side().className.includes('maxed') && !palette().className.includes('maxed'));
+
+    // restore
+    click([...doc.querySelectorAll('.panel-bar .panel-max')][1]);
+    await wait(120);
+    check('clicking Restore returns the panel to its default width',
+      !side().className.includes('maxed') && /width:\s*\d/.test(side().getAttribute('style') || ''));
+    check('the button switches back to Max',
+      /Max/.test(doc.querySelectorAll('.panel-bar .panel-max')[1].textContent));
+
+    // double-clicking a splitter resets that panel to its default width — the
+    // other half of "restore to default", for when it was dragged rather than
+    // maximised.
+    const splitters = [...doc.querySelectorAll('.splitter')];
+    check('both docked panels have a splitter', splitters.length === 2);
+    const widthOf = el => parseInt((el.getAttribute('style') || '').match(/width:\s*(\d+)/)?.[1] || '0', 10);
+    const before = widthOf(palette());
+    splitters[0].dispatchEvent(new win.MouseEvent('dblclick', { bubbles: true }));
+    await wait(120);
+    check('double-clicking the splitter resets to the default width',
+      widthOf(palette()) === 168 && before === 168);
+  }
 
   // ── ①②③ step badges default to on ──────────────────────────────────────────
   const stepsBtn = [...doc.querySelectorAll('.toolbar button')]
