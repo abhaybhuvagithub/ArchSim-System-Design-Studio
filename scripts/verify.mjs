@@ -53,15 +53,34 @@ const click = (el) => el && el.dispatchEvent(new win.MouseEvent('click', { bubbl
 const byText = (sel, txt) => [...doc.querySelectorAll(sel)].find((e) => e.textContent.includes(txt));
 
 try {
-  const dir = path.join(root, 'dist/assets');
-  const entry = fs.readdirSync(dir)
-    .filter((f) => f.endsWith('.js'))
-    .map((f) => ({ f, s: fs.statSync(path.join(dir, f)).size, m: fs.statSync(path.join(dir, f)).mtimeMs }))
-    .sort((a, b) => b.m - a.m || b.s - a.s)[0].f;
-  log('bundle: ' + entry);
-  await import(pathToFileURL(path.join(dir, entry)).href);
+  // Take the entry point from the built index.html. A single build emits
+  // several chunks with identical mtimes, so picking by mtime or size will
+  // sooner or later load a vendor chunk instead of the app — which is exactly
+  // what happened the first time this ran in CI.
+  const indexHtml = path.join(root, 'dist/index.html');
+  if (!fs.existsSync(indexHtml)) {
+    throw new Error('dist/index.html not found — run `npm run build` first');
+  }
+  const m = /<script[^>]+type="module"[^>]+src="([^"]+)"/.exec(fs.readFileSync(indexHtml, 'utf8'));
+  if (!m) throw new Error('no module script tag found in dist/index.html');
+  const entryPath = path.join(root, 'dist/assets', path.basename(m[1]));
+  if (!fs.existsSync(entryPath)) {
+    throw new Error(`entry ${path.basename(m[1])} referenced by index.html is missing from dist/assets`);
+  }
+  log('bundle: ' + path.basename(entryPath) + '  (from dist/index.html)');
+  await import(pathToFileURL(entryPath).href);
   await wait(700);
   check('app mounts', doc.body.innerHTML.length > 2000);
+  // Everything downstream assumes a mounted app. Without this, a bad bundle
+  // produces a cascade of "cannot read properties of undefined" that says
+  // nothing about the actual cause.
+  if (doc.body.innerHTML.length <= 2000) {
+    throw new Error(
+      'app did not mount (body was ' + doc.body.innerHTML.length + ' chars). ' +
+      'Either the wrong chunk was loaded or it threw on startup. ' +
+      'First captured error: ' + (errs[0]?.message || 'none')
+    );
+  }
 
   // load the WhatsApp template through the picker
   const sel = [...doc.querySelectorAll('select')].find((s) =>
