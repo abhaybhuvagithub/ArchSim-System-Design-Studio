@@ -54,6 +54,17 @@ export default function App() {
   const [chaosUsed, setChaosUsed] = useState(false)
   const [cloud, setCloud] = useState(readCloud)   // generic | aws | gcp | azure | oci
   const [palQ, setPalQ] = useState('')            // palette search
+  const palRef = useRef(null)
+  const sideBodyRef = useRef(null)
+  const [sideScrolled, setSideScrolled] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('archsim.palette.collapsed') || '{}') } catch { return {} }
+  })
+  const toggleGroup = key => setCollapsed(c => {
+    const next = { ...c, [key]: !c[key] }
+    try { localStorage.setItem('archsim.palette.collapsed', JSON.stringify(next)) } catch { /* private mode */ }
+    return next
+  })
   const [reqLog, setReqLog] = useState({})        // checklist index -> what it added
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
@@ -91,7 +102,26 @@ export default function App() {
   }, [])
   const T = THEMES[theme]
 
+  useEffect(() => {
+    sideBodyRef.current?.scrollTo({ top: 0 })
+    setSideScrolled(false)
+  }, [tab])
+
   useEffect(() => { document.documentElement.dataset.theme = theme; saveTheme(theme) }, [theme])
+
+  // "/" jumps to the component search, the way it does in most tools
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      const el = e.target
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      e.preventDefault()
+      palRef.current?.focus()
+      palRef.current?.select()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const svgRef = useRef(null)
   const drag = useRef(null)
 
@@ -125,6 +155,25 @@ export default function App() {
       alerted.current.hot = false
     }
   }, [simOn, sim.successRate, cap, nodes.length, notify])
+
+  // ---- palette derivations ----
+  const palHits = useMemo(() => {
+    const q = palQ.trim().toLowerCase()
+    if (!q) return []
+    return PALETTE_GROUPS.flatMap(g => g.types).filter(t => {
+      const c = CATALOG[t]
+      return `${c.name} ${c.desc} ${(CLOUD_MAP[t] || []).join(' ')}`.toLowerCase().includes(q)
+    })
+  }, [palQ])
+  const palHitSet = useMemo(() => new Set(palHits), [palHits])
+  const typeCounts = useMemo(() => {
+    const m = {}
+    for (const n of nodes) m[n.type] = (m[n.type] || 0) + 1
+    return m
+  }, [nodes])
+  const onCanvasTypes = useMemo(
+    () => Object.keys(typeCounts).filter(t => CATALOG[t]).sort((a, b) => typeCounts[b] - typeCounts[a]),
+    [typeCounts])
 
   // ---- panel resize / detach ----
   const startResize = (side, e) => {
@@ -705,43 +754,71 @@ export default function App() {
               </button>
             </span>
           </div>
-          <input className="pal-search" value={palQ} onChange={e => setPalQ(e.target.value)}
-            placeholder={`Search ${Object.keys(CATALOG).length} components…`} />
+          <div className="pal-search-row">
+            <input className="pal-search" ref={palRef} value={palQ}
+              onChange={e => setPalQ(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') { setPalQ(''); e.currentTarget.blur() }
+                if (e.key === 'Enter' && palHits.length) { addAtCentre(palHits[0]); setPalQ('') }
+              }}
+              aria-label="Search components"
+              placeholder={`Search ${Object.keys(CATALOG).length} components…  /`} />
+            {palQ && (
+              <button className="pal-clear" onClick={() => { setPalQ(''); palRef.current?.focus() }}
+                aria-label="Clear search">✕</button>
+            )}
+          </div>
+          {palQ && (
+            <div className="pal-hint">
+              {palHits.length
+                ? <>{palHits.length} match{palHits.length === 1 ? '' : 'es'} · <b>Enter</b> adds {CATALOG[palHits[0]].name}</>
+                : <>No component matches “{palQ}”</>}
+            </div>
+          )}
+
+          {/* What is already on the canvas — the fastest way to add another one */}
+          {!palQ && onCanvasTypes.length > 0 && (
+            <div className="pal-group">
+              <button className="pal-h" aria-expanded={!collapsed.__used}
+                onClick={() => toggleGroup('__used')}>
+                <span className="pal-caret">{collapsed.__used ? '▸' : '▾'}</span>
+                On canvas
+                <span className="pal-count">{onCanvasTypes.length}</span>
+              </button>
+              {!collapsed.__used && (
+                <div className="pal-list">
+                  {onCanvasTypes.map(t => (
+                    <PalItem key={'u' + t} type={t} cloud={cloud} cloudInfo={cloudInfo}
+                      onAdd={addAtCentre} count={typeCounts[t]} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {PALETTE_GROUPS.map(g => {
-            const q = palQ.trim().toLowerCase()
-            const types = g.types.filter(t => {
-              if (!q) return true
-              const c = CATALOG[t]
-              const svc = (CLOUD_MAP[t] || []).join(' ')
-              return `${c.name} ${c.desc} ${svc}`.toLowerCase().includes(q)
-            })
+            const types = palQ ? g.types.filter(t => palHitSet.has(t)) : g.types
             if (!types.length) return null
+            const open = palQ ? true : !collapsed[g.label]
             return (
-              <div key={g.label}>
-                <h4>{g.label}</h4>
-                {types.map(t => {
-                  const c = CATALOG[t]
-                  const svc = serviceName(t, cloud)
-                  return (
-                    <div key={t} className="pal-item" draggable
-                      onDragStart={e => e.dataTransfer.setData('type', t)}
-                      onClick={() => addAtCentre(t)}
-                      title={svc ? `${c.desc}\n\n${cloudInfo.name}: ${svc}` : c.desc}>
-                      <div className="pal-glyph" style={{ background: c.color + '33', border: `1px solid ${c.color}` }}>{c.glyph}</div>
-                      <div className="pal-txt">
-                        {c.name}
-                        {svc && <span className="pal-svc">{svc}</span>}
-                      </div>
-                    </div>
-                  )
-                })}
+              <div key={g.label} className="pal-group">
+                <button className="pal-h" aria-expanded={open}
+                  onClick={() => !palQ && toggleGroup(g.label)}>
+                  <span className="pal-caret">{open ? '▾' : '▸'}</span>
+                  {g.label}
+                  <span className="pal-count">{types.length}</span>
+                </button>
+                {open && (
+                  <div className="pal-list">
+                    {types.map(t => (
+                      <PalItem key={t} type={t} cloud={cloud} cloudInfo={cloudInfo}
+                        onAdd={addAtCentre} count={typeCounts[t]} />
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
-          {palQ && !PALETTE_GROUPS.some(g => g.types.some(t => {
-            const c = CATALOG[t], svc = (CLOUD_MAP[t] || []).join(' ')
-            return `${c.name} ${c.desc} ${svc}`.toLowerCase().includes(palQ.trim().toLowerCase())
-          })) && <div className="empty" style={{ padding: '10px 6px' }}>No component matches “{palQ}”.</div>}
         </div>
 
         {!compact && !floatPanel.left && <div className="splitter" onPointerDown={e => startResize('left', e)} onDoubleClick={() => resetPanel('left')} title="Drag to resize · double-click to reset" />}
@@ -839,31 +916,29 @@ export default function App() {
               </button>
             </span>
           </div>
-          <div className="tabs">
-            <button className={tab === 'brief' ? 'on' : ''} onClick={() => setTab('brief')} title="Written description of this architecture">Brief</button>
-            <button className={tab === 'capacity' ? 'on' : ''} onClick={() => setTab('capacity')}>Capacity</button>
-            <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
-              ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
-            </button>
-            <button className={`${tab === 'chaos' ? 'on' : ''} ${faults.length ? 'alarm' : ''}`}
-              onClick={() => setTab('chaos')}>
-              Chaos{faults.length ? ` (${faults.length})` : ''}
-            </button>
-            <button className={tab === 'cost' ? 'on' : ''} onClick={() => { setTab('cost'); setSel(null) }}>
-              💵 {money(cost.total)}
-            </button>
-            <button className={tab === 'scale' ? 'on' : ''} onClick={() => { setTab('scale'); setSel(null) }} title="How this design scales to a billion users">
-              ↗ Scale
-            </button>
-            <button className={tab === 'breakdown' ? 'on' : ''} onClick={() => { setTab('breakdown'); setSel(null) }} title="Full written breakdown of the loaded design">
-              📖 Breakdown
-            </button>
-            <button className={tab === 'learn' ? 'on' : ''} onClick={() => { setTab('learn'); setSel(null) }}>
-              🎓 {doneSteps.filter(Boolean).length}/{LESSON.length}
-            </button>
-            <button className={tab === 'about' ? 'on' : ''} onClick={() => setTab('about')} title="What this simulator is and how it differs">About</button>
+          <div className="tabs" role="tablist" aria-label="Analysis views">
+            {[
+              ['brief', 'Brief', null, 'Written description of this architecture'],
+              ['capacity', 'Capacity', null, 'Bottlenecks and the replicas each tier needs'],
+              ['improve', 'Improve', sugs.length || null, 'Architecture advisor findings'],
+              ['chaos', 'Chaos', faults.length || null, 'Inject faults and watch it degrade'],
+              ['cost', 'Cost', money(cost.total), 'What this design costs to run'],
+              ['scale', 'Scale', null, 'How this design scales to a billion users'],
+              ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
+              ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
+              ['about', 'About', null, 'What this simulator is and how it differs'],
+            ].map(([key, label, badge, hint]) => (
+              <button key={key} role="tab" id={`tab-${key}`} aria-selected={tab === key}
+                title={hint}
+                className={`${tab === key ? 'on' : ''} ${key === 'chaos' && faults.length ? 'alarm' : ''}`}
+                onClick={() => { setTab(key); if (key !== 'capacity' && key !== 'brief') setSel(null) }}>
+                {label}
+                {badge != null && <span className="tab-badge">{badge}</span>}
+              </button>
+            ))}
           </div>
-
+          <div className="side-body" role="tabpanel" aria-labelledby={`tab-${tab}`}
+            ref={sideBodyRef} onScroll={e => setSideScrolled(e.currentTarget.scrollTop > 240)}>
           {tab === 'scale' ? (
             <Scale template={template} focused={spotlight?.id || null}
               onFocus={setSpotlight} rps={rps} onSetRps={setRps}
@@ -970,6 +1045,11 @@ export default function App() {
                 )
               })}
             </section>
+          )}
+          </div>
+          {sideScrolled && (
+            <button className="side-top" onClick={() => sideBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+              aria-label="Back to top">↑ Top</button>
           )}
         </div>
         {compact && drawer && <div className="scrim" onClick={() => setDrawer(null)} />}
@@ -1669,6 +1749,28 @@ function flowSteps(nodes, edges) {
   }
   for (const e of edges) if (!(e.id in map)) map[e.id] = step++
   return map
+}
+
+// One draggable component in the palette. Pulled out of the panel body so the
+// row can carry its own affordances without making that JSX unreadable.
+function PalItem({ type, cloud, cloudInfo, onAdd, count }) {
+  const c = CATALOG[type]
+  const svc = serviceName(type, cloud)
+  return (
+    <div className="pal-item" draggable role="button" tabIndex={0}
+      onDragStart={e => e.dataTransfer.setData('type', type)}
+      onClick={() => onAdd(type)}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(type) } }}
+      aria-label={`Add ${c.name}${count ? `, ${count} already on canvas` : ''}`}
+      title={svc ? `${c.desc}\n\n${cloudInfo.name}: ${svc}` : c.desc}>
+      <div className="pal-glyph" style={{ background: c.color + '33', border: `1px solid ${c.color}` }}>{c.glyph}</div>
+      <div className="pal-txt">
+        <span className="pal-name">{c.name}</span>
+        {svc && <span className="pal-svc">{svc}</span>}
+      </div>
+      {count > 0 && <span className="pal-used" title={`${count} on the canvas`}>{count}</span>}
+    </div>
+  )
 }
 
 // ── Breakdown diagrams ───────────────────────────────────────────────────────
