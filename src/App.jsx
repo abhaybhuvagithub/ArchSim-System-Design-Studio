@@ -1686,16 +1686,6 @@ function BdBlocks({ blocks }) {
       </div>
     )
     if (t === 'opts') return <BdOptions key={i} options={v} />
-    if (t === 'links') return (
-      <div key={i} className="bd-refs">
-        {v.map(([label, url, note], j) => (
-          <div key={j} className="bd-ref">
-            <a href={url} target="_blank" rel="noopener noreferrer">{label} ↗</a>
-            {note && <span>{note}</span>}
-          </div>
-        ))}
-      </div>
-    )
     return null
   })
 }
@@ -1748,20 +1738,19 @@ function Breakdown({ template, onLoadTemplate, onFocus, focused }) {
   }, [bd])
 
   if (!bd) {
-    const avail = BREAKDOWN_NAMES
     return (
       <section>
         <h3>Breakdown</h3>
         <div className="muted" style={{ marginBottom: 10 }}>
-          A full written breakdown — requirements, core entities, API, high-level design, deep dives with
-          Bad/Good/Great options, level expectations and references — for the design on the canvas.
-          {template ? ` There isn't one for ${template.name} yet.` : ' Load a template to read one.'}
+          A full written breakdown — requirements, core entities, API, high-level design read off your
+          diagram, deep dives with Bad/Good/Great options and level expectations. Every template in the
+          library has one. Load one to read it.
         </div>
-        {avail.map(n => (
-          <button key={n} className="btn" style={{ marginRight: 6 }} onClick={() => onLoadTemplate(n)}>
-            Open {n}
-          </button>
-        ))}
+        <div className="sc-grid">
+          {BREAKDOWN_NAMES.map(n => (
+            <button key={n} className="sc-pick" onClick={() => onLoadTemplate(n)}>{n}</button>
+          ))}
+        </div>
       </section>
     )
   }
