@@ -821,3 +821,25 @@ select.btn { appearance: auto; }
 }
 .ra-voice + .ra-rate { margin-left: 0; }
 .ra-voice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- Skip link ---- */
+.skip-link {
+  position: absolute; left: 8px; top: -60px; z-index: 200;
+  background: var(--accent); color: #fff; padding: 8px 14px;
+  border-radius: 0 0 10px 10px; font-size: 12.5px; text-decoration: none;
+  transition: top .12s;
+}
+.skip-link:focus { top: 0; }
+
+/* ---- Screen-reader mode ----
+   Stronger focus, no motion, a little more room to hit things. The text
+   equivalent of the canvas is in the accessibility tree either way. */
+.a11y :focus-visible { outline: 3px solid var(--accent) !important; outline-offset: 3px !important; }
+.a11y .pal-item { padding: 8px; }
+.a11y .tabs button { padding: 8px 12px; }
+.a11y .readaloud button { padding: 5px 12px; }
+.a11y * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+.ra-voice optgroup { font-style: normal; font-weight: 700; }
