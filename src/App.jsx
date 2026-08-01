@@ -16,6 +16,7 @@ import { ABOUT, ABOUT_COMPARE } from './about.js'
 import { buildReport } from './report.js'
 import { diagnoseAll, diagnose, healthChip } from './health.js'
 import { prepareSvgForExport } from './svgexport.js'
+import { speechSupported, extractSpeech, chunkText, RATES, readRate, saveRate, pickVoice } from './speech.js'
 import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 
@@ -1154,6 +1155,7 @@ function About() {
   return (
     <section>
       <h3>About ArchSim</h3>
+      <ReadAloud label="the about page">
       {ABOUT.map(sec => (
         <div key={sec.title} className="brief-sec">
           <div className="brief-h">{sec.title}</div>
@@ -1174,6 +1176,7 @@ function About() {
           {ABOUT_COMPARE.note && <div className="cmp-note">{ABOUT_COMPARE.note}</div>}
         </div>
       </div>
+      </ReadAloud>
     </section>
   )
 }
@@ -1197,12 +1200,14 @@ function Brief({ brief }) {
           <button className="btn" onClick={download}>↓ .md</button>
         </div>
       )}
-      {brief.sections.map(sec => (
-        <div key={sec.title} className="brief-sec">
-          <div className="brief-h">{sec.title}</div>
-          {sec.lines.map((l, i) => <p key={i} className="brief-p"><RichLine text={l} /></p>)}
-        </div>
-      ))}
+      <ReadAloud label="the architecture brief">
+        {brief.sections.map(sec => (
+          <div key={sec.title} className="brief-sec">
+            <div className="brief-h">{sec.title}</div>
+            {sec.lines.map((l, i) => <p key={i} className="brief-p"><RichLine text={l} /></p>)}
+          </div>
+        ))}
+      </ReadAloud>
     </section>
   )
 }
@@ -1773,6 +1778,138 @@ function PalItem({ type, cloud, cloudInfo, onAdd, count }) {
   )
 }
 
+// ── Read aloud ───────────────────────────────────────────────────────────────
+// Wraps any panel section and reads its prose, highlighting each block as it
+// goes. Renders nothing at all where the browser has no speech synthesis,
+// rather than offering a control that would do nothing.
+
+function ReadAloud({ children, label = 'this section' }) {
+  const hostRef = useRef(null)
+  const [supported] = useState(speechSupported)
+  const [state, setState] = useState('idle')        // idle | playing | paused
+  const [rate, setRate] = useState(readRate)
+  const [at, setAt] = useState(-1)                  // index of the block being read
+  const blocksRef = useRef([])
+  const idxRef = useRef(0)
+  const stoppingRef = useRef(false)
+  const keepAliveRef = useRef(null)
+
+  const synth = supported ? window.speechSynthesis : null
+
+  const clearHighlight = useCallback(() => {
+    for (const b of blocksRef.current) b.el?.classList.remove('speaking')
+  }, [])
+
+  const stop = useCallback(() => {
+    stoppingRef.current = true
+    clearInterval(keepAliveRef.current)
+    try { synth?.cancel() } catch { /* nothing to cancel */ }
+    clearHighlight()
+    setState('idle')
+    setAt(-1)
+    idxRef.current = 0
+  }, [synth, clearHighlight])
+
+  // Stop when the section unmounts or is swapped for another tab. Without this
+  // it happily keeps reading a panel that is no longer on screen.
+  useEffect(() => stop, [stop])
+
+  const speakFrom = useCallback(i => {
+    if (!synth) return
+    const blocks = blocksRef.current
+    if (i >= blocks.length) { stop(); return }
+
+    clearHighlight()
+    const block = blocks[i]
+    block.el?.classList.add('speaking')
+    block.el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    setAt(i)
+    idxRef.current = i
+
+    const parts = chunkText(block.text)
+    let part = 0
+    const next = () => {
+      if (stoppingRef.current) return
+      if (part >= parts.length) { speakFrom(i + 1); return }
+      const u = new window.SpeechSynthesisUtterance(parts[part++])
+      u.rate = rate
+      u.lang = 'en-GB'
+      const v = pickVoice(synth)
+      if (v) u.voice = v
+      u.onend = next
+      u.onerror = e => {
+        // "interrupted" and "canceled" are what a deliberate stop looks like.
+        if (e?.error === 'interrupted' || e?.error === 'canceled') return
+        next()
+      }
+      synth.speak(u)
+    }
+    next()
+  }, [synth, rate, stop, clearHighlight])
+
+  const play = () => {
+    if (!synth) return
+    const blocks = extractSpeech(hostRef.current)
+    if (!blocks.length) return
+    blocksRef.current = blocks
+    stoppingRef.current = false
+    try { synth.cancel() } catch { /* no-op */ }
+    setState('playing')
+    // Chrome pauses long sessions unless it is nudged. Harmless elsewhere.
+    clearInterval(keepAliveRef.current)
+    keepAliveRef.current = setInterval(() => {
+      if (synth.speaking && !synth.paused) { synth.pause(); synth.resume() }
+    }, 10000)
+    speakFrom(0)
+  }
+
+  const pause = () => { synth?.pause(); setState('paused') }
+  const resume = () => { synth?.resume(); setState('playing') }
+
+  const changeRate = r => {
+    setRate(r); saveRate(r)
+    if (state !== 'idle') {           // restart the current block at the new speed
+      stoppingRef.current = true
+      try { synth.cancel() } catch { /* no-op */ }
+      setTimeout(() => { stoppingRef.current = false; setState('playing'); speakFrom(idxRef.current) }, 60)
+    }
+  }
+
+  const total = blocksRef.current.length
+
+  return (
+    <>
+      {supported && (
+        <div className="readaloud" data-no-speech>
+          {state === 'idle' ? (
+            <button className="ra-play" onClick={play} aria-label={`Read ${label} aloud`}>▶ Listen</button>
+          ) : (
+            <>
+              {state === 'playing'
+                ? <button className="ra-play" onClick={pause} aria-label="Pause reading">❙❙ Pause</button>
+                : <button className="ra-play" onClick={resume} aria-label="Resume reading">▶ Resume</button>}
+              <button onClick={stop} aria-label="Stop reading">■ Stop</button>
+              <span className="ra-prog" aria-hidden="true">{Math.min(at + 1, total)}/{total}</span>
+            </>
+          )}
+          <label className="ra-rate">
+            <span className="sr-only">Reading speed</span>
+            <select value={rate} onChange={e => changeRate(Number(e.target.value))}
+              aria-label="Reading speed">
+              {RATES.map(r => <option key={r} value={r}>{r}×</option>)}
+            </select>
+          </label>
+          <span className="sr-only" role="status" aria-live="polite">
+            {state === 'playing' ? `Reading ${label}, part ${at + 1} of ${total}`
+              : state === 'paused' ? 'Reading paused' : ''}
+          </span>
+        </div>
+      )}
+      <div ref={hostRef}>{children}</div>
+    </>
+  )
+}
+
 // ── Breakdown diagrams ───────────────────────────────────────────────────────
 // Inline SVG, no dependencies, themed through CSS variables so light and dark
 // both work without passing a palette around.
@@ -2112,6 +2249,7 @@ function Breakdown({ template, onLoadTemplate, onFocus, focused }) {
         )}
       </div>
 
+      <ReadAloud label={`the ${bd.title} breakdown`}>
       {bd.sections.map(s => (
         <div key={s.id} className={`bd-sec h${s.h}`}>
           {s.h === 1
@@ -2126,6 +2264,7 @@ function Breakdown({ template, onLoadTemplate, onFocus, focused }) {
           <BdBlocks blocks={s.blocks} />
         </div>
       ))}
+      </ReadAloud>
     </section>
   )
 }
