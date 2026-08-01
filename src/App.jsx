@@ -15,6 +15,7 @@ import { countVisit, formatVisitors } from './visitors.js'
 import { ABOUT, ABOUT_COMPARE } from './about.js'
 import { buildReport } from './report.js'
 import { diagnoseAll, diagnose, healthChip } from './health.js'
+import { prepareSvgForExport } from './svgexport.js'
 
 const NODE_W = 118, NODE_H = 46
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
@@ -520,48 +521,24 @@ export default function App() {
   const renderPNG = () => new Promise(resolve => {
     if (!svgRef.current || !nodes.length) return resolve(null)
     const svg = svgRef.current.cloneNode(true)
-
-    for (const p of svg.querySelectorAll('path')) {
-      if (!p.getAttribute('fill')) p.setAttribute('fill', 'none')
-      if (p.getAttribute('stroke') === 'transparent') p.remove()   // invisible hit targets
-    }
-    for (const r of svg.querySelectorAll('rect.body')) {
-      if (!r.getAttribute('stroke-width')) r.setAttribute('stroke-width', '1.5')
-    }
-    for (const t of svg.querySelectorAll('text')) {
-      if (!t.getAttribute('font-family')) {
-        t.setAttribute('font-family', '-apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif')
-      }
-    }
-    // frame the whole design rather than whatever happens to be in view
-    const PAD = 56
-    const minX = Math.min(...nodes.map(n => n.x)) - PAD
-    const minY = Math.min(...nodes.map(n => n.y)) - PAD
-    const boxW = Math.max(...nodes.map(n => n.x)) + NODE_W + PAD - minX
-    const boxH = Math.max(...nodes.map(n => n.y)) + NODE_H + PAD - minY
-    const content = svg.querySelector('g')
-    if (content) content.removeAttribute('transform')
-    svg.setAttribute('viewBox', `${minX} ${minY} ${boxW} ${boxH}`)
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
-
-    // ~2x for a crisp figure in print, capped so the data URL stays sane
-    const scale = Math.min(2.4, Math.max(1, 1700 / boxW))
-    const W = Math.round(boxW * scale), H = Math.round(boxH * scale)
-    svg.setAttribute('width', W); svg.setAttribute('height', H)
+    const size = prepareSvgForExport(svg, nodes)
+    if (!size) return resolve(null)
+    const { width, height } = size
 
     const s = new XMLSerializer().serializeToString(svg)
     const img = new Image()
     img.onload = () => {
       const c = document.createElement('canvas')
-      c.width = W; c.height = H
+      c.width = width; c.height = height
       const g = c.getContext('2d')
-      g.fillStyle = T.canvasBg; g.fillRect(0, 0, W, H)
-      g.drawImage(img, 0, 0, W, H)
+      g.fillStyle = T.canvasBg; g.fillRect(0, 0, width, height)
+      g.drawImage(img, 0, 0, width, height)
       resolve(c.toDataURL('image/png'))
     }
     img.onerror = () => resolve(null)
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(s)))
   })
+
   const exportPNG = async () => {
     const png = await renderPNG()
     if (png) dl(png, 'archsim-design.png')
