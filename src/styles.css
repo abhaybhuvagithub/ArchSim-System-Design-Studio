@@ -704,3 +704,77 @@ select.btn { appearance: auto; }
 @media (max-width: 900px) {
   .palette.maxed, .side.maxed { width: calc(100vw - 120px); }
 }
+
+/* ════ Components panel ════════════════════════════════════════════════════ */
+.pal-search-row { position: relative; display: flex; align-items: center; margin-bottom: 6px; }
+.pal-search-row .pal-search { margin-bottom: 0; padding-right: 26px; }
+.pal-clear {
+  position: absolute; right: 5px; width: 18px; height: 18px; border-radius: 50%;
+  display: grid; place-items: center; border: none; cursor: pointer;
+  background: var(--border); color: var(--muted); font-size: 9px; line-height: 1;
+}
+.pal-clear:hover { color: var(--text); }
+.pal-hint { font-size: 10.5px; color: var(--muted); padding: 0 4px 6px; line-height: 1.4; }
+.pal-hint b { color: var(--accent); }
+
+.pal-group { margin-bottom: 2px; }
+.pal-h {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  background: none; border: none; cursor: pointer; text-align: left;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); padding: 7px 4px 5px;
+}
+.pal-h:hover { color: var(--text); }
+.pal-caret { font-size: 8px; width: 9px; opacity: .7; }
+.pal-count {
+  margin-left: auto; font-size: 9.5px; letter-spacing: 0; opacity: .55;
+  background: var(--panel2); border-radius: 980px; padding: 1px 6px;
+}
+/* Two or three columns once there is room — a maximised panel was one long
+   narrow column of 82 items, which is the worst of both worlds. */
+.pal-list { display: grid; grid-template-columns: 1fr; gap: 1px; }
+.palette { container-type: inline-size; }
+@container (min-width: 340px) { .pal-list { grid-template-columns: 1fr 1fr; } }
+@container (min-width: 620px) { .pal-list { grid-template-columns: 1fr 1fr 1fr; } }
+@container (min-width: 900px) { .pal-list { grid-template-columns: repeat(4, 1fr); } }
+
+.pal-item { position: relative; }
+.pal-item:active { cursor: grabbing; transform: scale(.985); }
+.pal-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-used {
+  margin-left: auto; flex-shrink: 0; font-size: 9.5px; font-weight: 700;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 980px;
+  display: grid; place-items: center; background: var(--accent); color: #fff;
+}
+
+/* ════ Analysis panel ══════════════════════════════════════════════════════ */
+.side { display: flex; flex-direction: column; position: relative; }
+.side .tabs {
+  position: sticky; top: 0; z-index: 3; margin-bottom: 0;
+  padding: 0 0 8px; background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.side-body { flex: 1; overflow-y: auto; padding-top: 12px; min-height: 0; }
+.tab-badge {
+  margin-left: 5px; font-size: 9.5px; font-weight: 700; padding: 1px 5px;
+  border-radius: 980px; background: var(--border); color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.tabs button.on .tab-badge { background: rgba(255, 255, 255, .28); color: #fff; }
+.tabs button.alarm .tab-badge { background: var(--bad); color: #fff; }
+
+.side-top {
+  position: absolute; right: 14px; bottom: 12px; z-index: 4;
+  background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 980px; padding: 5px 11px; font-size: 11px; cursor: pointer;
+  box-shadow: 0 4px 14px var(--shadow);
+}
+.side-top:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ════ Focus visibility, both panels ═══════════════════════════════════════ */
+.pal-item:focus-visible, .pal-h:focus-visible, .tabs button:focus-visible,
+.panel-bar button:focus-visible, .pal-search:focus-visible, .side-top:focus-visible,
+.pal-clear:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.pal-search:focus { border-color: var(--accent); }

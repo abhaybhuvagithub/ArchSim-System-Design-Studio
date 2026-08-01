@@ -54,6 +54,13 @@ process.on('unhandledRejection', (e) => errs.push(e));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const click = (el) => el && el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
 const byText = (sel, txt) => [...doc.querySelectorAll(sel)].find((e) => e.textContent.includes(txt));
+// React tracks the previous value on the DOM node, so assigning `.value`
+// directly is ignored. Go through the native setter so onChange actually fires.
+const typeInto = (el, text) => {
+  const setter = Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set;
+  setter.call(el, text);
+  el.dispatchEvent(new win.Event('input', { bubbles: true }));
+};
 
 try {
   // ── data integrity, before touching the DOM ────────────────────────────────
@@ -171,6 +178,62 @@ try {
 
   // ── no template header before anything is loaded ───────────────────────────
   check('no template header on a blank canvas', !doc.querySelector('.tpl-header'));
+
+  // ── components panel ───────────────────────────────────────────────────────
+  {
+    const groups = [...doc.querySelectorAll('.pal-group')];
+    check('components are grouped', groups.length >= 10);
+    check('every group header states its size', doc.querySelectorAll('.pal-count').length === groups.length);
+    check('groups are collapsible', doc.querySelectorAll('.pal-h[aria-expanded]').length === groups.length);
+
+    const firstH = doc.querySelector('.pal-h');
+    const openBefore = firstH.getAttribute('aria-expanded');
+    click(firstH);
+    await wait(120);
+    check('collapsing a group hides its items and flips aria-expanded',
+      doc.querySelector('.pal-h').getAttribute('aria-expanded') !== openBefore);
+    click(doc.querySelector('.pal-h'));
+    await wait(120);
+    check('expanding it again restores the items',
+      doc.querySelector('.pal-h').getAttribute('aria-expanded') === openBefore);
+
+    // search
+    const search = doc.querySelector('.pal-search');
+    check('the search box is labelled', !!search?.getAttribute('aria-label'));
+    typeInto(search, 'kafka');
+    await wait(150);
+    check('searching filters the palette', doc.querySelectorAll('.pal-item').length < 82);
+    check('searching reports how many matched', /match/.test(doc.querySelector('.pal-hint')?.textContent || ''));
+    check('a clear button appears while searching', !!doc.querySelector('.pal-clear'));
+    click(doc.querySelector('.pal-clear'));
+    await wait(150);
+    check('clearing restores the full palette', !doc.querySelector('.pal-hint'));
+
+    typeInto(search, 'zzzznotathing');
+    await wait(150);
+    check('a search with no matches says so', /No component matches/.test(doc.querySelector('.pal-hint')?.textContent || ''));
+    click(doc.querySelector('.pal-clear'));
+    await wait(150);
+
+    check('palette items are keyboard reachable',
+      [...doc.querySelectorAll('.pal-item')].every((el) => el.getAttribute('tabindex') === '0'));
+    check('palette items are labelled for screen readers',
+      [...doc.querySelectorAll('.pal-item')].every((el) => !!el.getAttribute('aria-label')));
+  }
+
+  // ── analysis panel ─────────────────────────────────────────────────────────
+  {
+    const tablist = doc.querySelector('.tabs[role="tablist"]');
+    check('the tab bar is a tablist', !!tablist);
+    const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
+    check('all nine tabs are tabs', tabBtns.length === 9);
+    check('exactly one tab is selected',
+      tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
+    check('every tab has a word label, not just an icon',
+      tabBtns.every((b) => /[A-Za-z]{4,}/.test(b.textContent)));
+    check('the content area is a tabpanel', !!doc.querySelector('.side-body[role="tabpanel"]'));
+    check('numeric tab state is shown as a badge', doc.querySelectorAll('.tab-badge').length >= 2);
+  }
 
   // ── panel maximise / restore ───────────────────────────────────────────────
   {
