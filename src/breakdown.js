@@ -24,6 +24,7 @@ import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import A from './breakdown-a.js'
 import B from './breakdown-b.js'
 import C from './breakdown-c.js'
+import LLD from './lld.js'
 import D from './breakdown-d.js'
 import E from './breakdown-e.js'
 import F from './breakdown-f.js'
@@ -140,6 +141,46 @@ function deriveHld(template) {
   return sections
 }
 
+// ── diagrams ────────────────────────────────────────────────────────────────
+
+// A miniature of the template's own graph. Derived, so it can never disagree
+// with the canvas it is describing.
+function archBlock(template, focus) {
+  return ['arch', {
+    nodes: template.nodes.map(n => ({
+      id: n.id, label: n.label, x: n.x, y: n.y,
+      group: groupOf(n.type), replicas: n.replicas || 1,
+    })),
+    edges: template.edges.map(e => ({ from: e.from, to: e.to, label: e.label || '' })),
+    focus: focus || [],
+  }]
+}
+
+// The primary request path as a sequence diagram.
+function seqBlock(template) {
+  const path = primaryPath(template.nodes, template.edges)
+  if (path.length < 2) return null
+  const cut = Math.min(path.length, 6)
+  const actors = path.slice(0, cut).map(n => [n.id, n.label])
+  const steps = []
+  for (let i = 0; i + 1 < cut; i++) {
+    const e = template.edges.find(x => x.from === path[i].id && x.to === path[i + 1].id)
+    steps.push({ from: path[i].id, to: path[i + 1].id, label: e?.label || 'request' })
+  }
+  if (cut >= 2) steps.push({ from: path[cut - 1].id, to: path[0].id, label: 'response', ret: true })
+  return ['seq', { title: 'The primary request path', actors, steps }]
+}
+
+// A data-model sketch from the authored entities, for templates without an
+// authored schema.
+function sketchSchema(entities) {
+  return ['schema', entities.map(([name, desc]) => ({
+    name: name.replace(/\s+/g, '_').toLowerCase(),
+    columns: [['id', 'identifier', 'primary key'], ['…', '', desc]],
+    idx: [],
+  }))]
+}
+
 // ── shared level expectations ───────────────────────────────────────────────
 
 export const LEVELS = {
@@ -187,6 +228,7 @@ function build(template) {
     ['p', a.hld
       ? 'Walk the requirements one at a time, solving each as simply as it can be solved.'
       : 'Read straight off the diagram on the canvas. Change the design and this section changes with it.'],
+    archBlock(template),
   ])
   // `options` and `after` are authoring conveniences — fold them into blocks
   // so the renderer only ever deals with one stream.
@@ -198,6 +240,31 @@ function build(template) {
   }
 
   for (const s of (a.hld || deriveHld(template))) sections.push(flatten(s))
+
+  // ---- low-level design ----
+  const lld = LLD[template.name]
+  push('low-level-design', 1, 'Low-Level Design', [
+    ['p', lld ? lld.intro
+      : 'One level down: the tables the entities become, and the order the components actually talk in.'],
+  ])
+  push('data-model', 2, 'Data Model', [
+    lld ? ['schema', lld.schema] : sketchSchema(a.entities),
+    lld ? null : ['note', 'A sketch from the core entities. Bitly, WhatsApp, Ticketmaster, Uber, Amazon and Payments carry a fully specified schema — that is the level of detail an interviewer is looking for.'],
+  ])
+  const seqB = lld
+    ? ['seq', { title: lld.flow.title, actors: lld.flow.actors, steps: lld.flow.steps }]
+    : seqBlock(template)
+  if (seqB) {
+    push('key-flow', 2, lld ? lld.flow.title : 'Key Flow',
+      [seqB, ...(lld?.notes || [])],
+      { focus: (lld ? lld.flow.actors.map(x => x[0]) : []).filter(id => template.nodes.some(n => n.id === id)) })
+  }
+  if (lld && lld.state) {
+    push('state-machine', 2, lld.state.title, [
+      ['p', 'The transitions are where the hard problems live — every arrow that can fail needs an owner.'],
+      ['state', lld.state],
+    ])
+  }
 
   push('deep-dives', 1, 'Potential Deep Dives', [
     ['p', 'With the functional requirements met, this is where the non-functional ones get paid for — and where seniority shows.'],
