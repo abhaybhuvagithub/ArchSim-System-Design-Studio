@@ -246,10 +246,20 @@ try {
   check('References section is gone', !headings.includes('References'));
   check('no reference links rendered anywhere', doc.querySelectorAll('.bd-ref').length === 0);
   const hldStart = headings.indexOf('High-Level Design');
+  const lldStart = headings.indexOf('Low-Level Design');
   const ddStart = headings.indexOf('Potential Deep Dives');
-  check('WhatsApp has four authored high-level-design sections', ddStart - hldStart - 1 === 4);
+  check('WhatsApp has four authored high-level-design sections', lldStart - hldStart - 1 === 4);
+  check('Low-Level Design sits between the high-level design and the deep dives',
+    hldStart < lldStart && lldStart < ddStart);
   check('six WhatsApp deep dives',
     headings.slice(ddStart + 1, headings.indexOf('What is Expected at Each Level?')).length === 6);
+
+  // ── diagrams ───────────────────────────────────────────────────────────────
+  check('the architecture diagram renders', doc.querySelectorAll('.bd-dia-node').length >= 5);
+  check('the sequence diagram renders', doc.querySelectorAll('.bd-seq-actor').length >= 3);
+  check('sequence steps are drawn', doc.querySelectorAll('.bd-seq-step').length >= 3);
+  check('the data model renders as tables', doc.querySelectorAll('.bd-table').length >= 2);
+  check('table columns carry a type', doc.querySelectorAll('.bd-table td.t').length >= 6);
 
   check('contents rail lists every section',
     doc.querySelectorAll('.bd-toc-i').length === headings.length);
@@ -276,7 +286,7 @@ try {
 
   // spotlight
   const spot = doc.querySelector('.bd-focus');
-  check('spotlight buttons exist on design sections', doc.querySelectorAll('.bd-focus').length === 10);
+  check('spotlight buttons exist on design sections', doc.querySelectorAll('.bd-focus').length >= 10);
   click(spot);
   await wait(200);
   check('spotlight activates', !!doc.querySelector('.bd-focus.on'));
@@ -310,6 +320,9 @@ try {
     'High-Level Design',
     '1) Users should be able to submit a long URL and receive a shortened version',
     '2) Users should be able to access the original URL by using the shortened URL',
+    'Low-Level Design',
+    'Data Model',
+    'Following a short link',
     'Potential Deep Dives',
     '1) How can we ensure short urls are unique?',
     '2) How can we ensure that redirects are fast?',

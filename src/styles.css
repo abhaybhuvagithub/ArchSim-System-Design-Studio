@@ -641,3 +641,53 @@ select.btn { appearance: auto; }
   .tpl-header-tag { display: none; }
   .tpl-header { max-width: calc(100% - 20px); font-size: 12px; }
 }
+
+/* ---- Breakdown diagrams ---- */
+.bd-dia { margin: 4px 0 14px; overflow-x: auto; }
+.bd-dia-title { font-size: 11px; letter-spacing: .5px; text-transform: uppercase; opacity: .55; margin-bottom: 6px; }
+.bd-dia svg { display: block; max-width: 100%; }
+.bd-dia-arrowhead { fill: var(--line, #b0b6c0); }
+.bd-dia-edge { fill: none; stroke: var(--line, #b0b6c0); stroke-width: 1.4; }
+.bd-dia-edge.faint { opacity: .22; }
+
+.bd-dia-node rect { fill: rgba(127, 140, 160, .12); stroke: var(--line, #b0b6c0); stroke-width: 1.2; }
+.bd-dia-node text { font-size: 11px; fill: currentColor; }
+.bd-dia-node .bd-dia-rep { font-size: 9px; opacity: .55; }
+.bd-dia-node.faint { opacity: .3; }
+.bd-dia-node.g-traffic rect { stroke: #8b5cf6; }
+.bd-dia-node.g-compute rect { stroke: #0071e3; }
+.bd-dia-node.g-storage rect { stroke: #34c759; }
+.bd-dia-node.g-async rect { stroke: #ff9f0a; }
+.bd-dia-node.g-aiml rect { stroke: #e34234; }
+
+/* sequence */
+.bd-seq svg { min-width: 100%; }
+.bd-seq-actor rect { fill: rgba(0, 113, 227, .12); stroke: var(--line, #b0b6c0); stroke-width: 1; }
+.bd-seq-actor text { font-size: 10px; fill: currentColor; font-weight: 600; }
+.bd-seq-life { stroke: var(--line, #b0b6c0); stroke-width: 1; stroke-dasharray: 3 4; opacity: .7; }
+.bd-seq-line { stroke: currentColor; stroke-width: 1.3; opacity: .75; fill: none; }
+.bd-seq-step.ret .bd-seq-line { stroke-dasharray: 4 3; opacity: .5; }
+.bd-seq-step text { font-size: 9.5px; fill: currentColor; opacity: .8; }
+.bd-seq-step.ret text { opacity: .55; font-style: italic; }
+
+/* state machine */
+.bd-st-node rect { fill: rgba(52, 199, 89, .14); stroke: #34c759; stroke-width: 1.2; }
+.bd-st-node text { font-size: 9.5px; fill: currentColor; font-weight: 600; }
+.bd-st-tr path { fill: none; stroke: var(--line, #b0b6c0); stroke-width: 1.2; }
+.bd-st-tr text { font-size: 9px; fill: currentColor; opacity: .7; }
+
+/* data model */
+.bd-schema { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 14px; }
+.bd-table { border: 1px solid var(--line, #2a2f3a); border-radius: 8px; overflow: hidden; }
+.bd-table-h {
+  font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; font-weight: 700;
+  padding: 6px 10px; background: rgba(127, 140, 160, .12); border-bottom: 1px solid var(--line, #2a2f3a);
+}
+.bd-table table { width: 100%; border-collapse: collapse; }
+.bd-table td { padding: 4px 10px; font-size: 11px; vertical-align: top; border-bottom: 1px solid rgba(127, 140, 160, .12); }
+.bd-table tr:last-child td { border-bottom: none; }
+.bd-table td.c { font-family: ui-monospace, Menlo, monospace; font-weight: 600; white-space: nowrap; }
+.bd-table td.t { font-family: ui-monospace, Menlo, monospace; opacity: .6; white-space: nowrap; }
+.bd-table td.n { opacity: .7; line-height: 1.45; }
+.bd-table-idx { margin: 0; padding: 6px 10px 8px 26px; border-top: 1px solid rgba(127, 140, 160, .12); }
+.bd-table-idx li { font-size: 10.8px; opacity: .68; line-height: 1.5; }

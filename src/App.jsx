@@ -1642,6 +1642,197 @@ function flowSteps(nodes, edges) {
   return map
 }
 
+// ── Breakdown diagrams ───────────────────────────────────────────────────────
+// Inline SVG, no dependencies, themed through CSS variables so light and dark
+// both work without passing a palette around.
+
+const DIA_W = 400
+
+// Miniature of the template's own architecture, scaled to fit the panel.
+function ArchDiagram({ nodes, edges, focus }) {
+  if (!nodes.length) return null
+  const W = 118, H = 46
+  const minX = Math.min(...nodes.map(n => n.x)), maxX = Math.max(...nodes.map(n => n.x + W))
+  const minY = Math.min(...nodes.map(n => n.y)), maxY = Math.max(...nodes.map(n => n.y + H))
+  const pad = 10
+  const vw = maxX - minX + pad * 2, vh = maxY - minY + pad * 2
+  const height = Math.min(300, Math.max(140, (DIA_W * vh) / vw))
+  const at = Object.fromEntries(nodes.map(n => [n.id, n]))
+  const lit = new Set(focus || [])
+  const dim = lit.size > 0
+
+  return (
+    <div className="bd-dia">
+      <svg viewBox={`${minX - pad} ${minY - pad} ${vw} ${vh}`} width="100%" height={height}
+        preserveAspectRatio="xMidYMid meet" role="img" aria-label="Architecture diagram">
+        <defs>
+          <marker id="bd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" className="bd-dia-arrowhead" />
+          </marker>
+        </defs>
+        {edges.map((e, i) => {
+          const f = at[e.from], t = at[e.to]
+          if (!f || !t) return null
+          const x1 = f.x + W, y1 = f.y + H / 2, x2 = t.x, y2 = t.y + H / 2
+          const mx = (x1 + x2) / 2
+          const on = !dim || (lit.has(e.from) && lit.has(e.to))
+          return (
+            <path key={i} d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`}
+              className={`bd-dia-edge ${on ? '' : 'faint'}`} markerEnd="url(#bd-arrow)" />
+          )
+        })}
+        {nodes.map(n => {
+          const on = !dim || lit.has(n.id)
+          return (
+            <g key={n.id} className={`bd-dia-node g-${(n.group || 'other').toLowerCase().replace(/[^a-z]/g, '')} ${on ? '' : 'faint'}`}>
+              <rect x={n.x} y={n.y} width={W} height={H} rx="7" />
+              <text x={n.x + W / 2} y={n.y + H / 2 + 4} textAnchor="middle">
+                {n.label.length > 17 ? n.label.slice(0, 16) + '…' : n.label}
+              </text>
+              {n.replicas > 1 && (
+                <text x={n.x + W - 6} y={n.y + 12} textAnchor="end" className="bd-dia-rep">×{n.replicas}</text>
+              )}
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+// Sequence diagram: actors as lifelines, steps as arrows down the page.
+function SeqDiagram({ title, actors, steps }) {
+  if (!actors?.length || !steps?.length) return null
+  const colW = Math.max(78, Math.min(150, Math.floor((DIA_W + 120) / actors.length)))
+  const W = colW * actors.length
+  const top = 34, rowH = 30
+  const H = top + steps.length * rowH + 16
+  const cx = i => i * colW + colW / 2
+  const idx = Object.fromEntries(actors.map(([id], i) => [id, i]))
+
+  return (
+    <div className="bd-dia bd-seq">
+      {title && <div className="bd-dia-title">{title}</div>}
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label={title || 'Sequence diagram'}>
+        <defs>
+          <marker id="bd-seq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" className="bd-dia-arrowhead" />
+          </marker>
+        </defs>
+        {actors.map(([id, label], i) => (
+          <g key={id} className="bd-seq-actor">
+            <rect x={cx(i) - colW / 2 + 5} y="4" width={colW - 10} height="21" rx="5" />
+            <text x={cx(i)} y="18" textAnchor="middle">
+              {label.length > 14 ? label.slice(0, 13) + '…' : label}
+            </text>
+            <line x1={cx(i)} y1="27" x2={cx(i)} y2={H - 8} className="bd-seq-life" />
+          </g>
+        ))}
+        {steps.map((s, i) => {
+          const a = idx[s.from], b = idx[s.to]
+          if (a === undefined || b === undefined) return null
+          const y = top + i * rowH + 14
+          if (a === b) {
+            return (
+              <g key={i} className="bd-seq-step self">
+                <path d={`M ${cx(a)} ${y - 6} h 20 v 12 h -20`} className="bd-seq-line" markerEnd="url(#bd-seq-arrow)" />
+                <text x={cx(a) + 26} y={y + 3}>{s.label}</text>
+              </g>
+            )
+          }
+          const dir = b > a ? 1 : -1
+          const x1 = cx(a) + dir * 4, x2 = cx(b) - dir * 4
+          return (
+            <g key={i} className={`bd-seq-step ${s.ret ? 'ret' : ''}`}>
+              <line x1={x1} y1={y} x2={x2} y2={y} className="bd-seq-line" markerEnd="url(#bd-seq-arrow)" />
+              <text x={(x1 + x2) / 2} y={y - 5} textAnchor="middle">{s.label}</text>
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+// Data model: one card per table, columns with type and note.
+function SchemaDiagram({ tables }) {
+  if (!tables?.length) return null
+  return (
+    <div className="bd-schema">
+      {tables.map((t, i) => (
+        <div key={i} className="bd-table">
+          <div className="bd-table-h">{t.name}</div>
+          <table>
+            <tbody>
+              {t.columns.map(([col, type, note], j) => (
+                <tr key={j}>
+                  <td className="c">{col}</td>
+                  <td className="t">{type}</td>
+                  <td className="n">{note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {t.idx?.length > 0 && (
+            <ul className="bd-table-idx">{t.idx.map((x, j) => <li key={j}>{x}</li>)}</ul>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// State machine: states in a row, transitions as labelled arcs.
+function StateDiagram({ states, transitions }) {
+  if (!states?.length) return null
+  const boxW = 96, boxH = 26, gapX = 26
+  const perRow = Math.max(1, Math.floor((DIA_W + gapX) / (boxW + gapX)))
+  const rows = Math.ceil(states.length / perRow)
+  const W = perRow * (boxW + gapX) - gapX
+  const rowH = 74
+  const H = rows * rowH + 20
+  const at = {}
+  states.forEach((s, i) => {
+    const r = Math.floor(i / perRow), c = i % perRow
+    at[s] = { x: c * (boxW + gapX), y: r * rowH + 8 }
+  })
+
+  return (
+    <div className="bd-dia bd-state">
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="State machine">
+        <defs>
+          <marker id="bd-st-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" className="bd-dia-arrowhead" />
+          </marker>
+        </defs>
+        {transitions.map(([from, to, label], i) => {
+          const a = at[from], b = at[to]
+          if (!a || !b) return null
+          const sameRow = a.y === b.y
+          const x1 = a.x + boxW / 2, y1 = a.y + boxH
+          const x2 = b.x + boxW / 2, y2 = b.y + boxH
+          const dip = sameRow ? 26 + (i % 2) * 14 : 34
+          const d = `M ${x1} ${y1} C ${x1} ${y1 + dip}, ${x2} ${y2 + dip}, ${x2} ${y2}`
+          return (
+            <g key={i} className="bd-st-tr">
+              <path d={d} markerEnd="url(#bd-st-arrow)" />
+              <text x={(x1 + x2) / 2} y={Math.max(y1, y2) + dip - 2} textAnchor="middle">{label}</text>
+            </g>
+          )
+        })}
+        {states.map(s => (
+          <g key={s} className="bd-st-node">
+            <rect x={at[s].x} y={at[s].y} width={boxW} height={boxH} rx="13" />
+            <text x={at[s].x + boxW / 2} y={at[s].y + boxH / 2 + 3.5} textAnchor="middle">
+              {s.length > 13 ? s.slice(0, 12) + '…' : s}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
+}
+
 // ── Breakdown ────────────────────────────────────────────────────────────────
 // Long-form problem breakdown for the loaded template: requirements, set up,
 // high-level design, deep dives, level expectations and references. The
@@ -1689,6 +1880,10 @@ function BdBlocks({ blocks }) {
         ))}
       </div>
     )
+    if (t === 'arch') return <ArchDiagram key={i} {...v} />
+    if (t === 'seq') return <SeqDiagram key={i} {...v} />
+    if (t === 'schema') return <SchemaDiagram key={i} tables={v} />
+    if (t === 'state') return <StateDiagram key={i} {...v} />
     if (t === 'opts') return <BdOptions key={i} options={v} />
     return null
   })
