@@ -83,6 +83,35 @@ try {
     log(`data: ${TEMPLATES.length} templates checked`);
     if (bad.length) bad.slice(0, 12).forEach((b) => log('  ! ' + b));
     check(`all ${TEMPLATES.length} templates are structurally sound and documented`, bad.length === 0);
+
+    // ── auto-arrange quality ─────────────────────────────────────────────────
+    const { autoArrange, countCrossings, countNodeOverlaps } =
+      await import(pathToFileURL(path.join(root, 'src/layout.js')).href);
+
+    let handX = 0, autoX = 0, handO = 0, autoO = 0;
+    const unstable = [], regressed = [], stacked = [];
+    for (const t of TEMPLATES) {
+      const a = autoArrange(t.nodes, t.edges);
+      const b = autoArrange(a, t.edges);
+      if (!a.every((n, i) => n.x === b[i].x && n.y === b[i].y)) unstable.push(t.name);
+
+      const hx = countCrossings(t.nodes, t.edges), ax = countCrossings(a, t.edges);
+      handX += hx; autoX += ax;
+      handO += countNodeOverlaps(t.nodes, t.edges); autoO += countNodeOverlaps(a, t.edges);
+      if (ax > hx + 2) regressed.push(`${t.name} ${hx}→${ax}`);
+
+      const at = new Set();
+      for (const n of a) { const k = n.x + ',' + n.y; if (at.has(k)) stacked.push(t.name); at.add(k); }
+    }
+    log(`arrange: crossings ${handX} → ${autoX}, edges over nodes ${handO} → ${autoO}`);
+    if (unstable.length) log('  ! unstable: ' + unstable.join(', '));
+    if (regressed.length) log('  ! worse than hand-drawn: ' + regressed.join(', '));
+
+    check('arrange is idempotent — pressing it twice changes nothing', unstable.length === 0);
+    check('arrange never stacks two nodes in the same place', stacked.length === 0);
+    check('arrange beats the hand-drawn layouts on crossings', autoX < handX);
+    check('arrange beats the hand-drawn layouts on edges crossing nodes', autoO < handO);
+    check('no single template is made much worse', regressed.length === 0);
   }
 
   // Take the entry point from the built index.html. A single build emits
@@ -122,6 +151,12 @@ try {
 
   // ── no template header before anything is loaded ───────────────────────────
   check('no template header on a blank canvas', !doc.querySelector('.tpl-header'));
+
+  // ── ①②③ step badges default to on ──────────────────────────────────────────
+  const stepsBtn = [...doc.querySelectorAll('.toolbar button')]
+    .find((b) => /Steps|①/.test(b.textContent));
+  check('the steps toggle exists', !!stepsBtn);
+  check('step badges are on by default', !!stepsBtn && stepsBtn.className.includes('active'));
 
   // load the WhatsApp template through the picker
   const sel = [...doc.querySelectorAll('select')].find((s) =>
