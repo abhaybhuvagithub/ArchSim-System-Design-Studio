@@ -1,0 +1,74 @@
+name: Auto-merge
+
+# Push a branch named auto/<something> and, if CI is green, it merges itself
+# into main. Any other branch name behaves exactly as before — open a PR and
+# merge it by hand.
+#
+# Why this exists: it lets an agent (or a script) land verified work without
+# needing GitHub API access, since the automation runs here rather than on the
+# machine that pushed.
+on:
+  push:
+    branches: ['auto/**']
+
+concurrency:
+  group: auto-merge
+  cancel-in-progress: false
+
+jobs:
+  # Reuse the real CI definition rather than a copy that can drift from it.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  merge:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push to main
+      actions: write    # dispatch the Pages deploy
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge into main
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_REF_NAME}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Explicit, so this does not depend on checkout's DWIM behaviour.
+          git checkout -B main origin/main
+
+          # Fast-forward when the branch is simply ahead of main, which is the
+          # normal case. Fall back to a merge commit; fail loudly on conflict
+          # rather than pushing something nobody has looked at.
+          if git merge --ff-only "origin/$BRANCH"; then
+            echo "Fast-forwarded main to $BRANCH"
+          elif git merge --no-ff --no-edit "origin/$BRANCH"; then
+            echo "Merged $BRANCH into main with a merge commit"
+          else
+            echo "::error::Cannot merge $BRANCH into main automatically — resolve the conflict and merge by hand."
+            exit 1
+          fi
+
+          git push origin main
+
+      - name: Delete the merged branch
+        run: git push origin --delete "${GITHUB_REF_NAME}" || true
+
+      - name: Trigger the Pages deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A push made with GITHUB_TOKEN deliberately does not trigger other
+        # workflows, so deploy.yml would not fire on its own. Dispatch it.
+        run: gh workflow run deploy.yml --ref main
+
+      - name: Summary
+        run: |
+          {
+            echo "### Auto-merged \`${GITHUB_REF_NAME}\` into \`main\`"
+            echo ""
+            echo "CI passed, branch merged and deleted, Pages deploy dispatched."
+          } >> "$GITHUB_STEP_SUMMARY"
