@@ -181,24 +181,92 @@ export function chunkText(text, max = 220) {
   return parts.length ? parts : [String(text)]
 }
 
-export const RATES = [0.8, 1, 1.25, 1.5, 2]
+export const RATES = [0.8, 0.95, 1, 1.25, 1.5, 2]
 const RATE_KEY = 'archsim.speech.rate'
 
 export function readRate() {
   const v = Number(typeof localStorage !== 'undefined' ? localStorage.getItem(RATE_KEY) : NaN)
-  return RATES.includes(v) ? v : 1
+  return RATES.includes(v) ? v : 0.95
 }
 export function saveRate(r) {
   try { localStorage.setItem(RATE_KEY, String(r)) } catch { /* private mode */ }
 }
 
-// Pick a reasonable English voice once the list has loaded. Chrome returns an
-// empty array on the first call and fills it in later, hence the event.
-export function pickVoice(synth) {
-  const voices = synth.getVoices() || []
-  if (!voices.length) return null
-  return voices.find(v => /^en[-_]GB/i.test(v.lang) && v.localService)
-    || voices.find(v => /^en[-_]/i.test(v.lang) && v.localService)
-    || voices.find(v => /^en[-_]/i.test(v.lang))
-    || voices[0]
+// ── choosing a voice ────────────────────────────────────────────────────────
+// The Web Speech API exposes no gender, so a female voice has to be inferred
+// from the name. These are the ones that actually ship on macOS, iOS, Windows,
+// Edge, Chrome and Android — the list is long because the alternative is
+// sounding right on one machine and wrong on every other.
+const FEMALE = new RegExp([
+  // Apple
+  'samantha', 'karen', 'moira', 'tessa', 'fiona', 'serena', 'allison', 'ava',
+  'susan', 'victoria', 'zoe', 'nicky', 'kate', 'stephanie', 'catherine', 'martha',
+  // Microsoft, including the Natural/Online neural set
+  'zira', 'hazel', 'linda', 'eva', 'aria', 'jenny', 'sonia', 'libby', 'michelle',
+  'clara', 'natasha', 'yan', 'heera', 'neerja', 'kalpana', 'emily', 'amber', 'ana',
+  // Google and Android
+  'google uk english female', 'google us english', 'female',
+].join('|'), 'i')
+
+const MALE = /\b(daniel|alex|fred|thomas|oliver|george|james|david|mark|guy|ryan|tom|rishi|prabhat|ravi|male|man)\b/i
+
+// Neural voices are dramatically smoother than the older formant ones, and
+// they are exactly the ones labelled like this.
+const NATURAL = /natural|neural|premium|enhanced|online|siri/i
+
+// Higher is better. Negative means "not usable here".
+export function scoreVoice(v) {
+  const name = v?.name || ''
+  const lang = v?.lang || ''
+  if (!/^en([-_]|$)/i.test(lang)) return -1        // English only, whatever else it offers
+  // A base keeps male voices in the picker — they simply rank last, rather than
+  // being hidden from someone who would rather have one.
+  let s = 100
+  if (FEMALE.test(name)) s += 100
+  else if (MALE.test(name)) s -= 60
+  if (NATURAL.test(name)) s += 40                  // the single biggest quality jump
+  if (/en[-_]GB/i.test(lang)) s += 8
+  else if (/en[-_]IN/i.test(lang)) s += 7
+  else if (/en[-_]US/i.test(lang)) s += 6
+  if (v.localService) s += 3                       // no network hiccup mid-sentence
+  if (v.default) s += 1
+  return s
+}
+
+// Every usable voice, best first — this is what the picker shows.
+export function listVoices(synth) {
+  const all = (synth?.getVoices && synth.getVoices()) || []
+  return all
+    .map(v => ({ v, s: scoreVoice(v) }))
+    .filter(x => x.s >= 0)
+    .sort((a, b) => b.s - a.s || a.v.name.localeCompare(b.v.name))
+    .map(x => x.v)
+}
+
+// Honour an explicit choice when it is still available, otherwise take the best.
+export function pickVoice(synth, preferredName) {
+  const usable = listVoices(synth)
+  if (!usable.length) {
+    const all = (synth?.getVoices && synth.getVoices()) || []
+    return all[0] || null
+  }
+  if (preferredName) {
+    const exact = usable.find(v => v.name === preferredName)
+    if (exact) return exact
+  }
+  return usable[0]
+}
+
+// Warm rather than brisk. A touch under the default rate and a touch over the
+// default pitch is what reads as unhurried instead of clipped; going further
+// on pitch starts to sound artificial rather than sweet.
+export const PROSODY = { pitch: 1.06, volume: 1 }
+export const BLOCK_PAUSE_MS = 220        // a beat between paragraphs
+
+const VOICE_KEY = 'archsim.speech.voice'
+export function readVoiceName() {
+  try { return localStorage.getItem(VOICE_KEY) || '' } catch { return '' }
+}
+export function saveVoiceName(n) {
+  try { localStorage.setItem(VOICE_KEY, n || '') } catch { /* private mode */ }
 }

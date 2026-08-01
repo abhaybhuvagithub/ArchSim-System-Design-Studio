@@ -16,7 +16,8 @@ import { ABOUT, ABOUT_COMPARE } from './about.js'
 import { buildReport } from './report.js'
 import { diagnoseAll, diagnose, healthChip } from './health.js'
 import { prepareSvgForExport } from './svgexport.js'
-import { speechSupported, extractSpeech, chunkText, RATES, readRate, saveRate, pickVoice } from './speech.js'
+import { speechSupported, extractSpeech, chunkText, RATES, readRate, saveRate, pickVoice, listVoices,
+  readVoiceName, saveVoiceName, PROSODY, BLOCK_PAUSE_MS } from './speech.js'
 import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 
@@ -1783,11 +1784,25 @@ function PalItem({ type, cloud, cloudInfo, onAdd, count }) {
 // goes. Renders nothing at all where the browser has no speech synthesis,
 // rather than offering a control that would do nothing.
 
+// "Microsoft Sonia Online (Natural) - English (United Kingdom)" is unreadable in
+// a 90px select. Keep the part that identifies the voice.
+function shortVoice(name) {
+  return String(name)
+    .replace(/^(Microsoft|Google|Apple)\s+/i, '')
+    .replace(/\s*-\s*English.*$/i, '')
+    .replace(/\s*\((Natural|Neural|Premium|Enhanced|Online)\)/gi, ' ✦')
+    .replace(/\s*Online\b/i, '')
+    .replace(/English\s*\(?(United Kingdom|United States|India)\)?/i, m => m)
+    .trim() || name
+}
+
 function ReadAloud({ children, label = 'this section' }) {
   const hostRef = useRef(null)
   const [supported] = useState(speechSupported)
   const [state, setState] = useState('idle')        // idle | playing | paused
   const [rate, setRate] = useState(readRate)
+  const [voiceName, setVoiceName] = useState(readVoiceName)
+  const [voices, setVoices] = useState([])
   const [at, setAt] = useState(-1)                  // index of the block being read
   const blocksRef = useRef([])
   const idxRef = useRef(0)
@@ -1795,6 +1810,16 @@ function ReadAloud({ children, label = 'this section' }) {
   const keepAliveRef = useRef(null)
 
   const synth = supported ? window.speechSynthesis : null
+
+  // Chrome returns an empty list on the first call and fills it in later, so
+  // read it now and again when it changes.
+  useEffect(() => {
+    if (!synth) return
+    const load = () => setVoices(listVoices(synth))
+    load()
+    synth.addEventListener?.('voiceschanged', load)
+    return () => synth.removeEventListener?.('voiceschanged', load)
+  }, [synth])
 
   const clearHighlight = useCallback(() => {
     for (const b of blocksRef.current) b.el?.classList.remove('speaking')
@@ -1830,12 +1855,15 @@ function ReadAloud({ children, label = 'this section' }) {
     let part = 0
     const next = () => {
       if (stoppingRef.current) return
-      if (part >= parts.length) { speakFrom(i + 1); return }
+      if (part >= parts.length) { setTimeout(() => speakFrom(i + 1), BLOCK_PAUSE_MS); return }
       const u = new window.SpeechSynthesisUtterance(parts[part++])
       u.rate = rate
-      u.lang = 'en-GB'
-      const v = pickVoice(synth)
-      if (v) u.voice = v
+      u.pitch = PROSODY.pitch
+      u.volume = PROSODY.volume
+      const v = pickVoice(synth, voiceName)
+      // Set lang from the voice, not to a fixed value: a mismatch makes some
+      // engines quietly ignore the voice and fall back to their default.
+      if (v) { u.voice = v; if (v.lang) u.lang = v.lang }
       u.onend = next
       u.onerror = e => {
         // "interrupted" and "canceled" are what a deliberate stop looks like.
@@ -1845,7 +1873,7 @@ function ReadAloud({ children, label = 'this section' }) {
       synth.speak(u)
     }
     next()
-  }, [synth, rate, stop, clearHighlight])
+  }, [synth, rate, voiceName, stop, clearHighlight])
 
   const play = () => {
     if (!synth) return
@@ -1865,6 +1893,15 @@ function ReadAloud({ children, label = 'this section' }) {
 
   const pause = () => { synth?.pause(); setState('paused') }
   const resume = () => { synth?.resume(); setState('playing') }
+
+  const changeVoice = n => {
+    setVoiceName(n); saveVoiceName(n)
+    if (state !== 'idle') {
+      stoppingRef.current = true
+      try { synth.cancel() } catch { /* no-op */ }
+      setTimeout(() => { stoppingRef.current = false; setState('playing'); speakFrom(idxRef.current) }, 60)
+    }
+  }
 
   const changeRate = r => {
     setRate(r); saveRate(r)
@@ -1891,6 +1928,12 @@ function ReadAloud({ children, label = 'this section' }) {
               <button onClick={stop} aria-label="Stop reading">■ Stop</button>
               <span className="ra-prog" aria-hidden="true">{Math.min(at + 1, total)}/{total}</span>
             </>
+          )}
+          {voices.length > 1 && (
+            <select className="ra-voice" value={voiceName || (voices[0]?.name ?? '')}
+              onChange={e => changeVoice(e.target.value)} aria-label="Voice">
+              {voices.map(v => <option key={v.name} value={v.name}>{shortVoice(v.name)}</option>)}
+            </select>
           )}
           <label className="ra-rate">
             <span className="sr-only">Reading speed</span>
