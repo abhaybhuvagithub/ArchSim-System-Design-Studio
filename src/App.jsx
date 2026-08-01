@@ -16,6 +16,8 @@ import { ABOUT, ABOUT_COMPARE } from './about.js'
 import { buildReport } from './report.js'
 import { diagnoseAll, diagnose, healthChip } from './health.js'
 import { prepareSvgForExport } from './svgexport.js'
+import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
+import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 
 const NODE_W = 118, NODE_H = 46
 // Text box inside a node: starts after the glyph, stops short of the right
@@ -43,6 +45,7 @@ export default function App() {
   const [checks, setChecks] = useState({})
   const [view, setView] = useState({ x: 0, y: 0, k: 1 })
   const [tab, setTab] = useState('capacity')    // side panel: capacity | improve
+  const [spotlight, setSpotlight] = useState(null)   // Breakdown tab: { id, ids } to isolate on canvas
   const [applied, setApplied] = useState([])    // ids of suggestions already applied
   const [theme, setTheme] = useState(readTheme) // 'dark' | 'light'
   const [steps, setSteps] = useState(false)     // numbered request-flow badges
@@ -482,6 +485,7 @@ export default function App() {
   }
 
   const loadTemplate = idx => {
+    setSpotlight(null)
     if (idx === '') return
     if (idx === 'blank') { blank(); return }
     if (idx === 'starter') {
@@ -586,6 +590,8 @@ export default function App() {
 
   // neighbours of the hovered node — used to dim everything else
   const neighbours = useMemo(() => {
+    // spotlight from the Breakdown tab wins over hover
+    if (spotlight) return new Set(spotlight.ids)
     if (!hover) return null
     const s = new Set([hover])
     for (const e of edges) {
@@ -593,7 +599,7 @@ export default function App() {
       if (e.to === hover) s.add(e.from)
     }
     return s
-  }, [hover, edges])
+  }, [hover, edges, spotlight])
 
   return (
     <div className={`app ${compact ? 'compact' : ''} ${mobile ? 'mobile' : ''}`}>
@@ -786,7 +792,7 @@ export default function App() {
         <div className={`side ${floatPanel.right ? 'floating' : ''} ${compact ? 'drawer right' : ''} ${compact && drawer === 'right' ? 'open' : ''}`}
           style={compact ? undefined : floatPanel.right
             ? { left: floatPanel.right.x, top: floatPanel.right.y, width: floatPanel.right.w, height: floatPanel.right.h }
-            : { width: tab === 'learn' ? Math.max(panelW.right, 430) : panelW.right }}>
+            : { width: ['learn', 'breakdown', 'scale'].includes(tab) ? Math.max(panelW.right, 430) : panelW.right }}>
           <div className="panel-bar" onPointerDown={e => floatPanel.right && startDragPanel('right', e)}>
             <span>⠿ Analysis</span>
             <button onClick={() => (compact ? setDrawer(null) : detach('right'))}
@@ -811,9 +817,35 @@ export default function App() {
             <button className={tab === 'learn' ? 'on' : ''} onClick={() => { setTab('learn'); setSel(null) }}>
               🎓 {doneSteps.filter(Boolean).length}/{LESSON.length}
             </button>
+
+            <button className={tab === 'scale' ? 'on' : ''} onClick={() => { setTab('scale'); setSel(null) }} title="How this design scales to a billion users">
+
+              ↗ Scale
+
+            </button>
+
+            <button className={tab === 'breakdown' ? 'on' : ''} onClick={() => { setTab('breakdown'); setSel(null) }} title="Full written breakdown of the loaded design">
+
+              📖 Breakdown
+
+            </button>
           </div>
 
-          {tab === 'about' ? (
+          {tab === 'scale' ? (
+            <Scale template={template} focused={spotlight?.id || null}
+              onFocus={setSpotlight} rps={rps} onSetRps={setRps}
+              onLoadTemplate={name => {
+                const i = TEMPLATES.findIndex(t => t.name === name)
+                if (i >= 0) loadTemplate(String(i))
+              }} />
+          ) : tab === 'breakdown' ? (
+            <Breakdown template={template} focused={spotlight?.id || null}
+              onFocus={setSpotlight}
+              onLoadTemplate={name => {
+                const i = TEMPLATES.findIndex(t => t.name === name)
+                if (i >= 0) loadTemplate(String(i))
+              }} />
+          ) : tab === 'about' ? (
             <About />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
@@ -1604,4 +1636,307 @@ function flowSteps(nodes, edges) {
   }
   for (const e of edges) if (!(e.id in map)) map[e.id] = step++
   return map
+}
+
+// ── Breakdown ────────────────────────────────────────────────────────────────
+// Long-form problem breakdown for the loaded template: requirements, set up,
+// high-level design, deep dives, level expectations and references. The
+// contents rail tracks scroll position, and sections that name components can
+// spotlight them on the canvas.
+
+function BdBlocks({ blocks }) {
+  if (!blocks) return null
+  return blocks.map((b, i) => {
+    const [t, v] = b
+    if (t === 'p') return <p key={i} className="bd-p"><RichLine text={v} /></p>
+    if (t === 'steps') return <ol key={i} className="bd-steps">{v.map((s, j) => <li key={j}><RichLine text={s} /></li>)}</ol>
+    if (t === 'bul') return <ul key={i} className="bd-bul">{v.map((s, j) => <li key={j}><RichLine text={s} /></li>)}</ul>
+    if (t === 'note' || t === 'warn' || t === 'calc') return <div key={i} className={`bd-call ${t}`}><RichLine text={v} /></div>
+    if (t === 'code') return <pre key={i} className="bd-code">{v}</pre>
+    if (t === 'reqs') return (
+      <div key={i}>
+        <ol className="bd-steps">{v.core.map((r, j) => <li key={j}><RichLine text={r} /></li>)}</ol>
+        <div className="bd-below">
+          <span>Below the line</span>
+          {v.out.map((r, j) => <em key={j}>{r}</em>)}
+        </div>
+      </div>
+    )
+    if (t === 'nums') return (
+      <div key={i} className="bd-nums">
+        {v.map(([val, lab], j) => <div key={j} className="bd-num"><b>{val}</b><span>{lab}</span></div>)}
+      </div>
+    )
+    if (t === 'ent') return (
+      <div key={i} className="bd-ents">
+        {v.map(([n, d], j) => <div key={j} className="bd-ent"><b>{n}</b><span>{d}</span></div>)}
+      </div>
+    )
+    if (t === 'api') return (
+      <div key={i}>
+        {v.map((c, j) => (
+          <div key={j} className="bd-api">
+            <div className="bd-api-h">
+              <span className={`bd-dir ${c.dir === '←' ? 'in' : c.dir === '↔' ? 'both' : 'out'}`}>{c.dir}</span>
+              <code>{c.name}</code>
+            </div>
+            <pre className="bd-code">{c.body}</pre>
+          </div>
+        ))}
+      </div>
+    )
+    if (t === 'opts') return <BdOptions key={i} options={v} />
+    if (t === 'links') return (
+      <div key={i} className="bd-refs">
+        {v.map(([label, url, note], j) => (
+          <div key={j} className="bd-ref">
+            <a href={url} target="_blank" rel="noopener noreferrer">{label} ↗</a>
+            {note && <span>{note}</span>}
+          </div>
+        ))}
+      </div>
+    )
+    return null
+  })
+}
+
+function BdOptions({ options }) {
+  const best = options.findIndex(o => o.best)
+  const [open, setOpen] = useState(best >= 0 ? best : options.length - 1)
+  return (
+    <div className="bd-opts">
+      {options.map((o, i) => (
+        <div key={i} className={`bd-opt ${o.rating.toLowerCase()} ${open === i ? 'open' : ''}`}>
+          <button className="bd-opt-h" onClick={() => setOpen(open === i ? -1 : i)}>
+            <span className={`bd-rate ${o.rating.toLowerCase()}`}>{o.rating}</span>
+            <span className="bd-opt-t">{o.title}</span>
+            {o.best && <span className="bd-pick">pick this</span>}
+            <span className="bd-chev">{open === i ? '−' : '+'}</span>
+          </button>
+          {open === i && (
+            <div className="bd-opt-b">
+              <div className="bd-sub">Approach</div>
+              <p className="bd-p">{o.approach}</p>
+              <div className="bd-sub">Challenges</div>
+              <p className="bd-p">{o.challenges}</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Breakdown({ template, onLoadTemplate, onFocus, focused }) {
+  const bd = breakdownFor(template)
+  const [active, setActive] = useState('')
+  const [showToc, setShowToc] = useState(true)
+  const rootRef = useRef(null)
+
+  // Track which section is in view so the contents rail can follow along.
+  useEffect(() => {
+    if (!bd || typeof IntersectionObserver === 'undefined' || !rootRef.current) return
+    const heads = [...rootRef.current.querySelectorAll('[data-bd-sec]')]
+    if (!heads.length) return
+    const io = new IntersectionObserver(entries => {
+      const vis = entries.filter(e => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+      if (vis.length) setActive(vis[0].target.dataset.bdSec)
+    }, { rootMargin: '-8px 0px -70% 0px', threshold: 0 })
+    heads.forEach(h => io.observe(h))
+    return () => io.disconnect()
+  }, [bd])
+
+  if (!bd) {
+    const avail = BREAKDOWN_NAMES
+    return (
+      <section>
+        <h3>Breakdown</h3>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          A full written breakdown — requirements, core entities, API, high-level design, deep dives with
+          Bad/Good/Great options, level expectations and references — for the design on the canvas.
+          {template ? ` There isn't one for ${template.name} yet.` : ' Load a template to read one.'}
+        </div>
+        {avail.map(n => (
+          <button key={n} className="btn" style={{ marginRight: 6 }} onClick={() => onLoadTemplate(n)}>
+            Open {n}
+          </button>
+        ))}
+      </section>
+    )
+  }
+
+  const jump = id => {
+    const el = rootRef.current?.querySelector(`[data-bd-sec="${id}"]`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setActive(id)
+  }
+
+  return (
+    <section className="bd" ref={rootRef}>
+      <h3>{bd.title}</h3>
+      <div className="bd-meta">{bd.meta}</div>
+      <p className="bd-p bd-intro"><RichLine text={bd.intro} /></p>
+
+      <div className="bd-toc">
+        <button className="bd-toc-h" onClick={() => setShowToc(s => !s)}>
+          On this page <span>{showToc ? '−' : '+'}</span>
+        </button>
+        {showToc && (
+          <div className="bd-toc-list">
+            {bd.sections.map(s => (
+              <button key={s.id}
+                className={`bd-toc-i h${s.h} ${active === s.id ? 'on' : ''}`}
+                onClick={() => jump(s.id)}>{s.title}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {bd.sections.map(s => (
+        <div key={s.id} className={`bd-sec h${s.h}`}>
+          {s.h === 1
+            ? <h4 data-bd-sec={s.id} className="bd-h1">{s.title}</h4>
+            : <h5 data-bd-sec={s.id} className="bd-h2">{s.title}</h5>}
+          {s.focus && (
+            <button className={`bd-focus ${focused === s.id ? 'on' : ''}`}
+              onClick={() => onFocus(focused === s.id ? null : { id: s.id, types: s.focus })}>
+              {focused === s.id ? '✕ Show whole diagram' : '◎ Spotlight on canvas'}
+            </button>
+          )}
+          <BdBlocks blocks={s.blocks} />
+        </div>
+      ))}
+    </section>
+  )
+}
+
+// ── Scale ────────────────────────────────────────────────────────────────────
+// "How do we take this to a billion users?" for the loaded template: the
+// binding constraint, a rung-by-rung ladder, the specific levers (each able to
+// spotlight the components it touches), and the wall you cannot scale past.
+
+function Scale({ template, onLoadTemplate, onFocus, focused, rps, onSetRps }) {
+  const sc = scalingFor(template)
+  const [tab, setTab] = useState('ladder')
+
+  if (!sc) {
+    return (
+      <section>
+        <h3>Scale to a billion</h3>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          Load a template and this shows what breaks first, what you change at each rung of
+          growth, and the constraint you cannot engineer past.
+        </div>
+        <div className="sc-grid">
+          {SCALING_NAMES.map(n => (
+            <button key={n} className="sc-pick" onClick={() => onLoadTemplate(n)}>{n}</button>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="sc">
+      <h3>Scaling {template.name}</h3>
+
+      <div className="sc-constraint">
+        <span>Binding constraint</span>
+        <p>{sc.constraint}</p>
+      </div>
+
+      <div className="tabs sub">
+        {[['ladder', 'Ladder'], ['levers', `Levers (${sc.levers.length})`], ['wall', 'The wall'], ['rules', 'Rules']]
+          .map(([k, l]) => (
+            <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
+          ))}
+      </div>
+
+      {tab === 'ladder' && (
+        <>
+          <div className="muted" style={{ margin: '2px 0 10px' }}>
+            What you actually build at each size. Earlier rungs are deliberately simpler than
+            later ones — adding the last rung's machinery at the first is the classic mistake.
+          </div>
+          <div className="sc-ladder">
+            {sc.ladder.map(([users, thru, move], i) => (
+              <div key={i} className="sc-rung">
+                <div className="sc-rung-l">
+                  <b>{users}</b>
+                  <span>{thru}</span>
+                </div>
+                <div className="sc-rung-r">{move}</div>
+              </div>
+            ))}
+          </div>
+          {typeof rps === 'number' && (
+            <div className="sc-sim">
+              Canvas is simulating <b>{rps >= 1000 ? (rps / 1000).toFixed(0) + 'k' : rps} rps</b>.
+              {' '}Push it and watch which tier saturates first:
+              <span className="sc-sim-btns">
+                {[10000, 100000, 1000000].map(r => (
+                  <button key={r} className="btn" onClick={() => onSetRps(r)}>
+                    {r >= 1000000 ? '1M' : (r / 1000) + 'k'} rps
+                  </button>
+                ))}
+              </span>
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'levers' && (
+        <>
+          <div className="muted" style={{ margin: '2px 0 10px' }}>
+            The moves that matter for this design, most load-bearing first. Spotlight one to see
+            which components it touches.
+          </div>
+          {sc.levers.map((l, i) => {
+            const id = 'lever-' + i
+            return (
+              <div key={i} className={`sc-lever ${focused === id ? 'on' : ''}`}>
+                <div className="sc-lever-h">
+                  <b>{l.t}</b>
+                  {l.n && l.n.length > 0 && (
+                    <button className={`bd-focus ${focused === id ? 'on' : ''}`}
+                      onClick={() => onFocus(focused === id ? null : { id, ids: l.n })}>
+                      {focused === id ? '✕' : '◎'}
+                    </button>
+                  )}
+                </div>
+                <p>{l.d}</p>
+              </div>
+            )
+          })}
+        </>
+      )}
+
+      {tab === 'wall' && (
+        <div className="sc-wall">
+          <div className="sc-wall-t">🧱 {sc.wall.t}</div>
+          <p>{sc.wall.d}</p>
+          <div className="muted" style={{ marginTop: 12, lineHeight: 1.6 }}>
+            Naming the wall is the senior-level move. Every design in this library has one, and
+            past it the answer stops being "add capacity" and becomes admission control, pricing,
+            procurement or an honest conversation about scope.
+          </div>
+        </div>
+      )}
+
+      {tab === 'rules' && (
+        <>
+          <div className="muted" style={{ margin: '2px 0 10px' }}>
+            {PRINCIPLES.length} rules that hold across every design in the library.
+          </div>
+          {PRINCIPLES.map((p, i) => (
+            <div key={i} className="sc-rule">
+              <b><span className="sc-rule-n">{i + 1}</span>{p.t}</b>
+              <p>{p.d}</p>
+            </div>
+          ))}
+        </>
+      )}
+    </section>
+  )
 }
