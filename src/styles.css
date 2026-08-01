@@ -181,11 +181,15 @@ select.btn { appearance: auto; }
 .muted { color: var(--muted); line-height: 1.5; }
 
 /* Side panel tabs */
-.tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .tabs button {
-  flex: 1; background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
-  border-radius: 980px; padding: 6px 8px; font-size: 11.5px; cursor: pointer; white-space: nowrap;
+  /* wrap onto a second row rather than running off the edge of a narrow panel */
+  flex: 1 1 auto; min-width: max-content;
+  background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 980px; padding: 6px 10px; font-size: 11.5px; cursor: pointer; white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s;
 }
+.tabs button:hover { border-color: var(--accent); color: var(--accent); }
 .tabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* Advisor suggestions */
