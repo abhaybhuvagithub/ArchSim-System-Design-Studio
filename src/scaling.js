@@ -12,8 +12,9 @@
 
 import A from './scaling-a.js'
 import B from './scaling-b.js'
+import C from './scaling-c.js'
 
-export const SCALING = { ...A, ...B }
+export const SCALING = { ...A, ...B, ...C }
 
 export const SCALING_NAMES = Object.keys(SCALING)
 

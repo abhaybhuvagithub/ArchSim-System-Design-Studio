@@ -25,8 +25,9 @@ import A from './breakdown-a.js'
 import B from './breakdown-b.js'
 import C from './breakdown-c.js'
 import D from './breakdown-d.js'
+import E from './breakdown-e.js'
 
-const AUTHORED = { ...A, ...B, ...C, ...D }
+const AUTHORED = { ...A, ...B, ...C, ...D, ...E }
 
 const groupOf = type => PALETTE_GROUPS.find(g => g.types.includes(type))?.label || 'Other'
 const nameOf = n => CATALOG[n.type]?.name || n.type
