@@ -343,6 +343,11 @@ try {
     pause() { this.paused = true },
     resume() { this.paused = false },
     getVoices() { return [
+      { name: 'Microsoft Swara Online (Natural) - Hindi (India)', lang: 'hi-IN' },
+      { name: 'Veena', lang: 'ta-IN', localService: true },
+      { name: 'Microsoft Heera - English (India)', lang: 'en-IN', localService: true },
+      { name: 'Albert', lang: 'en-US', localService: true },
+      { name: 'Grandma (English (US))', lang: 'en-US', localService: true },
       { name: 'Microsoft David - English (United States)', lang: 'en-US', localService: true },
       { name: 'Daniel', lang: 'en-GB', localService: true },
       { name: 'Samantha', lang: 'en-US', localService: true },
