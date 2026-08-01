@@ -728,6 +728,16 @@ export default function App() {
         {!compact && !floatPanel.left && <div className="splitter" onPointerDown={e => startResize('left', e)} title="Drag to resize" />}
 
         <div className="canvas-wrap" onDrop={onDrop} onDragOver={e => e.preventDefault()}>
+          {template && (
+            <div className="tpl-header">
+              <span className="tpl-header-name">{template.name}</span>
+              {template.tagline && <span className="tpl-header-tag">{template.tagline}</span>}
+              <span className="tpl-header-meta">
+                {nodes.length} components · {rps >= 1000 ? (rps / 1000).toFixed(rps >= 10000 ? 0 : 1) + 'k' : rps} rps
+              </span>
+              <button className="tpl-header-x" title="Clear the canvas" onClick={blank}>✕</button>
+            </div>
+          )}
           <svg ref={svgRef} onPointerDown={onCanvasDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onWheel={onWheel} style={{ touchAction: 'none' }}>
             <defs>
               <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -801,12 +811,11 @@ export default function App() {
             </button>
           </div>
           <div className="tabs">
+            <button className={tab === 'brief' ? 'on' : ''} onClick={() => setTab('brief')} title="Written description of this architecture">Brief</button>
             <button className={tab === 'capacity' ? 'on' : ''} onClick={() => setTab('capacity')}>Capacity</button>
             <button className={tab === 'improve' ? 'on' : ''} onClick={() => { setTab('improve'); setSel(null) }}>
               ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
             </button>
-            <button className={tab === 'brief' ? 'on' : ''} onClick={() => setTab('brief')} title="Written description of this architecture">Brief</button>
-            <button className={tab === 'about' ? 'on' : ''} onClick={() => setTab('about')} title="What this simulator is and how it differs">About</button>
             <button className={`${tab === 'chaos' ? 'on' : ''} ${faults.length ? 'alarm' : ''}`}
               onClick={() => setTab('chaos')}>
               Chaos{faults.length ? ` (${faults.length})` : ''}
@@ -814,21 +823,16 @@ export default function App() {
             <button className={tab === 'cost' ? 'on' : ''} onClick={() => { setTab('cost'); setSel(null) }}>
               💵 {money(cost.total)}
             </button>
+            <button className={tab === 'scale' ? 'on' : ''} onClick={() => { setTab('scale'); setSel(null) }} title="How this design scales to a billion users">
+              ↗ Scale
+            </button>
+            <button className={tab === 'breakdown' ? 'on' : ''} onClick={() => { setTab('breakdown'); setSel(null) }} title="Full written breakdown of the loaded design">
+              📖 Breakdown
+            </button>
             <button className={tab === 'learn' ? 'on' : ''} onClick={() => { setTab('learn'); setSel(null) }}>
               🎓 {doneSteps.filter(Boolean).length}/{LESSON.length}
             </button>
-
-            <button className={tab === 'scale' ? 'on' : ''} onClick={() => { setTab('scale'); setSel(null) }} title="How this design scales to a billion users">
-
-              ↗ Scale
-
-            </button>
-
-            <button className={tab === 'breakdown' ? 'on' : ''} onClick={() => { setTab('breakdown'); setSel(null) }} title="Full written breakdown of the loaded design">
-
-              📖 Breakdown
-
-            </button>
+            <button className={tab === 'about' ? 'on' : ''} onClick={() => setTab('about')} title="What this simulator is and how it differs">About</button>
           </div>
 
           {tab === 'scale' ? (

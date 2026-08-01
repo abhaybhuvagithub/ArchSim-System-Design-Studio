@@ -611,3 +611,33 @@ select.btn { appearance: auto; }
 .sc-pick { font: inherit; font-size: 11.8px; text-align: left; padding: 7px 10px; border-radius: 7px;
   cursor: pointer; background: none; color: inherit; border: 1px solid var(--line, #2a2f3a); }
 .sc-pick:hover { border-color: #0071e3; }
+
+/* ---- Selected-template header, floating over the canvas ---- */
+.tpl-header {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; z-index: 4;
+  max-width: min(720px, calc(100% - 32px));
+  padding: 7px 8px 7px 15px; border-radius: 999px;
+  background: var(--panel); border: 1px solid var(--line);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .18);
+  font-size: 12.5px; pointer-events: auto;
+}
+.tpl-header-name { font-weight: 600; white-space: nowrap; }
+.tpl-header-tag {
+  opacity: .62; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-left: 10px; border-left: 1px solid var(--line);
+}
+.tpl-header-meta {
+  opacity: .55; white-space: nowrap; font-variant-numeric: tabular-nums;
+  padding-left: 10px; border-left: 1px solid var(--line);
+}
+.tpl-header-x {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: none; border: none; color: inherit; opacity: .45; font-size: 12px;
+}
+.tpl-header-x:hover { opacity: 1; background: rgba(127, 140, 160, .18); }
+@media (max-width: 760px) {
+  .tpl-header-tag { display: none; }
+  .tpl-header { max-width: calc(100% - 20px); font-size: 12px; }
+}

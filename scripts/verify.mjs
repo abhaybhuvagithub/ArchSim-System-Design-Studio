@@ -53,6 +53,38 @@ const click = (el) => el && el.dispatchEvent(new win.MouseEvent('click', { bubbl
 const byText = (sel, txt) => [...doc.querySelectorAll(sel)].find((e) => e.textContent.includes(txt));
 
 try {
+  // ── data integrity, before touching the DOM ────────────────────────────────
+  // Cheap, and it localises a broken template to the template rather than to
+  // whichever assertion happens to trip over it later.
+  {
+    const { TEMPLATES } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+    const { breakdownFor } = await import(pathToFileURL(path.join(root, 'src/breakdown.js')).href);
+    const { scalingFor } = await import(pathToFileURL(path.join(root, 'src/scaling.js')).href);
+
+    const bad = [];
+    for (const t of TEMPLATES) {
+      const ids = new Set(t.nodes.map((n) => n.id));
+      if (ids.size !== t.nodes.length) bad.push(`${t.name}: duplicate node id`);
+      for (const e of t.edges) {
+        if (!ids.has(e.from)) bad.push(`${t.name}: edge from unknown node "${e.from}"`);
+        if (!ids.has(e.to)) bad.push(`${t.name}: edge to unknown node "${e.to}"`);
+      }
+      const seen = new Set();
+      for (const n of t.nodes) {
+        const at = `${n.x},${n.y}`;
+        if (seen.has(at)) bad.push(`${t.name}: "${n.label}" overlaps another node at ${at}`);
+        seen.add(at);
+      }
+      const wired = new Set(t.edges.flatMap((e) => [e.from, e.to]));
+      for (const n of t.nodes) if (!wired.has(n.id)) bad.push(`${t.name}: "${n.label}" is not wired to anything`);
+      if (!breakdownFor(t)) bad.push(`${t.name}: no breakdown`);
+      if (!scalingFor(t)) bad.push(`${t.name}: no scaling playbook`);
+    }
+    log(`data: ${TEMPLATES.length} templates checked`);
+    if (bad.length) bad.slice(0, 12).forEach((b) => log('  ! ' + b));
+    check(`all ${TEMPLATES.length} templates are structurally sound and documented`, bad.length === 0);
+  }
+
   // Take the entry point from the built index.html. A single build emits
   // several chunks with identical mtimes, so picking by mtime or size will
   // sooner or later load a vendor chunk instead of the app — which is exactly
@@ -82,6 +114,15 @@ try {
     );
   }
 
+  // ── analysis tab order ─────────────────────────────────────────────────────
+  const tabNames = [...doc.querySelectorAll('.tabs button')].map((b) => b.textContent.trim());
+  log('tab order: ' + tabNames.join(' | '));
+  check('Brief is the first analysis tab', /^Brief/.test(tabNames[0] || ''));
+  check('About is the last analysis tab', /About$/.test(tabNames[tabNames.length - 1] || ''));
+
+  // ── no template header before anything is loaded ───────────────────────────
+  check('no template header on a blank canvas', !doc.querySelector('.tpl-header'));
+
   // load the WhatsApp template through the picker
   const sel = [...doc.querySelectorAll('select')].find((s) =>
     [...s.options].some((o) => o.textContent.includes('WhatsApp')));
@@ -90,6 +131,21 @@ try {
   sel.value = opt.value;
   sel.dispatchEvent(new win.Event('change', { bubbles: true }));
   await wait(400);
+
+  // ── the selected-template header ───────────────────────────────────────────
+  const hdr = doc.querySelector('.tpl-header');
+  check('template header appears once a template is loaded', !!hdr);
+  check('header shows the template name',
+    !!hdr && hdr.querySelector('.tpl-header-name')?.textContent.includes('WhatsApp'));
+  check('header shows component count and traffic',
+    !!hdr && /\d+ components/.test(hdr.textContent) && /rps/.test(hdr.textContent));
+
+  // ── the AI systems group ───────────────────────────────────────────────────
+  const aiWanted = ['ChatGPT', 'LangChain', 'Copilot', 'Perplexity', 'Diffusion', 'Fine-tuning'];
+  const optText = [...sel.options].map((o) => o.textContent);
+  const aiMissing = aiWanted.filter((n) => !optText.some((t) => t.includes(n)));
+  check('AI system templates are in the picker' + (aiMissing.length ? ' — missing: ' + aiMissing.join(', ') : ''),
+    aiMissing.length === 0);
 
   const nodeCount = () => doc.querySelectorAll('svg g[data-nid], svg g.node').length;
   check('template loaded onto the canvas', doc.body.innerHTML.includes('Chat Servers'));

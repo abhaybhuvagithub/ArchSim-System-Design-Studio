@@ -1039,4 +1039,134 @@ export const TEMPLATES = [
     'Chain-wide scale means per-banner tenancy and data isolation; one retailer must never see another retailer’s shelves',
     'Night scanning shifts the load profile — schedule the heavy analytics for when the stores are closed',
   ], 'Robotics & edge'),
+
+  // ── AI systems ──────────────────────────────────────────────────────────────
+  T('ChatGPT (conversational AI)', 'Consumer chat over a GPU fleet', 20000, [
+    ['u', 'client', 'Users', 40, 250], ['cdn', 'cdn', 'CDN (static)', 170, 130],
+    ['waf', 'waf', 'WAF / abuse', 170, 370], ['gw', 'gateway', 'API Gateway', 300, 250, 4],
+    ['iam', 'iam', 'Auth / Session', 300, 110, 2], ['rl', 'ratelimiter', 'Plan Limits', 430, 110, 2],
+    ['conv', 'app', 'Conversation Svc', 430, 250, 8], ['hist', 'nosql', 'Message Store', 430, 400, 4],
+    ['mem', 'app', 'Memory Service', 560, 110, 3], ['gin', 'guard', 'Input Safety', 560, 250, 4],
+    ['files', 'blob', 'Uploads', 560, 400], ['router', 'app', 'Model Router', 690, 250, 3],
+    ['cache', 'cache', 'Prompt Cache', 690, 110, 3], ['tools', 'micro', 'Tools / Browsing', 690, 400, 4],
+    ['llm', 'llm', 'Inference Fleet', 830, 250, 70], ['gout', 'guard', 'Output Safety', 970, 250, 4],
+    ['k', 'kafka', 'Usage Events', 830, 400], ['bill', 'billing', 'Metering', 970, 400, 2],
+  ], [
+    ['u', 'cdn', 'app shell'], ['u', 'waf'], ['waf', 'gw'], ['gw', 'iam'], ['gw', 'rl'],
+    ['rl', 'conv'], ['conv', 'hist', 'persist turn'], ['conv', 'mem', 'recall'], ['conv', 'files'],
+    ['conv', 'gin'], ['gin', 'router'], ['router', 'cache', 'prefix hit'], ['router', 'llm'],
+    ['llm', 'tools', 'tool call'], ['llm', 'gout'], ['conv', 'k'], ['k', 'bill'],
+  ], [
+    'Streaming is the product — time to first token matters far more than total generation time',
+    'Conversation history grows unbounded; summarise or window it rather than resending everything',
+    'Prompt caching on the shared system prefix is the single largest cost lever',
+    'Safety runs on both input and output, and both are additional inference you must budget for',
+    'Tool calls turn one request into several round trips — the latency budget has to absorb that',
+    'Metering must be exact because it is billing, unlike almost everything else here',
+  ], 'AI / ML'),
+
+  T('LangChain (agent framework)', 'Tool-calling agents with memory and tracing', 800, [
+    ['dev', 'client', 'App / Developer', 40, 250], ['sdk', 'app', 'SDK Runtime', 180, 250, 3],
+    ['orch', 'app', 'Agent Orchestrator', 320, 250, 4], ['prompt', 'config', 'Prompt Registry', 320, 110],
+    ['cache', 'cache', 'Semantic Cache', 320, 390, 2], ['tools', 'micro', 'Tool Router', 460, 250, 4],
+    ['retr', 'vector', 'Vector Retriever', 460, 110, 3], ['mem', 'nosql', 'Agent Memory', 460, 390, 2],
+    ['emb', 'embed', 'Embedding Svc', 600, 110, 3], ['llm', 'llm', 'LLM Provider', 600, 250, 8],
+    ['sandbox', 'worker', 'Sandboxed Tools', 600, 390, 6], ['trace', 'tracing', 'Run Tracing', 740, 110],
+    ['eval', 'worker', 'Eval Harness', 740, 390, 2], ['guard', 'guard', 'Output Guard', 740, 250, 3],
+  ], [
+    ['dev', 'sdk'], ['sdk', 'orch'], ['orch', 'prompt'], ['orch', 'cache'], ['orch', 'tools'],
+    ['tools', 'retr', 'retrieval tool'], ['retr', 'emb'], ['tools', 'llm'], ['tools', 'sandbox', 'code / http'],
+    ['orch', 'mem', 'scratchpad'], ['llm', 'guard'], ['orch', 'trace'], ['trace', 'eval'],
+  ], [
+    'The agent loop is unbounded by nature — cap iterations, wall-clock and token spend or it will not terminate',
+    'Every tool is untrusted code or an untrusted endpoint; sandbox execution and set hard timeouts',
+    'Memory is the hardest part: what to keep, what to summarise, what to retrieve per step',
+    'Tracing is not optional — a failed agent run is incomprehensible without the full step-by-step',
+    'Semantic caching on the whole agent input saves far more than caching individual LLM calls',
+    'Evals have to run continuously; prompt changes regress silently and no test suite catches it',
+  ], 'AI / ML'),
+
+  T('AI Code Assistant (Copilot)', 'Inline completion under a 200ms budget', 30000, [
+    ['ide', 'client', 'IDE Plugin', 40, 250], ['edge', 'edge', 'Edge PoP', 170, 250, 6],
+    ['gw', 'gateway', 'API Gateway', 300, 250, 6], ['cache', 'cache', 'Completion Cache', 300, 400, 4],
+    ['ctx', 'app', 'Context Builder', 440, 250, 10], ['idx', 'search', 'Repo Index', 440, 110, 4],
+    ['emb', 'embed', 'Code Embeddings', 580, 110, 8], ['vec', 'vector', 'Vector Store', 720, 110, 4],
+    ['router', 'app', 'Model Router', 580, 250, 4], ['llm', 'ml', 'Completion Model', 720, 250, 14],
+    ['filt', 'guard', 'Secret / Licence Filter', 860, 250, 4], ['tel', 'kafka', 'Telemetry', 580, 400],
+    ['an', 'analytics', 'Acceptance Metrics', 720, 400, 6], ['iam', 'iam', 'Org Policy', 300, 110, 2],
+  ], [
+    ['ide', 'edge'], ['edge', 'gw'], ['gw', 'iam'], ['gw', 'cache', 'exact prefix'], ['gw', 'ctx'],
+    ['ctx', 'idx', 'nearby symbols'], ['idx', 'emb'], ['emb', 'vec'], ['ctx', 'router'],
+    ['router', 'llm'], ['llm', 'filt'], ['ctx', 'tel'], ['tel', 'an'],
+  ], [
+    'The latency budget is brutal — a completion nobody waits for is a completion nobody uses',
+    'Cancellation matters as much as speed: the user keeps typing and in-flight requests must be dropped',
+    'Context selection beats model size — the right 2k tokens of repo context outperforms a bigger model',
+    'Fill-in-the-middle, not just prefix continuation, since the cursor usually has code after it',
+    'Never emit a secret or verbatim licensed code; filtering is a hard requirement, not a nicety',
+    'Acceptance rate is the only metric that matters, and it must be measured per model version',
+  ], 'AI / ML'),
+
+  T('AI Search (Perplexity)', 'Retrieve, rerank, synthesise with citations', 5000, [
+    ['u', 'client', 'Users', 40, 250], ['cdn', 'cdn', 'CDN', 170, 120],
+    ['gw', 'gateway', 'API Gateway', 300, 250, 4], ['cache', 'cache', 'Answer Cache', 300, 400, 3],
+    ['plan', 'app', 'Query Planner', 440, 250, 4], ['srch', 'search', 'Search Index', 440, 110, 4],
+    ['prov', 'partner', 'Search Providers', 580, 110], ['vec', 'vector', 'Doc Embeddings', 440, 400, 3],
+    ['fetch', 'worker', 'Page Fetchers', 580, 250, 8], ['rank', 'ml', 'Reranker', 720, 250, 4],
+    ['llm', 'llm', 'Synthesis LLM', 860, 250, 24], ['cite', 'app', 'Citation Builder', 1000, 250, 3],
+    ['k', 'kafka', 'Query Log', 720, 400], ['idx', 'worker', 'Index Refresh', 580, 400, 4],
+  ], [
+    ['u', 'cdn'], ['u', 'gw'], ['gw', 'cache'], ['gw', 'plan'], ['plan', 'srch'], ['srch', 'prov'],
+    ['plan', 'vec'], ['plan', 'fetch', 'live pages'], ['fetch', 'rank'], ['srch', 'rank'],
+    ['rank', 'llm', 'top-k passages'], ['llm', 'cite'], ['plan', 'k'], ['k', 'idx'],
+  ], [
+    'Every claim needs a citation traceable to a retrieved passage, or the product has no defence',
+    'Retrieval quality caps answer quality — no model rescues bad passages',
+    'Freshness is the differentiator over a static model, so live fetching sits on the hot path',
+    'Fan-out to providers needs hard timeouts and partial results; one slow provider must not block',
+    'Answer caching is delicate: the same question asked a day later may deserve a different answer',
+    'Streaming hides multi-second synthesis, which is the only reason the latency is tolerable',
+  ], 'AI / ML'),
+
+  T('Image Generation (Diffusion)', 'Async GPU jobs with moderation', 2000, [
+    ['u', 'client', 'Users', 40, 250], ['gw', 'gateway', 'API Gateway', 180, 250, 3],
+    ['mod', 'guard', 'Prompt Moderation', 320, 120, 4], ['q', 'queue', 'Job Queue', 320, 250],
+    ['ws', 'ws', 'Progress Stream', 320, 400, 4], ['sched', 'scheduler', 'GPU Scheduler', 460, 250, 2],
+    ['meta', 'nosql', 'Job Metadata', 460, 400, 3], ['gpu', 'ml', 'Diffusion Workers', 600, 250, 40],
+    ['safety', 'guard', 'Image Safety', 740, 250, 4], ['blob', 'blob', 'Image Store', 880, 250],
+    ['cdn2', 'cdn', 'Delivery CDN', 1020, 250], ['bill', 'billing', 'Credits', 600, 400, 2],
+    ['k', 'kafka', 'Job Events', 740, 400],
+  ], [
+    ['u', 'gw'], ['gw', 'mod'], ['mod', 'q', 'accepted'], ['gw', 'ws', 'subscribe'], ['q', 'sched'],
+    ['sched', 'gpu'], ['sched', 'meta'], ['gpu', 'safety'], ['safety', 'blob'], ['blob', 'cdn2'],
+    ['gpu', 'k'], ['k', 'bill'], ['k', 'ws', 'progress'],
+  ], [
+    'Generation takes tens of seconds, so it is a job, not a request — accept and return an id',
+    'Moderate the prompt before spending GPU time, and the image after, because prompts get past you',
+    'A GPU is either busy or wasted; batching and a scheduler that packs the fleet is the whole economics',
+    'Progress updates are what make a 30-second wait tolerable',
+    'Images are immutable and content-addressed — cache them at the edge forever',
+    'Credits must be reserved on submit and settled on completion, or users generate for free on failure',
+  ], 'AI / ML'),
+
+  T('LLM Fine-tuning Platform', 'Data to trained model to serving', 200, [
+    ['u', 'client', 'ML Engineers', 40, 250], ['gw', 'gateway', 'Control API', 180, 250, 2],
+    ['data', 'app', 'Dataset Service', 320, 120, 2], ['val', 'worker', 'Data Validation', 320, 380, 4],
+    ['lake', 'lake', 'Training Data Lake', 460, 120], ['sched', 'scheduler', 'Job Scheduler', 460, 250, 2],
+    ['pii', 'pii', 'PII Scrubber', 460, 380, 3], ['train', 'worker', 'GPU Training Cluster', 620, 250, 48],
+    ['ckpt', 'blob', 'Checkpoints', 620, 120], ['mon', 'monitor', 'Training Metrics', 620, 380],
+    ['eval', 'worker', 'Eval Harness', 780, 250, 6], ['reg', 'registry', 'Model Registry', 780, 120],
+    ['serve', 'llm', 'Serving Fleet', 920, 250, 10], ['audit', 'audit', 'Lineage / Audit', 780, 380],
+  ], [
+    ['u', 'gw'], ['gw', 'data'], ['data', 'val'], ['val', 'pii'], ['pii', 'lake'], ['data', 'lake'],
+    ['gw', 'sched'], ['sched', 'train'], ['train', 'ckpt', 'every N steps'], ['train', 'mon'],
+    ['train', 'eval'], ['eval', 'reg', 'promote'], ['reg', 'serve'], ['reg', 'audit'],
+  ], [
+    'Checkpoint constantly — a multi-day run that dies at 90% without checkpoints has lost everything',
+    'Data quality dominates outcome far more than hyperparameters; validate and scrub before training',
+    'Evaluation gates promotion, or you will ship a regression that looks fine in the loss curve',
+    'GPUs are the budget: queue jobs by priority and preempt, because idle accelerators are pure waste',
+    'Full lineage from dataset to deployed model is a compliance requirement in most regulated settings',
+    'Rollback has to be as easy as promotion — pin serving to a registry version, never to "latest"',
+  ], 'AI / ML'),
 ]
