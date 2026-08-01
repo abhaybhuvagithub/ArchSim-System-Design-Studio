@@ -17,7 +17,7 @@ import { buildReport } from './report.js'
 import { diagnoseAll, diagnose, healthChip } from './health.js'
 import { prepareSvgForExport } from './svgexport.js'
 import { speechSupported, extractSpeech, chunkText, RATES, readRate, saveRate, pickVoice, listVoices,
-  readVoiceName, saveVoiceName, PROSODY, BLOCK_PAUSE_MS } from './speech.js'
+  voicesByLanguage, readVoiceName, saveVoiceName, PROSODY, BLOCK_PAUSE_MS } from './speech.js'
 import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 
@@ -70,6 +70,10 @@ export default function App() {
   const [reqLog, setReqLog] = useState({})        // checklist index -> what it added
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
+  const [a11y, setA11y] = useState(() => {
+    try { return localStorage.getItem('archsim.a11y') === '1' } catch (e) { return false }
+  })
+  const [announce, setAnnounce] = useState('')      // polite live-region text
   const [maxed, setMaxed] = useState(null)          // 'left' | 'right' | null
   const [floatPanel, setFloatPanel] = useState({ left: null, right: null }) // {x,y,w,h} when detached
   const [faults, setFaults] = useState([])       // [{key, faultId, targetId, until}]
@@ -108,6 +112,11 @@ export default function App() {
     sideBodyRef.current?.scrollTo({ top: 0 })
     setSideScrolled(false)
   }, [tab])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('a11y', a11y)
+    try { localStorage.setItem('archsim.a11y', a11y ? '1' : '0') } catch (e) { /* private mode */ }
+  }, [a11y])
 
   useEffect(() => { document.documentElement.dataset.theme = theme; saveTheme(theme) }, [theme])
 
@@ -561,6 +570,7 @@ export default function App() {
     setRps(t.rps)
     requestAnimationFrame(() => fitView(t.nodes))
     notify(`Loaded ${t.name} — ${t.nodes.length} components at ${t.rps >= 1000 ? (t.rps / 1000).toFixed(1) + 'k' : t.rps} rps`, 'info')
+    setAnnounce(`Loaded ${t.name}. ${t.nodes.length} components, ${t.edges.length} connections, simulating ${t.rps} requests per second.`)
   }
   const clearAll = blank
 
@@ -663,7 +673,9 @@ export default function App() {
 
   return (
     <div className={`app ${compact ? 'compact' : ''} ${mobile ? 'mobile' : ''}`}>
-      <div className="toolbar">
+      <a className="skip-link" href="#analysis">Skip to the written analysis</a>
+      <span className="sr-only" role="status" aria-live="polite">{announce}</span>
+      <header className="toolbar" role="banner">
         <div className="logo">Arch<span>Sim</span></div>
         {compact && (
           <>
@@ -732,10 +744,15 @@ export default function App() {
         </select>
         <label className="btn">JSON ↑<input type="file" accept=".json" style={{ display: 'none' }} onChange={importJSON} /></label>
         <button className="btn" onClick={clearAll}>Clear</button>
-      </div>
+        <button className={`btn ${a11y ? 'active' : ''}`} onClick={() => setA11y(v => !v)}
+          aria-pressed={a11y}
+          title="Screen-reader mode: a text equivalent of the diagram, stronger focus outlines and no motion">
+          ♿ {a11y ? 'A11y on' : 'A11y'}
+        </button>
+      </header>
 
       <div className="body">
-        <div className={`palette ${floatPanel.left ? 'floating' : ''} ${maxed === 'left' ? 'maxed' : ''} ${compact ? 'drawer left' : ''} ${compact && drawer === 'left' ? 'open' : ''}`}
+        <nav aria-label="Components" className={`palette ${floatPanel.left ? 'floating' : ''} ${maxed === 'left' ? 'maxed' : ''} ${compact ? 'drawer left' : ''} ${compact && drawer === 'left' ? 'open' : ''}`}
           style={compact ? undefined : floatPanel.left
             ? { left: floatPanel.left.x, top: floatPanel.left.y, width: floatPanel.left.w, height: floatPanel.left.h }
             : maxed === 'left' ? undefined            // width comes from .maxed, so it stays responsive
@@ -821,11 +838,10 @@ export default function App() {
               </div>
             )
           })}
-        </div>
-
+        </nav>
         {!compact && !floatPanel.left && <div className="splitter" onPointerDown={e => startResize('left', e)} onDoubleClick={() => resetPanel('left')} title="Drag to resize · double-click to reset" />}
 
-        <div className="canvas-wrap" onDrop={onDrop} onDragOver={e => e.preventDefault()}>
+        <main id="canvas" className="canvas-wrap" aria-label="Architecture canvas" onDrop={onDrop} onDragOver={e => e.preventDefault()}>
           {template && (
             <div className="tpl-header">
               <span className="tpl-header-name">{template.name}</span>
@@ -893,11 +909,12 @@ export default function App() {
           )}
           {nodes.length === 0 && <div className="hint">Blank canvas — drag components in from the left, wire them from a node's ● port, or pick a template ↑</div>}
           {nodes.length > 0 && <div className="hint">Drag ● port to connect · click a connection to label it · scroll to zoom · drag canvas to pan · Del removes selection</div>}
-        </div>
+          <CanvasDescription nodes={nodes} edges={edges} rps={rps} template={template} />
+        </main>
 
         {!compact && !floatPanel.right && <div className="splitter" onPointerDown={e => startResize('right', e)} onDoubleClick={() => resetPanel('right')} title="Drag to resize · double-click to reset" />}
 
-        <div className={`side ${floatPanel.right ? 'floating' : ''} ${maxed === 'right' ? 'maxed' : ''} ${compact ? 'drawer right' : ''} ${compact && drawer === 'right' ? 'open' : ''}`}
+        <aside id="analysis" aria-label="Analysis" className={`side ${floatPanel.right ? 'floating' : ''} ${maxed === 'right' ? 'maxed' : ''} ${compact ? 'drawer right' : ''} ${compact && drawer === 'right' ? 'open' : ''}`}
           style={compact ? undefined : floatPanel.right
             ? { left: floatPanel.right.x, top: floatPanel.right.y, width: floatPanel.right.w, height: floatPanel.right.h }
             : maxed === 'right' ? undefined
@@ -1053,7 +1070,7 @@ export default function App() {
             <button className="side-top" onClick={() => sideBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
               aria-label="Back to top">↑ Top</button>
           )}
-        </div>
+        </aside>
         {compact && drawer && <div className="scrim" onClick={() => setDrawer(null)} />}
       </div>
 
@@ -1779,6 +1796,49 @@ function PalItem({ type, cloud, cloudInfo, onAdd, count }) {
   )
 }
 
+// A canvas is invisible to a screen reader — an SVG of boxes conveys nothing.
+// This is the diagram as navigable text: what each component is, how many of
+// it there are, and what it feeds. Always in the accessibility tree, never on
+// screen.
+function CanvasDescription({ nodes, edges, rps, template }) {
+  if (!nodes.length) {
+    return <div className="sr-only">The canvas is empty. Load a template from the toolbar, or add components from the Components list.</div>
+  }
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
+  const sources = nodes.filter(n => CATALOG[n.type]?.source)
+  return (
+    <div className="sr-only" role="region" aria-label="Diagram described as text">
+      <h2>{template ? template.name : 'Current design'}, described</h2>
+      <p>
+        {nodes.length} components and {edges.length} connections, simulating {rps} requests per second.
+        {sources.length ? ` Traffic enters at ${sources.map(n => n.label).join(', ')}.` : ''}
+      </p>
+      <h3>Components</h3>
+      <ul>
+        {nodes.map(n => {
+          const c = CATALOG[n.type] || {}
+          const feeds = edges.filter(e => e.from === n.id).map(e => byId[e.to]?.label).filter(Boolean)
+          const fed = edges.filter(e => e.to === n.id).map(e => byId[e.from]?.label).filter(Boolean)
+          return (
+            <li key={n.id}>
+              {n.label}, {c.name || n.type}
+              {(n.replicas || 1) > 1 ? `, ${n.replicas} replicas` : ', single instance'}
+              {fed.length ? `. Receives from ${fed.join(', ')}` : ''}
+              {feeds.length ? `. Sends to ${feeds.join(', ')}` : '. Endpoint, sends to nothing'}.
+            </li>
+          )
+        })}
+      </ul>
+      <h3>Connections</h3>
+      <ul>
+        {edges.map(e => (
+          <li key={e.id}>{byId[e.from]?.label} to {byId[e.to]?.label}{e.label ? `, labelled ${e.label}` : ''}.</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 // ── Read aloud ───────────────────────────────────────────────────────────────
 // Wraps any panel section and reads its prose, highlighting each block as it
 // goes. Renders nothing at all where the browser has no speech synthesis,
@@ -1803,6 +1863,7 @@ function ReadAloud({ children, label = 'this section' }) {
   const [rate, setRate] = useState(readRate)
   const [voiceName, setVoiceName] = useState(readVoiceName)
   const [voices, setVoices] = useState([])
+  const [voiceGroups, setVoiceGroups] = useState([])
   const [at, setAt] = useState(-1)                  // index of the block being read
   const blocksRef = useRef([])
   const idxRef = useRef(0)
@@ -1815,7 +1876,7 @@ function ReadAloud({ children, label = 'this section' }) {
   // read it now and again when it changes.
   useEffect(() => {
     if (!synth) return
-    const load = () => setVoices(listVoices(synth))
+    const load = () => { setVoices(listVoices(synth)); setVoiceGroups(voicesByLanguage(synth)) }
     load()
     synth.addEventListener?.('voiceschanged', load)
     return () => synth.removeEventListener?.('voiceschanged', load)
@@ -1931,8 +1992,12 @@ function ReadAloud({ children, label = 'this section' }) {
           )}
           {voices.length > 1 && (
             <select className="ra-voice" value={voiceName || (voices[0]?.name ?? '')}
-              onChange={e => changeVoice(e.target.value)} aria-label="Voice">
-              {voices.map(v => <option key={v.name} value={v.name}>{shortVoice(v.name)}</option>)}
+              onChange={e => changeVoice(e.target.value)} aria-label="Voice and language">
+              {voiceGroups.map(([lang, list]) => (
+                <optgroup key={lang} label={lang}>
+                  {list.map(v => <option key={v.name} value={v.name}>{shortVoice(v.name)}</option>)}
+                </optgroup>
+              ))}
             </select>
           )}
           <label className="ra-rate">
