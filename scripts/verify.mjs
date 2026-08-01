@@ -107,6 +107,23 @@ try {
     if (unstable.length) log('  ! unstable: ' + unstable.join(', '));
     if (regressed.length) log('  ! worse than hand-drawn: ' + regressed.join(', '));
 
+    // ── templates must load in a healthy state ───────────────────────────────
+    // A template that is already dropping traffic on load teaches the wrong
+    // lesson: you cannot push it to find its bottleneck if it arrives broken.
+    const { simulate } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+    const unhealthy = [];
+    for (const t of TEMPLATES) {
+      const s = simulate(t.nodes, t.edges, t.rps, new Set());
+      const hot = Object.entries(s.stats)
+        .filter(([, st]) => st.util > 0.9)
+        .map(([id]) => t.nodes.find(n => n.id === id)?.label);
+      if (s.successRate < 0.99 || hot.length) {
+        unhealthy.push(`${t.name} (${(s.successRate * 100).toFixed(1)}%${hot.length ? ', ' + hot.join(', ') : ''})`);
+      }
+    }
+    if (unhealthy.length) unhealthy.forEach(u => log('  ! saturated on load: ' + u));
+    check('every template loads healthy at its own default traffic', unhealthy.length === 0);
+
     check('arrange is idempotent — pressing it twice changes nothing', unstable.length === 0);
     check('arrange never stacks two nodes in the same place', stacked.length === 0);
     check('arrange beats the hand-drawn layouts on crossings', autoX < handX);
