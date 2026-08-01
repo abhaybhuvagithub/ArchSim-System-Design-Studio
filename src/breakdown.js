@@ -168,12 +168,14 @@ function build(template) {
   ])
 
   push('the-set-up', 1, 'The Set Up', [])
-  push('planning-the-approach', 2, 'Planning the Approach', [['p', a.planning]])
+  // Some problems warrant an explicit strategy paragraph; others go straight
+  // to entities. Omit `planning` and the section disappears.
+  if (a.planning) push('planning-the-approach', 2, 'Planning the Approach', [['p', a.planning]])
   push('core-entities', 2, 'Defining the Core Entities', [
     ['p', 'The nouns worth naming before you draw anything — they give you the language for the API and the data model.'],
     ['ent', a.entities],
   ])
-  push('api', 2, 'API or System Interface', [
+  push('api', 2, a.apiTitle || 'API or System Interface', [
     a.apiIntro ? ['p', a.apiIntro] : null,
     ['api', a.api],
     a.apiNote ? ['note', a.apiNote] : null,
@@ -201,6 +203,15 @@ function build(template) {
   ;(a.dives || []).forEach((d, i) => {
     sections.push(flatten({ ...d, id: 'dd-' + (i + 1), h: 2, title: `${i + 1}) ${d.title}` }))
   })
+
+  // Optional: assemble everything back into one picture before the level bars.
+  if (a.finalDesign) {
+    sections.push(flatten({
+      id: 'final-design', h: 1, title: 'Final Design',
+      focus: a.finalDesign.focus,
+      blocks: a.finalDesign.blocks,
+    }))
+  }
 
   push('levels', 1, 'What is Expected at Each Level?', [
     ['p', 'How much of the above is actually required of you depends on the level you are interviewing at.'],
