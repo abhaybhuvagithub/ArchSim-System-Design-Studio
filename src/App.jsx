@@ -48,7 +48,7 @@ export default function App() {
   const [spotlight, setSpotlight] = useState(null)   // Breakdown tab: { id, ids } to isolate on canvas
   const [applied, setApplied] = useState([])    // ids of suggestions already applied
   const [theme, setTheme] = useState(readTheme) // 'dark' | 'light'
-  const [steps, setSteps] = useState(false)     // numbered request-flow badges
+  const [steps, setSteps] = useState(true)      // numbered request-flow badges, on by default
   const [chaosUsed, setChaosUsed] = useState(false)
   const [cloud, setCloud] = useState(readCloud)   // generic | aws | gcp | azure | oci
   const [palQ, setPalQ] = useState('')            // palette search
