@@ -18,6 +18,11 @@ import { diagnoseAll, diagnose, healthChip } from './health.js'
 import { prepareSvgForExport } from './svgexport.js'
 
 const NODE_W = 118, NODE_H = 46
+// Text box inside a node: starts after the glyph, stops short of the right
+// edge. The replica badge sits on the corner above the label's cap height, so
+// the title gets the full width.
+const TITLE_W = NODE_W - 30 - 6
+const SUB_W = NODE_W - 30 - 8
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
 const utilColor = u => u > 1 ? '#ef4444' : u > 0.8 ? '#f59e0b' : u > 0.5 ? '#eab308' : '#22c55e'
 let idc = 0
@@ -935,20 +940,27 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
         stroke={isDown ? t.downStroke : hovered ? t.nodeStrokeHover : color}
         strokeWidth={hovered ? 2 : 1.5} opacity={isDown ? 0.9 : 1} />
       <text x="10" y="20" fontSize="13">{spec.glyph}</text>
-      <text x="30" y="19" fontSize="10.5" fill={t.nodeText} fontWeight="600">{trunc(n.label, 15)}</text>
+      <text x="30" y="19" fontSize="10.5" fill={t.nodeText} fontWeight="600">{fit(n.label, TITLE_W, 10.5, true)}</text>
       <text x="30" y="33" fontSize="9" fill={t.nodeSub}>
-        {isDown ? 'CHAOS: instance lost'
-          : svc ? `${n.replicas}× · ${trunc(svc, 22)}`
-          : `${n.replicas}× · ${spec.source ? 'source' : fmt(spec.cap * n.replicas) + ' rps cap'}`}
+        {fit(isDown ? 'CHAOS: instance lost'
+          : `${n.replicas}× · ${svc || (spec.source ? 'source' : fmt(spec.cap * n.replicas) + ' rps cap')}`,
+          SUB_W, 9)}
       </text>
+      <title>{n.label} — {spec.name}{svc ? ` (${svc})` : ''}</title>
       {simOn && !spec.source && (
         <>
           <rect x="8" y={NODE_H - 7} width={NODE_W - 16} height="4" rx="2" fill={t.barTrack} />
           <rect x="8" y={NODE_H - 7} width={(NODE_W - 16) * Math.min(1, util)} height="4" rx="2" fill={utilColor(util)} />
         </>
       )}
-      {(n.replicas || 1) > 1 && <circle cx={NODE_W - 12} cy="12" r="8" fill={color} opacity="0.9" />}
-      {(n.replicas || 1) > 1 && <text x={NODE_W - 12} y="15" fontSize="9" textAnchor="middle" fill={t.badgeText} fontWeight="700">{n.replicas}</text>}
+      {(n.replicas || 1) > 1 && (
+        <g>
+          {/* sits on the corner rather than over the label, which it used to clip */}
+          <circle cx={NODE_W - 4} cy="2" r="8.5" fill={t.nodeFill} />
+          <circle cx={NODE_W - 4} cy="2" r="7.5" fill={color} />
+          <text x={NODE_W - 4} y="5" fontSize="8.5" textAnchor="middle" fill={t.badgeText} fontWeight="700">{n.replicas}</text>
+        </g>
+      )}
       <circle cx={NODE_W} cy={NODE_H / 2} r="6" fill={t.wire} stroke={t.nodeFill} strokeWidth="2"
         style={{ cursor: 'crosshair' }} onPointerDown={e => onPortDown(e, n)} />
     </g>
@@ -1548,6 +1560,25 @@ function bezier(t, x1, y1, mx, x2, y2) {
   return { x, y }
 }
 const trunc = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
+
+// Node labels are drawn into a fixed-width box, so trim by pixels rather than
+// by character count — "WWW" and "iii" are not the same width.
+const WIDE = new Set('MWmw@%'), NARROW = new Set('ijlt.,:;!|\'’ ()[]/')
+const textWidth = (s, size, bold) => {
+  let w = 0
+  for (const ch of s) w += WIDE.has(ch) ? 0.86 : NARROW.has(ch) ? 0.30 : /[A-Z0-9]/.test(ch) ? 0.62 : 0.52
+  return w * size * (bold ? 1.06 : 1)
+}
+const fit = (s, px, size, bold = false) => {
+  s = String(s)
+  if (textWidth(s, size, bold) <= px) return s
+  let out = ''
+  for (const ch of s) {
+    if (textWidth(out + ch + '…', size, bold) > px) break
+    out += ch
+  }
+  return out.trimEnd() + '…'
+}
 
 // Number the connections in request order (BFS from traffic sources) — the
 // numbered-walkthrough style used in system design write-ups.
