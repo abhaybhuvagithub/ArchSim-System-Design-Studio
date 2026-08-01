@@ -20,6 +20,8 @@ import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 
 const NODE_W = 118, NODE_H = 46
+// Default docked widths, so "restore" has something definite to go back to.
+const PANEL_DEFAULT = { left: 168, right: 280 }
 // Text box inside a node: starts after the glyph, stops short of the right
 // edge. The replica badge sits on the corner above the label's cap height, so
 // the title gets the full width.
@@ -54,7 +56,8 @@ export default function App() {
   const [palQ, setPalQ] = useState('')            // palette search
   const [reqLog, setReqLog] = useState({})        // checklist index -> what it added
   // panel geometry: docked width, or floating window position
-  const [panelW, setPanelW] = useState({ left: 168, right: 280 })
+  const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
+  const [maxed, setMaxed] = useState(null)          // 'left' | 'right' | null
   const [floatPanel, setFloatPanel] = useState({ left: null, right: null }) // {x,y,w,h} when detached
   const [faults, setFaults] = useState([])       // [{key, faultId, targetId, until}]
   const [visitors, setVisitors] = useState(null)
@@ -126,6 +129,7 @@ export default function App() {
   // ---- panel resize / detach ----
   const startResize = (side, e) => {
     e.preventDefault()
+    setMaxed(m => (m === side ? null : m))    // dragging is an implicit restore
     resizeRef.current = { side, startX: e.clientX, startW: panelW[side] }
     const move = ev => {
       const r = resizeRef.current
@@ -136,6 +140,11 @@ export default function App() {
     const up = () => { resizeRef.current = null; window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+  }
+  const toggleMax = side => setMaxed(m => (m === side ? null : side))
+  const resetPanel = side => {
+    setMaxed(m => (m === side ? null : m))
+    setPanelW(w => ({ ...w, [side]: PANEL_DEFAULT[side] }))
   }
   const detach = side => setFloatPanel(f => ({
     ...f,
@@ -675,16 +684,26 @@ export default function App() {
       </div>
 
       <div className="body">
-        <div className={`palette ${floatPanel.left ? 'floating' : ''} ${compact ? 'drawer left' : ''} ${compact && drawer === 'left' ? 'open' : ''}`}
+        <div className={`palette ${floatPanel.left ? 'floating' : ''} ${maxed === 'left' ? 'maxed' : ''} ${compact ? 'drawer left' : ''} ${compact && drawer === 'left' ? 'open' : ''}`}
           style={compact ? undefined : floatPanel.left
             ? { left: floatPanel.left.x, top: floatPanel.left.y, width: floatPanel.left.w, height: floatPanel.left.h }
+            : maxed === 'left' ? undefined            // width comes from .maxed, so it stays responsive
             : { width: panelW.left }}>
           <div className="panel-bar" onPointerDown={e => floatPanel.left && startDragPanel('left', e)}>
             <span>⠿ Components</span>
-            <button onClick={() => (compact ? setDrawer(null) : detach('left'))}
-              title={compact ? 'Close' : floatPanel.left ? 'Dock panel' : 'Detach into a floating window'}>
-              {compact ? '✕ Close' : floatPanel.left ? '⇤ Dock' : '⧉ Float'}
-            </button>
+            <span className="panel-bar-btns">
+              {!compact && !floatPanel.left && (
+                <button className="panel-max" onClick={() => toggleMax('left')}
+                  onDoubleClick={() => resetPanel('left')}
+                  title={maxed === 'left' ? 'Restore to the default width' : 'Maximise this panel'}>
+                  {maxed === 'left' ? '⤡ Restore' : '⤢ Max'}
+                </button>
+              )}
+              <button onClick={() => (compact ? setDrawer(null) : detach('left'))}
+                title={compact ? 'Close' : floatPanel.left ? 'Dock panel' : 'Detach into a floating window'}>
+                {compact ? '✕ Close' : floatPanel.left ? '⇤ Dock' : '⧉ Float'}
+              </button>
+            </span>
           </div>
           <input className="pal-search" value={palQ} onChange={e => setPalQ(e.target.value)}
             placeholder={`Search ${Object.keys(CATALOG).length} components…`} />
@@ -725,7 +744,7 @@ export default function App() {
           })) && <div className="empty" style={{ padding: '10px 6px' }}>No component matches “{palQ}”.</div>}
         </div>
 
-        {!compact && !floatPanel.left && <div className="splitter" onPointerDown={e => startResize('left', e)} title="Drag to resize" />}
+        {!compact && !floatPanel.left && <div className="splitter" onPointerDown={e => startResize('left', e)} onDoubleClick={() => resetPanel('left')} title="Drag to resize · double-click to reset" />}
 
         <div className="canvas-wrap" onDrop={onDrop} onDragOver={e => e.preventDefault()}>
           {template && (
@@ -797,18 +816,28 @@ export default function App() {
           {nodes.length > 0 && <div className="hint">Drag ● port to connect · click a connection to label it · scroll to zoom · drag canvas to pan · Del removes selection</div>}
         </div>
 
-        {!compact && !floatPanel.right && <div className="splitter" onPointerDown={e => startResize('right', e)} title="Drag to resize" />}
+        {!compact && !floatPanel.right && <div className="splitter" onPointerDown={e => startResize('right', e)} onDoubleClick={() => resetPanel('right')} title="Drag to resize · double-click to reset" />}
 
-        <div className={`side ${floatPanel.right ? 'floating' : ''} ${compact ? 'drawer right' : ''} ${compact && drawer === 'right' ? 'open' : ''}`}
+        <div className={`side ${floatPanel.right ? 'floating' : ''} ${maxed === 'right' ? 'maxed' : ''} ${compact ? 'drawer right' : ''} ${compact && drawer === 'right' ? 'open' : ''}`}
           style={compact ? undefined : floatPanel.right
             ? { left: floatPanel.right.x, top: floatPanel.right.y, width: floatPanel.right.w, height: floatPanel.right.h }
+            : maxed === 'right' ? undefined
             : { width: ['learn', 'breakdown', 'scale'].includes(tab) ? Math.max(panelW.right, 430) : panelW.right }}>
           <div className="panel-bar" onPointerDown={e => floatPanel.right && startDragPanel('right', e)}>
             <span>⠿ Analysis</span>
-            <button onClick={() => (compact ? setDrawer(null) : detach('right'))}
-              title={compact ? 'Close' : floatPanel.right ? 'Dock panel' : 'Detach into a floating window'}>
-              {compact ? '✕ Close' : floatPanel.right ? '⇥ Dock' : '⧉ Float'}
-            </button>
+            <span className="panel-bar-btns">
+              {!compact && !floatPanel.right && (
+                <button className="panel-max" onClick={() => toggleMax('right')}
+                  onDoubleClick={() => resetPanel('right')}
+                  title={maxed === 'right' ? 'Restore to the default width' : 'Maximise this panel'}>
+                  {maxed === 'right' ? '⤡ Restore' : '⤢ Max'}
+                </button>
+              )}
+              <button onClick={() => (compact ? setDrawer(null) : detach('right'))}
+                title={compact ? 'Close' : floatPanel.right ? 'Dock panel' : 'Detach into a floating window'}>
+                {compact ? '✕ Close' : floatPanel.right ? '⇥ Dock' : '⧉ Float'}
+              </button>
+            </span>
           </div>
           <div className="tabs">
             <button className={tab === 'brief' ? 'on' : ''} onClick={() => setTab('brief')} title="Written description of this architecture">Brief</button>

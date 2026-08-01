@@ -691,3 +691,16 @@ select.btn { appearance: auto; }
 .bd-table td.n { opacity: .7; line-height: 1.45; }
 .bd-table-idx { margin: 0; padding: 6px 10px 8px 26px; border-top: 1px solid rgba(127, 140, 160, .12); }
 .bd-table-idx li { font-size: 10.8px; opacity: .68; line-height: 1.5; }
+
+/* ---- Panel maximise ---- */
+/* Width lives in CSS rather than an inline style, so a maximised panel stays
+   responsive when the window resizes without any JS listening for it. */
+.palette.maxed, .side.maxed {
+  width: min(1180px, calc(100vw - 260px));
+  flex-shrink: 0;
+}
+.panel-bar-btns { display: inline-flex; gap: 4px; }
+.panel-bar button.panel-max { font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) {
+  .palette.maxed, .side.maxed { width: calc(100vw - 120px); }
+}
