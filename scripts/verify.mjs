@@ -1000,6 +1000,15 @@ try {
       check('leaving leaderless hides the quorum inputs',
         doc.querySelectorAll('.ddia-quorum input').length === 0);
     }
+    // .field is a flex row of label + control. Anything explanatory placed
+    // inside one gets squeezed to a column about one word wide — invisible to
+    // a DOM-only test, so assert the structure that caused it instead.
+    check('explanatory blocks sit outside the flex .field rows',
+      [...doc.querySelectorAll('.ddia-blurb, .ddia-verdict, .ddia-permits, .ddia-notes')]
+        .every(el => !el.parentElement?.classList.contains('field')));
+    check('every .field holds only its label and control',
+      [...doc.querySelectorAll('.field')].every(f => f.children.length <= 2));
+
     check('no crash while driving the consistency controls', errs.length === 0);
 
     // hand the Scale tab back to the sweep that follows

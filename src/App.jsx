@@ -1891,6 +1891,8 @@ function ConsistencyFields({ n, setNodes }) {
   const part = partitionEffects(n)
   const quorumOk = rep.mode !== 'leaderless' || quorumOverlaps(rep.n, rep.w, rep.r)
 
+  // .field is a flex row (label | control), so anything explanatory has to sit
+  // outside it — inside, it gets squeezed into a third column one word wide.
   return (
     <>
       <div className="field">
@@ -1898,26 +1900,28 @@ function ConsistencyFields({ n, setNodes }) {
         <select value={rep.mode} onChange={e => set({ replication: e.target.value })}>
           {Object.keys(REPLICATION).map(k => <option key={k} value={k}>{REPLICATION[k].label}</option>)}
         </select>
-        <div className="muted ddia-blurb">{REPLICATION[rep.mode]?.blurb}</div>
       </div>
+      <div className="ddia-blurb">{REPLICATION[rep.mode]?.blurb}</div>
 
       {rep.mode === 'leaderless' && (
-        <div className="field">
-          <label>Quorum — n / w / r</label>
-          <div className="ddia-quorum">
-            {[['quorumN', rep.n, 'n'], ['quorumW', rep.w, 'w'], ['quorumR', rep.r, 'r']].map(([k, v, lbl]) => (
-              <label key={k}><span>{lbl}</span>
-                <input type="number" min="1" max="9" value={v}
-                  onChange={e => set({ [k]: Math.max(1, Math.min(9, +e.target.value || 1)) })} />
-              </label>
-            ))}
+        <>
+          <div className="field">
+            <label>Quorum — n / w / r</label>
+            <div className="ddia-quorum">
+              {[['quorumN', rep.n, 'n'], ['quorumW', rep.w, 'w'], ['quorumR', rep.r, 'r']].map(([k, v, lbl]) => (
+                <label key={k}><span>{lbl}</span>
+                  <input type="number" min="1" max="9" value={v}
+                    onChange={e => set({ [k]: Math.max(1, Math.min(9, +e.target.value || 1)) })} />
+                </label>
+              ))}
+            </div>
           </div>
           <div className={`ddia-verdict ${quorumOk ? 'good' : 'bad'}`}>
             {quorumOk
               ? `w + r = ${rep.w + rep.r} > n = ${rep.n}. Read and write sets overlap, so a read sees the newest write.`
               : `w + r = ${rep.w + rep.r}, not greater than n = ${rep.n}. A read can miss the write entirely and go backwards.`}
           </div>
-        </div>
+        </>
       )}
 
       {(rep.mode === 'leader' || rep.mode === 'multi') && (
@@ -1929,11 +1933,13 @@ function ConsistencyFields({ n, setNodes }) {
       )}
 
       {n.type === 'sql' && (
-        <div className="field">
-          <label>Isolation level</label>
-          <select value={iso.level} onChange={e => set({ isolation: e.target.value })}>
-            {Object.keys(ISOLATION).map(k => <option key={k} value={k}>{ISOLATION[k].label}</option>)}
-          </select>
+        <>
+          <div className="field">
+            <label>Isolation level</label>
+            <select value={iso.level} onChange={e => set({ isolation: e.target.value })}>
+              {Object.keys(ISOLATION).map(k => <option key={k} value={k}>{ISOLATION[k].label}</option>)}
+            </select>
+          </div>
           <div className="ddia-permits">
             {iso.permits.length === 0
               ? <div className="ddia-ok">Prevents every anomaly below. The cost is contention.</div>
@@ -1943,7 +1949,7 @@ function ConsistencyFields({ n, setNodes }) {
                 </>}
           </div>
           {iso.trap && <div className="ddia-verdict bad">{iso.trap}</div>}
-        </div>
+        </>
       )}
 
       <div className="field">
@@ -1951,18 +1957,20 @@ function ConsistencyFields({ n, setNodes }) {
         <select value={part.strategy} onChange={e => set({ partitioning: e.target.value })}>
           {Object.keys(PARTITIONING).map(k => <option key={k} value={k}>{PARTITIONING[k].label}</option>)}
         </select>
-        <div className="muted ddia-blurb">{PARTITIONING[part.strategy]?.blurb}</div>
-        {part.strategy !== 'none' && (
-          <>
-            <label style={{ marginTop: 6 }}>Key skew — how concentrated the hot keys are</label>
+      </div>
+      <div className="ddia-blurb">{PARTITIONING[part.strategy]?.blurb}</div>
+      {part.strategy !== 'none' && (
+        <>
+          <div className="field">
+            <label>Key skew</label>
             <input type="range" min="0" max="100" value={Math.round((n.keySkew ?? 0.2) * 100)}
               onChange={e => set({ keySkew: +e.target.value / 100 })} />
-            <div className={`ddia-verdict ${part.hotspotFactor > 2 ? 'bad' : 'good'}`}>
-              Busiest partition takes about {part.hotspotFactor.toFixed(1)}× its fair share.
-            </div>
-          </>
-        )}
-      </div>
+          </div>
+          <div className={`ddia-verdict ${part.hotspotFactor > 2 ? 'bad' : 'good'}`}>
+            Busiest partition takes about {part.hotspotFactor.toFixed(1)}× its fair share.
+          </div>
+        </>
+      )}
 
       {rep.notes.length > 0 && (
         <ul className="ddia-notes">{rep.notes.map((x, i) => <li key={i}>{x}</li>)}</ul>
