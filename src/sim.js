@@ -1,5 +1,5 @@
 import { CATALOG } from './catalog.js'
-import { physicalEffects } from './ddia2.js'
+import { physicalEffects, capacitySplit, effectiveCapacity, readFractionOf } from './ddia2.js'
 
 // Propagate RPS from client nodes through the directed graph and compute
 // per-node utilization, drops, latency and an end-to-end estimate.
@@ -12,13 +12,14 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
   totalRps = totalRps * (fx?.rpsMul || 1)
 
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
-  const out = {}, incoming = {}
-  for (const n of nodes) { out[n.id] = []; incoming[n.id] = 0 }
+  const out = {}, incoming = {}, incomingReads = {}
+  for (const n of nodes) { out[n.id] = []; incoming[n.id] = 0; incomingReads[n.id] = 0 }
   for (const e of edges) if (byId[e.from] && byId[e.to] && !isCut(e)) out[e.from].push(e.to)
 
   const sources = nodes.filter(n => CATALOG[n.type]?.source)
   const wSum = sources.reduce((a, s) => a + (s.weight ?? 1), 0) || 1
   for (const s of sources) incoming[s.id] = totalRps * (s.weight ?? 1) / wSum
+  for (const s of sources) incomingReads[s.id] = incoming[s.id] * 0.5
 
   // topo-ish propagation with cycle guard (Kahn on reachable subgraph, fall back to N passes)
   const stats = {}
@@ -37,7 +38,12 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
     // the simulator, choosing linearizable cost nothing on the canvas, which
     // is exactly backwards.
     const ph = physicalEffects(n)
-    const rawCap = spec.source ? Infinity : spec.cap * Math.max(replicas, 0) * ph.capMul
+    // Reads and writes have separate ceilings. Combining them by the mix that
+    // actually arrives is what makes single-leader replication show its true
+    // shape: followers raise the read ceiling and leave the write one alone.
+    const readMix = inRps > 0 ? incomingReads[id] / inRps : 0.5
+    const split = capacitySplit(n, spec.cap, Math.max(replicas, 0), n.replication)
+    const rawCap = spec.source ? Infinity : effectiveCapacity(split.readCap, split.writeCap, readMix)
     const capacity = rawCap === Infinity ? Infinity : rawCap * f.capMul
     const faultDrop = inRps * f.drop                       // lost before any work happens
     const offered = inRps - faultDrop
@@ -53,6 +59,7 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
     if (f.capMul < 1) avail *= (0.5 + 0.5 * f.capMul)
     stats[id] = {
       in: inRps, processed, dropped, util, latency, avail, replicas,
+      readMix, readCap: split.readCap, writeCap: split.writeCap, writesScale: split.writesScale,
       down: isDown, faulted: f !== NOFX, faultDrop,
     }
 
@@ -63,8 +70,10 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
     const targets = out[id]
     if (targets.length) {
       const share = fwd / targets.length
+      const byTarget = Object.fromEntries(edges.filter(e => e.from === id).map(e => [e.to, e]))
       for (const t of targets) {
         incoming[t] += share
+        incomingReads[t] += share * readFractionOf(byTarget[t])
         flowOnEdge[`${id}->${t}`] = share
       }
     }

@@ -13,24 +13,28 @@ export const ENGINES = {
   btree: {
     label: 'B-tree',
     blurb: 'Writes go to a write-ahead log and then in place, so every write touches the disk at least twice. Reads are a predictable handful of page lookups.',
+    readMul: 1.15, writeMul: 0.8,
     capMul: 1, latMul: 1, tailMul: 1,
     writeAmp: 'Roughly 2×: once to the log, once to the page.',
   },
   lsm: {
     label: 'LSM-tree',
     blurb: 'Writes land in memory and are flushed as sorted files, so sustained write throughput is much higher. Compaction runs in the background and occasionally steals the disk from a read.',
+    readMul: 0.9, writeMul: 2.2,
     capMul: 1.6, latMul: 1.1, tailMul: 2.2,
     writeAmp: 'Higher overall, but sequential — the same data is rewritten each time it is compacted.',
   },
   memory: {
     label: 'In-memory',
     blurb: 'No disk in the read path at all. Durability becomes a separate decision — a log, a replica, or an accepted loss.',
+    readMul: 4, writeMul: 3,
     capMul: 3, latMul: 0.25, tailMul: 1.1,
     writeAmp: 'None, until you add the log that makes it durable.',
   },
   column: {
     label: 'Column-oriented',
     blurb: 'Values from one column are stored together, so a scan reads only the columns it needs and compresses them well. Single-row writes are expensive.',
+    readMul: 1.4, writeMul: 0.15,
     capMul: 0.5, latMul: 1.6, tailMul: 1.3,
     writeAmp: 'Poor for row-at-a-time writes. Load in batches, or write to a row store first and merge.',
   },
@@ -198,4 +202,75 @@ export function physicalFindings(nodes, edges) {
 export function tailAmplification(fanout, p99Fraction = 0.01) {
   const n = Math.max(0, Math.floor(fanout))
   return 1 - Math.pow(1 - p99Fraction, n)   // chance at least one call is in its own tail
+}
+
+
+// ── read / write split (the precondition for everything above being sharp) ──
+//
+// A single number for "requests" forced an LSM tree's write advantage and a
+// B-tree's read advantage to be averaged into one figure, which flattered both.
+// This splits them, and in doing so makes the most under-appreciated fact about
+// single-leader replication visible: adding followers scales reads and does
+// nothing whatever for writes.
+
+export const DEFAULT_READ_FRACTION = 0.5
+
+export function readFractionOf(edge) {
+  const v = Number(edge?.readFrac)
+  return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : DEFAULT_READ_FRACTION
+}
+
+// Separate ceilings for reads and writes. `replicas` is passed in because the
+// simulator already accounts for downed instances and faults.
+export function capacitySplit(node, baseCap, replicas, replicationMode) {
+  const e = ENGINES[node?.engine] || null
+  const c = CONSISTENCY[node?.consistency] || null
+  const r = Math.max(replicas, 0)
+  const consist = c?.capMul ?? 1
+
+  // Only claim writes are bottlenecked when the design actually says so.
+  // Templates that set a replica count without declaring a mode keep the old
+  // behaviour rather than being silently retro-fitted with a bottleneck.
+  const writeReplicas = replicationMode === 'leader' ? Math.min(r, 1) : r
+
+  return {
+    readCap: baseCap * r * (e?.readMul ?? 1) * consist,
+    writeCap: baseCap * writeReplicas * (e?.writeMul ?? 1) * consist,
+    writesScale: replicationMode !== 'leader',
+  }
+}
+
+// A tier serving a mix saturates when the two shares together fill it. Solving
+// r/R + w/W = 1 for total throughput gives the harmonic combination below —
+// which is why one bad direction drags the whole tier down.
+export function effectiveCapacity(readCap, writeCap, readMix) {
+  const r = Math.min(1, Math.max(0, readMix))
+  const w = 1 - r
+  if (readCap <= 0 && writeCap <= 0) return 0
+  if (r === 1) return readCap
+  if (w === 1) return writeCap
+  if (readCap <= 0 || writeCap <= 0) return 0
+  return 1 / (r / readCap + w / writeCap)
+}
+
+// The finding that makes the point.
+export function replicaScalingFindings(nodes, edges, mixOf) {
+  const out = []
+  for (const n of nodes) {
+    if (!STORES.has(n.type)) continue
+    const replicas = n.replicas || 1
+    if (n.replication !== 'leader' || replicas < 2) continue
+    const mix = mixOf ? mixOf(n.id) : DEFAULT_READ_FRACTION
+    if (mix > 0.75) continue      // read-heavy: followers are doing their job
+    out.push({
+      severity: mix < 0.4 ? 'warn' : 'info',
+      nodeId: n.id,
+      title: n.label + ' has ' + replicas + ' replicas but one writer',
+      why: 'Single-leader replication sends every write to the leader, so these followers add read capacity and none at all for writes. This workload is about ' +
+        Math.round((1 - mix) * 100) + '% writes, so most of the traffic is still queueing behind one machine.',
+      fix: 'Adding replicas will not fix a write bottleneck. Partition the data so there are several leaders, or move to a mode that accepts writes in more than one place — accepting that you then have to resolve concurrent writes.',
+      source: 'physical',
+    })
+  }
+  return out
 }

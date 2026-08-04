@@ -23,7 +23,7 @@ import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 import { REPLICATION, ISOLATION, PARTITIONING, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
 import { DDIA_TRACK, DDIA_COMPARISONS } from './learn-ddia.js'
 import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from './tour.js'
-import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects } from './ddia2.js'
+import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects, readFractionOf } from './ddia2.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1614,6 +1614,16 @@ function EdgeInspector({ e, nodes, sim, step, setEdges, onDelete }) {
         <input value={e.label || ''} placeholder="e.g. cache miss, write"
           onChange={ev => setEdges(es => es.map(x => x.id === e.id ? { ...x, label: ev.target.value } : x))} />
       </div>
+      <div className="field">
+        <label>Read / write mix</label>
+        <input type="range" min="0" max="100" value={Math.round(readFractionOf(e) * 100)}
+          onChange={ev => setEdges(es => es.map(x => x.id === e.id ? { ...x, readFrac: +ev.target.value / 100 } : x))} />
+      </div>
+      <div className="ddia-blurb">
+        {Math.round(readFractionOf(e) * 100)}% reads, {100 - Math.round(readFractionOf(e) * 100)}% writes.
+        Reads scale with replicas; writes only scale if there is more than one node accepting them.
+      </div>
+
       <div className="field">
         <label>Encoding</label>
         <select value={e.encoding || ''} onChange={ev => setEdges(es => es.map(x => x.id === e.id ? { ...x, encoding: ev.target.value || undefined } : x))}>

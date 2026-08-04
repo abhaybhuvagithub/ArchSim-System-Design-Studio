@@ -230,6 +230,83 @@ try {
       !fires([{ id: 'k', type: 'kafka', label: 'K', replicas: 3, streamRole: 'sourcing' }], [], /cannot be an event source/i));
   }
 
+  // ── read / write split ─────────────────────────────────────────────────────
+  {
+    const d2 = await import(pathToFileURL(path.join(root, 'src/ddia2.js')).href);
+    const { simulate } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+    const { review } = await import(pathToFileURL(path.join(root, 'src/advisor.js')).href);
+
+    const N = x => [{ id: 'c', type: 'client', label: 'C', replicas: 1 },
+                    { id: 'db', type: 'sql', label: 'DB', replicas: 3, ...x }];
+    const E = rf => [{ id: 'c->db', from: 'c', to: 'db', readFrac: rf }];
+    const util = (x, rf) => simulate(N(x), E(rf), 12000).stats.db.util;
+
+    // The lesson the split exists to teach.
+    check('followers do not raise the write ceiling under single-leader', (() => {
+      const c = d2.capacitySplit({}, 5000, 3, 'leader');
+      return c.readCap === 15000 && c.writeCap === 5000;
+    })());
+    check('without a declared mode, replicas still scale both ways', (() => {
+      const c = d2.capacitySplit({}, 5000, 3, undefined);
+      return c.readCap === 15000 && c.writeCap === 15000;
+    })());
+    check('a write-heavy single-leader store saturates', util({ replication: 'leader' }, 0.5) > 1);
+    check('the same store read-heavy does not', util({ replication: 'leader' }, 0.9) < 1);
+    check('declaring single-leader is what introduces the write bottleneck',
+      util({ replication: 'leader' }, 0.5) > util({}, 0.5));
+    check('an undeclared store is unaffected by the read mix',
+      Math.abs(util({}, 0.1) - util({}, 0.9)) < 1e-9);
+
+    // Engine asymmetry — the reason a single number was not good enough.
+    check('LSM beats B-tree on writes', (() => {
+      const l = d2.capacitySplit({ engine: 'lsm' }, 5000, 1), b = d2.capacitySplit({ engine: 'btree' }, 5000, 1);
+      return l.writeCap > b.writeCap;
+    })());
+    check('B-tree beats LSM on reads', (() => {
+      const l = d2.capacitySplit({ engine: 'lsm' }, 5000, 1), b = d2.capacitySplit({ engine: 'btree' }, 5000, 1);
+      return b.readCap > l.readCap;
+    })());
+    check('a column store is far worse at row writes than at scans', (() => {
+      const c = d2.capacitySplit({ engine: 'column' }, 5000, 1);
+      return c.readCap > c.writeCap * 5;
+    })());
+
+    // Harmonic combination: one bad direction drags the tier down.
+    check('an all-read workload gets the read ceiling', d2.effectiveCapacity(1000, 10, 1) === 1000);
+    check('an all-write workload gets the write ceiling', d2.effectiveCapacity(1000, 10, 0) === 10);
+    check('a mix is dragged toward the worse of the two',
+      d2.effectiveCapacity(1000, 10, 0.5) < 100);
+    check('equal ceilings combine to the same number', d2.effectiveCapacity(500, 500, 0.3) === 500);
+    check('a zero ceiling in a mixed workload means nothing gets through',
+      d2.effectiveCapacity(1000, 0, 0.5) === 0);
+
+    check('the read fraction defaults rather than crashing on an unlabelled link',
+      d2.readFractionOf(undefined) === 0.5 && d2.readFractionOf({}) === 0.5);
+    check('an out-of-range read fraction is clamped',
+      d2.readFractionOf({ readFrac: 5 }) === 1 && d2.readFractionOf({ readFrac: -2 }) === 0);
+
+    // The finding.
+    const fires = (ns, es, re) => review(ns, es, 1000).some(x => re.test(x.title + ' ' + (x.detail || '')));
+    const wHeavy = [{ id: 'c', type: 'client', label: 'C' }, { id: 'db', type: 'sql', label: 'DB', replicas: 3, replication: 'leader' }];
+    check('replicas that cannot help writes are called out',
+      fires(wHeavy, [{ id: 'e', from: 'c', to: 'db', readFrac: 0.2 }], /one writer/i));
+    check('a read-heavy workload is not called out',
+      !fires(wHeavy, [{ id: 'e', from: 'c', to: 'db', readFrac: 0.95 }], /one writer/i));
+    check('a single-replica leader is not called out',
+      !fires([wHeavy[0], { ...wHeavy[1], replicas: 1 }], [{ id: 'e', from: 'c', to: 'db', readFrac: 0.2 }], /one writer/i));
+    check('a store with no declared mode is not called out',
+      !fires([wHeavy[0], { ...wHeavy[1], replication: undefined }], [{ id: 'e', from: 'c', to: 'db', readFrac: 0.2 }], /one writer/i));
+
+    // Every existing template must keep working through the new capacity path.
+    const { TEMPLATES: TPL } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+    const broken = TPL.filter(t => {
+      const r = simulate(t.nodes, t.edges, t.rps);
+      return Object.values(r.stats).some(x => !Number.isFinite(x.util) || !Number.isFinite(x.latency));
+    });
+    check('every template still simulates to finite numbers' +
+      (broken.length ? ' — broken: ' + broken.map(t => t.name).join(', ') : ''), broken.length === 0);
+  }
+
   // ── the guided tour: data and geometry ─────────────────────────────────────
   {
     const t = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
@@ -1229,7 +1306,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 310;
+const EXPECTED_MIN = 330;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

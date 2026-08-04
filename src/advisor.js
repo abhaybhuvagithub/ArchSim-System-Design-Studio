@@ -6,7 +6,7 @@ import { CATALOG } from './catalog.js'
 import { simulate, capacityReport } from './sim.js'
 import { nodeCost, money } from './pricing.js'
 import { ddiaFindings } from './ddia.js'
-import { physicalFindings } from './ddia2.js'
+import { physicalFindings, replicaScalingFindings, readFractionOf } from './ddia2.js'
 
 const NODE_W = 118, NODE_H = 46
 let seq = 0
@@ -708,7 +708,13 @@ export function review(nodes, edges, rps) {
   }
 
   // Correctness findings — replication, quorums, isolation, partitioning.
-  for (const f of [...ddiaFindings(nodes, edges, rps), ...physicalFindings(nodes, edges)]) {
+  // The read mix a store actually sees, averaged over the links into it.
+  const mixOf = id => {
+    const inc = edges.filter(e => e.to === id)
+    if (!inc.length) return 0.5
+    return inc.reduce((a, e) => a + readFractionOf(e), 0) / inc.length
+  }
+  for (const f of [...ddiaFindings(nodes, edges, rps), ...physicalFindings(nodes, edges), ...replicaScalingFindings(nodes, edges, mixOf)]) {
     push({
       id: 'ddia:' + f.title,
       icon: f.severity === 'bad' ? '🛑' : f.severity === 'warn' ? '⚠️' : '💡',
