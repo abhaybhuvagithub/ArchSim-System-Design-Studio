@@ -104,19 +104,34 @@ export function conceptsFromTemplate(template, breakdown) {
 export const STAGES = [
   { id: 'requirements', title: 'Requirements',
     ask: d => `Let's design ${d}. Before you draw anything — what are we actually building? Tell me the functional requirements, and what you are deliberately leaving out.`,
-    probe: 'What is explicitly out of scope? Naming what you are not building is part of the answer.' },
+    probes: [
+      { concept: 'scoping-out', text: 'What is explicitly out of scope? Naming what you are not building is part of the answer.' },
+      { concept: 'nonfunctional', text: 'And the non-functional side — availability, latency, durability. Which of those actually matters here?' },
+    ] },
   { id: 'estimation', title: 'Scale',
     ask: () => 'Good. Now put numbers on it. How much traffic, how much data, and what is the read to write ratio?',
-    probe: 'Give me a rough number rather than a category — even an order of magnitude changes the design.' },
+    probes: [
+      { concept: 'scale-numbers', text: 'Give me a rough number rather than a category — even an order of magnitude changes the design.' },
+      { concept: 'read-write-ratio', text: 'What is the read to write ratio? That one number decides most of the design.' },
+      { concept: 'storage-estimate', text: 'How much data does this accumulate, and how long do we keep it?' },
+    ] },
   { id: 'high-level', title: 'High-level design',
     ask: () => 'Walk me through the design. Start at the client and follow one request all the way to storage and back.',
-    probe: 'Which component saturates first as traffic grows?' },
+    probes: [
+      { concept: 'bottleneck', text: 'Which component saturates first as traffic grows?' },
+      { concept: 'partitioning', text: 'When one machine is no longer enough for that store, how do you split it?' },
+    ] },
   { id: 'deep-dives', title: 'Deep dive',
     ask: (d, dd) => dd ? `Let's go deeper on one thing: ${dd}. How do you handle it?` : 'Pick the hardest part of this design and go deep on it.',
-    probe: 'What does that cost you? Every choice here gives something up.' },
+    probes: [
+      { concept: 'tradeoff', text: 'What does that cost you? Every choice here gives something up.' },
+      { concept: 'failure', text: 'What happens when that fails halfway through?' },
+    ] },
   { id: 'wrap', title: 'Wrap-up',
     ask: () => 'Last one. What would break first at ten times this load, and what would you change?',
-    probe: null },
+    probes: [
+      { concept: 'wrap-limit', text: 'Be specific about which part gives way first.' },
+    ] },
 ]
 
 export function buildInterview(template, breakdown) {
@@ -239,4 +254,18 @@ const ADVICE = {
   'high-level': 'Follow one request end to end and name the component that saturates first. A diagram without a bottleneck is a drawing, not a design.',
   'deep-dives': 'Pick the part that is genuinely hard and stay there. Say what your approach gives up — an answer with no cost stated reads as one you have not thought through.',
   wrap: 'Have a rehearsed answer for what breaks at ten times the load. It is asked in almost every interview.',
+}
+
+
+// Choose a follow-up. The rule that matters: never ask about something the
+// candidate already covered. Probing a point they just made is the fastest way
+// for a mock interviewer to lose the candidate's trust — and it happened, on a
+// short but complete answer, because the first version probed on word count.
+export function pickProbe(stage, answer, alreadyAsked = []) {
+  const probes = stage.probes || []
+  if (!probes.length) return null
+  const { hit } = matchConcepts(answer, stage.concepts || [])
+  const covered = new Set(hit.map(c => c.id))
+  const asked = new Set(alreadyAsked)
+  return probes.find(p => !covered.has(p.concept) && !asked.has(p.concept)) || null
 }

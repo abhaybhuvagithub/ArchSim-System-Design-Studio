@@ -26,7 +26,7 @@ import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from '.
 import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects, readFractionOf } from './ddia2.js'
 import { buildInterview, report as interviewReport, STAGES } from './interview.js'
 import * as LLM from './interview-llm.js'
-import { matchConcepts } from './interview.js'
+import { matchConcepts, pickProbe } from './interview.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -2262,11 +2262,11 @@ function Interview({ template }) {
       return
     }
 
-    // Rubric: probe once on a thin answer, otherwise move on.
-    const { missed } = matchConceptsSafe(text, stage.concepts)
-    const alreadyProbed = turns.some(t => t.role === 'interviewer' && t.stage === stage.id && t.probe)
-    if (!alreadyProbed && stage.probe && (missed.length > stage.concepts.length / 2 || text.split(/\s+/).length < 40)) {
-      setTurns(t => [...t, { role: 'interviewer', stage: stage.id, text: stage.probe, probe: true }])
+    // Rubric: chase something they did not say, at most twice per stage.
+    const askedHere = turns.filter(t => t.role === 'interviewer' && t.stage === stage.id && t.probe)
+    const probe = askedHere.length < 2 ? pickProbe(stage, text, askedHere.map(t => t.probe)) : null
+    if (probe) {
+      setTurns(t => [...t, { role: 'interviewer', stage: stage.id, text: probe.text, probe: probe.concept }])
       return
     }
     if (stageIdx + 1 < iv.stages.length) {
