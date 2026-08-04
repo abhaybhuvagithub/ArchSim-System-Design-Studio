@@ -6,6 +6,7 @@ import { CATALOG } from './catalog.js'
 import { simulate, capacityReport } from './sim.js'
 import { nodeCost, money } from './pricing.js'
 import { ddiaFindings } from './ddia.js'
+import { physicalFindings } from './ddia2.js'
 
 const NODE_W = 118, NODE_H = 46
 let seq = 0
@@ -707,7 +708,7 @@ export function review(nodes, edges, rps) {
   }
 
   // Correctness findings — replication, quorums, isolation, partitioning.
-  for (const f of ddiaFindings(nodes, edges, rps)) {
+  for (const f of [...ddiaFindings(nodes, edges, rps), ...physicalFindings(nodes, edges)]) {
     push({
       id: 'ddia:' + f.title,
       icon: f.severity === 'bad' ? '🛑' : f.severity === 'warn' ? '⚠️' : '💡',

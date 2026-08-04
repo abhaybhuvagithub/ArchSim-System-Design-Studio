@@ -1,4 +1,5 @@
 import { CATALOG } from './catalog.js'
+import { physicalEffects } from './ddia2.js'
 
 // Propagate RPS from client nodes through the directed graph and compute
 // per-node utilization, drops, latency and an end-to-end estimate.
@@ -32,7 +33,11 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
     const isDown = downSet.has(id)
     const f = fxOf(id)
     const replicas = isDown ? Math.max(0, (n.replicas || 1) - 1) : (n.replicas || 1)
-    const rawCap = spec.source ? Infinity : spec.cap * Math.max(replicas, 0)
+    // Storage engine and consistency guarantee are not free. Until these fed
+    // the simulator, choosing linearizable cost nothing on the canvas, which
+    // is exactly backwards.
+    const ph = physicalEffects(n)
+    const rawCap = spec.source ? Infinity : spec.cap * Math.max(replicas, 0) * ph.capMul
     const capacity = rawCap === Infinity ? Infinity : rawCap * f.capMul
     const faultDrop = inRps * f.drop                       // lost before any work happens
     const offered = inRps - faultDrop
@@ -41,7 +46,7 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
     const util = capacity === Infinity ? 0 : capacity === 0 ? (offered > 0 ? 999 : 0) : offered / capacity
     // M/M/1-flavoured queueing delay
     const qFactor = util >= 1 ? 20 : 1 / Math.max(0.05, 1 - util)
-    const latency = spec.lat * Math.min(qFactor, 20) * f.latMul
+    const latency = spec.lat * Math.min(qFactor, 20) * f.latMul * ph.latMul
     const availOne = spec.avail ?? 0.999
     let avail = replicas <= 0 ? 0 : 1 - Math.pow(1 - availOne, replicas)
     if (f.drop > 0) avail *= (1 - f.drop)
