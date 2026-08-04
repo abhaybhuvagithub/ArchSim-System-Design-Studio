@@ -377,6 +377,43 @@ try {
       plan.stages.every(s => (s.probes || []).length > 0 &&
         s.probes.every(p => s.concepts.some(c => c.id === p.concept))));
 
+    // Conversational quality: the first version replied with a fixed sentence
+    // per stage and never showed it had heard the answer.
+    const rq = plan.stages.find(s => s.id === 'requirements');
+    const nx = plan.stages.find(s => s.id === 'estimation');
+    const good = 'Functional: browse events, hold seats, pay. Out of scope: refunds and dynamic pricing. Availability matters more than latency.';
+    const rGood = iv.respond({ stage: rq, answer: good, nextStage: nx, turnIndex: 0 });
+    check('a covered answer is acknowledged before the next question',
+      /you'?ve got/i.test(rGood.text) && rGood.text.includes(nx.question));
+    check('the acknowledgement reads as English, not as rubric labels',
+      !/states what is out of scope/i.test(rGood.text));
+    check('a complete answer advances rather than being re-asked', rGood.advance === true);
+
+    const rPush = iv.respond({ stage: rq, answer: 'Users buy tickets.', nextStage: nx, turnIndex: 1 });
+    check('a thin answer is pushed on instead of waved through', rPush.advance === false && !!rPush.probe);
+
+    check('a question from the candidate is answered, not ignored', (() => {
+      const r = iv.respond({ stage: rq, answer: 'Users browse and buy. How much traffic should I assume?', nextStage: nx, turnIndex: 2, ctx: { rps: 8000 } });
+      return /8,000|requests per second/i.test(r.text);
+    })());
+    check('a direct question is detected', iv.hasQuestion('what scale?') && !iv.hasQuestion('this is a statement.'));
+
+    check('the reply quotes the candidate back when it pushes', (() => {
+      const r = iv.respond({ stage: nx, answer: 'We get about 50000 rps at peak.', nextStage: null, turnIndex: 0 });
+      return /you said/i.test(r.text);
+    })());
+    check('replies vary rather than repeating one sentence', (() => {
+      const texts = [0, 1, 2, 3].map(i => iv.respond({ stage: rq, answer: good, nextStage: nx, turnIndex: i }).text);
+      return new Set(texts).size >= 3;
+    })());
+    check('the same turn index always gives the same reply', (() => {
+      const a1 = iv.respond({ stage: rq, answer: good, nextStage: nx, turnIndex: 7 }).text;
+      const a2 = iv.respond({ stage: rq, answer: good, nextStage: nx, turnIndex: 7 }).text;
+      return a1 === a2;
+    })());
+    check('an unanswerable question still gets a usable reply',
+      iv.answerQuestion('what colour is the logo?').length > 20);
+
     // Keyword matching must not credit things that were not said.
     const est = iv.UNIVERSAL.filter(c => c.stage === 'estimation');
     check('numbers in an answer are detected', iv.matchConcepts('roughly 20000 rps at peak', est).hit.some(c => c.id === 'scale-numbers'));
@@ -1433,7 +1470,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 362;
+const EXPECTED_MIN = 372;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

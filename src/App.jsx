@@ -26,7 +26,7 @@ import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from '.
 import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects, readFractionOf } from './ddia2.js'
 import { buildInterview, report as interviewReport, STAGES } from './interview.js'
 import * as LLM from './interview-llm.js'
-import { matchConcepts, pickProbe } from './interview.js'
+import { matchConcepts, pickProbe, respond as interviewRespond } from './interview.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -2262,18 +2262,27 @@ function Interview({ template }) {
       return
     }
 
-    // Rubric: chase something they did not say, at most twice per stage.
+    // Rubric: react to what was actually said, then either push or move on.
     const askedHere = turns.filter(t => t.role === 'interviewer' && t.stage === stage.id && t.probe)
-    const probe = askedHere.length < 2 ? pickProbe(stage, text, askedHere.map(t => t.probe)) : null
-    if (probe) {
-      setTurns(t => [...t, { role: 'interviewer', stage: stage.id, text: probe.text, probe: probe.concept }])
+    const nextStage = stageIdx + 1 < iv.stages.length ? iv.stages[stageIdx + 1] : null
+    const r = interviewRespond({
+      stage, answer: text,
+      turnIndex: turns.length,
+      nextStage: askedHere.length < 2 ? nextStage : nextStage,
+      askedProbes: askedHere.map(t => t.probe),
+      ctx: { rps: template?.rps },
+    })
+    const forceMove = askedHere.length >= 2
+    if (r.probe && !forceMove) {
+      setTurns(t => [...t, { role: 'interviewer', stage: stage.id, text: r.text, probe: r.probe }])
       return
     }
-    if (stageIdx + 1 < iv.stages.length) {
-      const n = iv.stages[stageIdx + 1]
+    if (nextStage) {
       setStageIdx(stageIdx + 1)
-      setTurns(t => [...t, { role: 'interviewer', stage: n.id, text: n.question }])
+      setTurns(t => [...t, { role: 'interviewer', stage: nextStage.id,
+        text: forceMove && r.probe ? nextStage.question : r.text }])
     } else {
+      setTurns(t => [...t, { role: 'interviewer', stage: stage.id, text: 'That is everything I wanted to cover. Here is how it went.' }])
       setState('done')
     }
   }
@@ -2294,7 +2303,7 @@ function Interview({ template }) {
           <div className="iv-mode">
             <label>
               <input type="checkbox" checked={useLLM} onChange={e => { setUseLLM(e.target.checked); setErr(null) }} />
-              Use a language model instead of the rubric
+              Use Claude instead (needs your own API key)
             </label>
             {useLLM && (
               <div className="iv-key">
