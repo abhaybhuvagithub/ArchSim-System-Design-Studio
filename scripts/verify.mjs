@@ -141,6 +141,20 @@ try {
     check('no single template is made much worse', regressed.length === 0);
   }
 
+  // ── node labels read as sentences in advisor findings ──────────────────────
+  {
+    const { TEMPLATES } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+    // Findings are built as "<label> has a single copy", so a label that starts
+    // lowercase reads as a broken sentence. Genuine brand names are exempt.
+    const BRAND_LOWERCASE = new Set(['goCash Wallet', 'iCloud Sync', 'eKYC Service']);
+    const labels = TEMPLATES.flatMap(t => t.nodes.map(n => ({ t: t.name, l: n.label })));
+    const offenders = labels.filter(x => /^[a-z]/.test(x.l) && !BRAND_LOWERCASE.has(x.l));
+    check('every node label is non-empty', labels.every(x => x.l && x.l.trim()));
+    check('node labels start uppercase so findings read as sentences' +
+      (offenders.length ? ' — ' + offenders.map(o => `${o.t}: "${o.l}"`).join(', ') : ''),
+      offenders.length === 0);
+  }
+
   // ── consistency model: quorums, isolation, partitioning ────────────────────
   {
     const d = await import(pathToFileURL(path.join(root, 'src/ddia.js')).href);

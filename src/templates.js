@@ -204,9 +204,9 @@ export const TEMPLATES = [
     ['c', 'client', 'Storefront', 40, 250], ['gw', 'gateway', 'API Gateway', 175, 250, 2],
     ['mesh', 'mesh', 'Service Mesh', 175, 400, 2], ['reg', 'registry', 'Discovery', 40, 400],
     ['saga', 'saga', 'Order Saga', 330, 250, 3],
-    ['order', 'micro', 'Order Svc', 490, 120, 2], ['odb', 'sql', 'orders db', 650, 120],
-    ['inv', 'micro', 'Inventory Svc', 490, 250, 2], ['idb', 'sql', 'inventory db', 650, 250],
-    ['pay', 'micro', 'Payment Svc', 490, 380, 2], ['pdb', 'sql', 'payments db', 650, 380],
+    ['order', 'micro', 'Order Svc', 490, 120, 2], ['odb', 'sql', 'Orders DB', 650, 120],
+    ['inv', 'micro', 'Inventory Svc', 490, 250, 2], ['idb', 'sql', 'Inventory DB', 650, 250],
+    ['pay', 'micro', 'Payment Svc', 490, 380, 2], ['pdb', 'sql', 'Payments DB', 650, 380],
     ['ship', 'micro', 'Shipping Svc', 490, 500, 2], ['bus', 'kafka', 'Event Bus', 330, 500],
   ], [['c','gw'],['gw','mesh'],['mesh','reg'],['gw','saga'],['saga','order'],['order','odb'],
       ['saga','inv'],['inv','idb'],['saga','pay'],['pay','pdb'],['saga','bus'],['bus','ship']], [
@@ -267,8 +267,8 @@ export const TEMPLATES = [
     ['c', 'client', 'Clients', 40, 250], ['lb', 'lb', 'Router / LB', 180, 250],
     ['gw', 'gateway', 'Strangler Facade', 320, 250, 3],
     ['mono', 'app', 'Legacy Monolith', 480, 380, 4], ['mdb', 'sql', 'Legacy DB', 640, 460, 2],
-    ['new1', 'micro', 'Users Svc (new)', 480, 130, 3], ['ndb1', 'nosql', 'users db', 640, 80, 2],
-    ['new2', 'micro', 'Search Svc (new)', 480, 240, 3], ['ndb2', 'search', 'search index', 640, 200, 2],
+    ['new1', 'micro', 'Users Svc (new)', 480, 130, 3], ['ndb1', 'nosql', 'Users DB', 640, 80, 2],
+    ['new2', 'micro', 'Search Svc (new)', 480, 240, 3], ['ndb2', 'search', 'Search Index', 640, 200, 2],
     ['cdc', 'kafka', 'CDC Stream', 640, 330], ['sync', 'worker', 'Sync Workers', 800, 330, 3],
   ], [['c','lb'],['lb','gw'],['gw','new1'],['new1','ndb1'],['gw','new2'],['new2','ndb2'],
       ['gw','mono'],['mono','mdb'],['mdb','cdc'],['cdc','sync'],['sync','ndb1']], [
