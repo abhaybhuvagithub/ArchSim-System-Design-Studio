@@ -8,10 +8,11 @@
 // key dies with the tab rather than sitting on disk until you remember it.
 
 export const KEY_STORE = 'archsim.interview.key'
+export const BASE_STORE = 'archsim.interview.base'
 export const PROVIDERS = {
   anthropic: {
     label: 'Anthropic',
-    url: 'https://api.anthropic.com/v1/messages',
+    url: () => 'https://api.anthropic.com/v1/messages',
     model: 'claude-sonnet-5',
     headers: key => ({
       'content-type': 'application/json',
@@ -22,9 +23,24 @@ export const PROVIDERS = {
     body: (model, system, messages) => JSON.stringify({ model, max_tokens: 700, system, messages }),
     text: j => (j?.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim(),
   },
+  bharatgpt: {
+    label: 'BharatGPT (CoRover)',
+    needsBaseUrl: true,
+    model: 'BharatGPT-3B-Indic',
+    // CoRover does not publish a public REST endpoint — access is granted per
+    // tenant through builder.corover.ai. The open BharatGPT-3B-Indic weights
+    // are on Hugging Face and can be served behind any OpenAI-compatible
+    // endpoint. Either way the base URL is yours, so it is asked for rather
+    // than invented: a hard-coded guess would fail silently.
+    note: 'BharatGPT has no public API endpoint. Paste the OpenAI-compatible base URL for your CoRover tenant, or for wherever you are serving the open BharatGPT-3B-Indic weights.',
+    url: base => String(base || '').replace(/\/+$/, '') + '/chat/completions',
+    headers: key => ({ 'content-type': 'application/json', authorization: 'Bearer ' + key }),
+    body: (model, system, messages) => JSON.stringify({ model, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages] }),
+    text: j => (j?.choices?.[0]?.message?.content || '').trim(),
+  },
   openai: {
     label: 'OpenAI',
-    url: 'https://api.openai.com/v1/chat/completions',
+    url: () => 'https://api.openai.com/v1/chat/completions',
     model: 'gpt-4o',
     headers: key => ({ 'content-type': 'application/json', authorization: 'Bearer ' + key }),
     body: (model, system, messages) => JSON.stringify({ model, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages] }),
@@ -52,12 +68,14 @@ export function systemPrompt(design, stage) {
 }
 
 // Never logs the key, and never puts it in a URL.
-export async function ask({ provider = 'anthropic', key, system, messages, fetchImpl }) {
+export async function ask({ provider = 'anthropic', key, baseUrl, system, messages, fetchImpl }) {
   const p = PROVIDERS[provider]
   if (!p) throw new Error('Unknown provider')
   if (!key) throw new Error('No API key')
+  if (p.needsBaseUrl && !baseUrl) throw new Error('This provider needs a base URL — see the note under the provider picker.')
   const f = fetchImpl || fetch
-  const res = await f(p.url, { method: 'POST', headers: p.headers(key), body: p.body(p.model, system, messages) })
+  const url = p.url(baseUrl)
+  const res = await f(url, { method: 'POST', headers: p.headers(key), body: p.body(p.model, system, messages) })
   if (!res.ok) {
     const status = res.status
     throw new Error(status === 401 ? 'The provider rejected that key.'
@@ -69,3 +87,7 @@ export async function ask({ provider = 'anthropic', key, system, messages, fetch
 
 // Redaction for anything that might get displayed or copied.
 export const redact = s => String(s || '').replace(/\b(sk-[A-Za-z0-9_-]{8,}|sk-ant-[A-Za-z0-9_-]{8,})\b/g, '[key redacted]')
+
+
+export const getBase = () => { try { return sessionStorage.getItem(BASE_STORE) || '' } catch { return '' } }
+export const setBase = v => { try { v ? sessionStorage.setItem(BASE_STORE, v) : sessionStorage.removeItem(BASE_STORE) } catch { /* blocked */ } }

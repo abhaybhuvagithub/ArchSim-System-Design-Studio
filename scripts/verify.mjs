@@ -459,6 +459,28 @@ try {
     check('every template yields a complete interview' +
       (badPlans.length ? ' — broken: ' + badPlans.slice(0, 3).map(t => t.name).join(', ') : ''), badPlans.length === 0);
 
+    // Claude is the engine; the rubric is the fallback when there is no key.
+    check('Claude is the default provider', (await import(pathToFileURL(path.join(root, 'src/interview-llm.js')).href)).PROVIDERS.anthropic.model.includes('claude'));
+    check('BharatGPT is offered', !!llm.PROVIDERS.bharatgpt);
+    check('BharatGPT asks for a base URL rather than guessing one',
+      llm.PROVIDERS.bharatgpt.needsBaseUrl === true && /no public API endpoint/i.test(llm.PROVIDERS.bharatgpt.note));
+    check('a missing base URL fails loudly instead of hitting a wrong host', await (async () => {
+      let called = false;
+      try { await llm.ask({ provider: 'bharatgpt', key: 'k', system: 's', messages: [], fetchImpl: () => { called = true } }) }
+      catch (e) { return !called && /base URL/i.test(e.message) }
+      return false;
+    })());
+    check('a supplied base URL is used verbatim, with one slash', await (async () => {
+      let seen = '';
+      await llm.ask({ provider: 'bharatgpt', key: 'k', baseUrl: 'https://tenant.example.com/v1/', system: 's', messages: [],
+        fetchImpl: async u => { seen = u; return { ok: true, json: async () => ({ choices: [{ message: { content: 'hi' } }] }) } } });
+      return seen === 'https://tenant.example.com/v1/chat/completions';
+    })());
+    check('every provider has a model, headers, body and a reader',
+      Object.values(llm.PROVIDERS).every(p => p.model && p.headers && p.body && p.text && p.url));
+    check('the base URL is stored per tab, like the key',
+      /session/i.test(llm.getBase.toString()) && /session/i.test(llm.setBase.toString()));
+
     // The key. This is the part that must not be sloppy.
     check('the key is held in session storage, not local storage',
       llm.KEY_STORE && /session/i.test(llm.getKey.toString()));
@@ -1490,7 +1512,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 376;
+const EXPECTED_MIN = 382;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

@@ -2192,9 +2192,10 @@ function Interview({ template }) {
   const [turns, setTurns] = useState([])
   const [draft, setDraft] = useState('')
   const [listening, setListening] = useState(false)
-  const [useLLM, setUseLLM] = useState(false)
+  const [baseUrl, setBaseUrl] = useState(() => LLM.getBase())
   const [keyInput, setKeyInput] = useState('')
   const [provider, setProvider] = useState('anthropic')
+  const [keySet, setKeySet] = useState(() => LLM.hasKey())
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
   const recRef = useRef(null)
@@ -2249,11 +2250,11 @@ function Interview({ template }) {
     const next = [...turns, { role: 'candidate', stage: stage.id, text }]
     setTurns(next); setDraft(''); setErr(null)
 
-    if (useLLM && LLM.hasKey()) {
+    if (LLM.hasKey()) {
       setBusy(true)
       try {
         const reply = await LLM.ask({
-          provider, key: LLM.getKey(),
+          provider, key: LLM.getKey(), baseUrl: LLM.getBase(),
           system: LLM.systemPrompt(iv.design, stage.title),
           messages: next.filter(t => t.role !== 'system').map(t => ({ role: t.role === 'candidate' ? 'user' : 'assistant', content: t.text })),
         })
@@ -2296,32 +2297,40 @@ function Interview({ template }) {
       {state === 'idle' && (
         <>
           <p className="muted">
-            Five stages, the same ones a real interview follows. The questions come from this
-            design's own breakdown, so the interview is about this system rather than a generic one.
+            Five stages, the same ones a real interview follows, on the design you have loaded.
             At the end you get a rating per stage and the specific things you did not say.
           </p>
+
           <div className="iv-mode">
-            <label>
-              <input type="checkbox" checked={useLLM} onChange={e => { setUseLLM(e.target.checked); setErr(null) }} />
-              Use Claude instead (needs your own API key)
-            </label>
-            {useLLM && (
-              <div className="iv-key">
-                <div className="ddia-verdict bad">{LLM.KEY_WARNING}</div>
-                <div className="field">
-                  <label>Provider</label>
-                  <select value={provider} onChange={e => setProvider(e.target.value)}>
-                    {Object.keys(LLM.PROVIDERS).map(k => <option key={k} value={k}>{LLM.PROVIDERS[k].label}</option>)}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>API key</label>
-                  <input type="password" value={keyInput} placeholder={LLM.hasKey() ? 'a key is set for this tab' : 'paste here'}
-                    onChange={e => { setKeyInput(e.target.value); LLM.setKey(e.target.value) }} />
-                </div>
-                <button className="iv-clearkey" onClick={() => { LLM.setKey(''); setKeyInput('') }}>Forget the key</button>
+            <div className={`iv-engine ${keySet ? 'live' : ''}`}>
+              {keySet
+                ? <><b>{LLM.PROVIDERS[provider].label} is running this interview.</b> It will follow whatever you say, including tangents the built-in interviewer cannot.</>
+                : <><b>Add a key and {LLM.PROVIDERS[provider].label} runs the interview.</b> Without one it falls back to the built-in interviewer, which works offline and free but only recognises the concepts it was written to listen for.</>}
+            </div>
+
+            <div className="field">
+              <label>Model</label>
+              <select value={provider} onChange={e => { setProvider(e.target.value); setErr(null) }}>
+                {Object.keys(LLM.PROVIDERS).map(k => <option key={k} value={k}>{LLM.PROVIDERS[k].label}</option>)}
+              </select>
+            </div>
+            {LLM.PROVIDERS[provider].note && <div className="ddia-blurb">{LLM.PROVIDERS[provider].note}</div>}
+
+            {LLM.PROVIDERS[provider].needsBaseUrl && (
+              <div className="field">
+                <label>Base URL</label>
+                <input type="text" value={baseUrl} placeholder="https://your-endpoint/v1"
+                  onChange={e => { setBaseUrl(e.target.value); LLM.setBase(e.target.value) }} />
               </div>
             )}
+
+            <div className="field">
+              <label>API key</label>
+              <input type="password" value={keyInput} placeholder={keySet ? 'a key is set for this tab' : 'paste here — optional'}
+                onChange={e => { setKeyInput(e.target.value); LLM.setKey(e.target.value); setKeySet(!!e.target.value) }} />
+            </div>
+            <div className="ddia-verdict bad">{LLM.KEY_WARNING}</div>
+            {keySet && <button className="iv-clearkey" onClick={() => { LLM.setKey(''); setKeyInput(''); setKeySet(false) }}>Forget the key</button>}
           </div>
           <button className="iv-start" onClick={start}>Start the interview</button>
           {!speechOK && <p className="muted iv-note">This browser has no speech recognition, so you will type your answers. Chrome and Edge support the microphone.</p>}
@@ -2333,7 +2342,7 @@ function Interview({ template }) {
         <ol className="iv-tape">
           {turns.map((t, i) => (
             <li key={i} className={`iv-turn ${t.role}`}>
-              <span className="iv-who">{t.role === 'interviewer' ? 'Interviewer' : 'You'}</span>
+              <span className="iv-who">{t.role === 'interviewer' ? (t.llm ? LLM.PROVIDERS[provider].label : 'Interviewer (built-in)') : 'You'}</span>
               <p>{t.text}</p>
             </li>
           ))}

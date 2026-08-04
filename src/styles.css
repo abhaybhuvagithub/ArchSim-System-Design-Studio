@@ -935,3 +935,6 @@ select.btn { appearance: auto; }
 .iv-list li { font-size: 12.5px; line-height: 1.6; margin-bottom: 9px; }
 .iv-list li.sev-high { border-left: 2px solid #e34234; padding-left: 9px; list-style: none; margin-left: -16px; }
 .iv-missed { font-size: 11px; opacity: .6; margin-top: 3px; }
+.iv-engine { font-size: 12px; line-height: 1.6; padding: 9px 11px; border-radius: 10px; margin-bottom: 10px;
+  background: rgba(127,127,127,.08); border-left: 3px solid rgba(127,127,127,.35); }
+.iv-engine.live { background: rgba(52,199,89,.10); border-color: #34c759; }
