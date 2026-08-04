@@ -24,6 +24,9 @@ import { REPLICATION, ISOLATION, PARTITIONING, replicationEffects, isolationEffe
 import { DDIA_TRACK, DDIA_COMPARISONS } from './learn-ddia.js'
 import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from './tour.js'
 import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects, readFractionOf } from './ddia2.js'
+import { buildInterview, report as interviewReport, STAGES } from './interview.js'
+import * as LLM from './interview-llm.js'
+import { matchConcepts } from './interview.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -954,6 +957,7 @@ export default function App() {
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
+              ['interview', 'Interview', null, 'Mock system design interview on the loaded design'],
               ['about', 'About', null, 'What this simulator is and how it differs'],
             ].map(([key, label, badge, hint]) => (
               <button key={key} role="tab" id={`tab-${key}`} aria-selected={tab === key}
@@ -993,6 +997,8 @@ export default function App() {
             <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} cloud={cloudInfo}
               plan={rightSizePlan(nodes, sim, cloudInfo.mult)}
               onRightSize={rightSize} onScaleAll={scaleEverything} onSetReplicas={setReplicas} />
+          ) : tab === 'interview' ? (
+            <Interview template={template} />
           ) : tab === 'learn' ? (
             <Learn done={doneSteps} />
           ) : tab === 'improve' ? (
@@ -2176,6 +2182,220 @@ function StreamFields({ n, set }) {
       </div>
     </>
   )
+}
+
+// A mock interview on the loaded design. The rubric engine is the default and
+// needs nothing; a model is optional and needs a key the user supplies.
+function Interview({ template }) {
+  const [state, setState] = useState('idle')     // idle | running | done
+  const [stageIdx, setStageIdx] = useState(0)
+  const [turns, setTurns] = useState([])
+  const [draft, setDraft] = useState('')
+  const [listening, setListening] = useState(false)
+  const [useLLM, setUseLLM] = useState(false)
+  const [keyInput, setKeyInput] = useState('')
+  const [provider, setProvider] = useState('anthropic')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const recRef = useRef(null)
+
+  const iv = useMemo(() => template ? buildInterview(template, breakdownFor(template)) : null, [template?.name])
+  const speechOK = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition)
+
+  if (!template) return (
+    <section className="iv">
+      <h3>Mock interview</h3>
+      <p className="muted">Load a design first — the interview is about a specific system, and the questions come from that design's breakdown.</p>
+    </section>
+  )
+
+  const stage = iv.stages[stageIdx]
+
+  const start = () => {
+    setTurns([{ role: 'interviewer', stage: iv.stages[0].id, text: iv.stages[0].question }])
+    setStageIdx(0); setState('running'); setErr(null)
+  }
+
+  const stopListening = () => {
+    try { recRef.current?.stop() } catch { /* already stopped */ }
+    recRef.current = null; setListening(false)
+  }
+
+  const listen = () => {
+    if (listening) return stopListening()
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) return
+    const r = new SR()
+    r.continuous = true; r.interimResults = true; r.lang = 'en-US'
+    let final = ''
+    r.onresult = e => {
+      let interim = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript
+        if (e.results[i].isFinal) final += t + ' '; else interim += t
+      }
+      setDraft((final + interim).trim())
+    }
+    r.onerror = ev => { setErr(ev.error === 'not-allowed' ? 'Microphone permission was refused. You can type instead.' : 'Speech recognition stopped: ' + ev.error); stopListening() }
+    r.onend = () => setListening(false)
+    recRef.current = r
+    try { r.start(); setListening(true) } catch { setErr('Could not start the microphone.') }
+  }
+
+  const submit = async () => {
+    const text = draft.trim()
+    if (!text || busy) return
+    stopListening()
+    const next = [...turns, { role: 'candidate', stage: stage.id, text }]
+    setTurns(next); setDraft(''); setErr(null)
+
+    if (useLLM && LLM.hasKey()) {
+      setBusy(true)
+      try {
+        const reply = await LLM.ask({
+          provider, key: LLM.getKey(),
+          system: LLM.systemPrompt(iv.design, stage.title),
+          messages: next.filter(t => t.role !== 'system').map(t => ({ role: t.role === 'candidate' ? 'user' : 'assistant', content: t.text })),
+        })
+        setTurns(t => [...t, { role: 'interviewer', stage: stage.id, text: reply, llm: true }])
+      } catch (e) { setErr(LLM.redact(e.message)) } finally { setBusy(false) }
+      return
+    }
+
+    // Rubric: probe once on a thin answer, otherwise move on.
+    const { missed } = matchConceptsSafe(text, stage.concepts)
+    const alreadyProbed = turns.some(t => t.role === 'interviewer' && t.stage === stage.id && t.probe)
+    if (!alreadyProbed && stage.probe && (missed.length > stage.concepts.length / 2 || text.split(/\s+/).length < 40)) {
+      setTurns(t => [...t, { role: 'interviewer', stage: stage.id, text: stage.probe, probe: true }])
+      return
+    }
+    if (stageIdx + 1 < iv.stages.length) {
+      const n = iv.stages[stageIdx + 1]
+      setStageIdx(stageIdx + 1)
+      setTurns(t => [...t, { role: 'interviewer', stage: n.id, text: n.question }])
+    } else {
+      setState('done')
+    }
+  }
+
+  const rep = state === 'done' ? interviewReport(iv, turns) : null
+
+  return (
+    <section className="iv" aria-label="Mock interview">
+      <h3>Mock interview — {iv.design}</h3>
+
+      {state === 'idle' && (
+        <>
+          <p className="muted">
+            Five stages, the same ones a real interview follows. The questions come from this
+            design's own breakdown, so the interview is about this system rather than a generic one.
+            At the end you get a rating per stage and the specific things you did not say.
+          </p>
+          <div className="iv-mode">
+            <label>
+              <input type="checkbox" checked={useLLM} onChange={e => { setUseLLM(e.target.checked); setErr(null) }} />
+              Use a language model instead of the rubric
+            </label>
+            {useLLM && (
+              <div className="iv-key">
+                <div className="ddia-verdict bad">{LLM.KEY_WARNING}</div>
+                <div className="field">
+                  <label>Provider</label>
+                  <select value={provider} onChange={e => setProvider(e.target.value)}>
+                    {Object.keys(LLM.PROVIDERS).map(k => <option key={k} value={k}>{LLM.PROVIDERS[k].label}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>API key</label>
+                  <input type="password" value={keyInput} placeholder={LLM.hasKey() ? 'a key is set for this tab' : 'paste here'}
+                    onChange={e => { setKeyInput(e.target.value); LLM.setKey(e.target.value) }} />
+                </div>
+                <button className="iv-clearkey" onClick={() => { LLM.setKey(''); setKeyInput('') }}>Forget the key</button>
+              </div>
+            )}
+          </div>
+          <button className="iv-start" onClick={start}>Start the interview</button>
+          {!speechOK && <p className="muted iv-note">This browser has no speech recognition, so you will type your answers. Chrome and Edge support the microphone.</p>}
+          {speechOK && <p className="muted iv-note">Answering by voice sends audio to your browser vendor's speech service. Type instead if you would rather it did not.</p>}
+        </>
+      )}
+
+      {state !== 'idle' && (
+        <ol className="iv-tape">
+          {turns.map((t, i) => (
+            <li key={i} className={`iv-turn ${t.role}`}>
+              <span className="iv-who">{t.role === 'interviewer' ? 'Interviewer' : 'You'}</span>
+              <p>{t.text}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {state === 'running' && (
+        <div className="iv-input">
+          <div className="iv-stage">Stage {stageIdx + 1} of {iv.stages.length} — {stage.title}</div>
+          <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={4}
+            placeholder="Answer out loud with the microphone, or type here…"
+            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }} />
+          <div className="iv-btns">
+            {speechOK && (
+              <button className={`iv-mic ${listening ? 'on' : ''}`} onClick={listen} aria-pressed={listening}>
+                {listening ? '● Listening — stop' : '🎤 Answer by voice'}
+              </button>
+            )}
+            <span className="spacer" />
+            <button className="iv-skip" onClick={() => setState('done')}>End &amp; get feedback</button>
+            <button className="iv-send" onClick={submit} disabled={!draft.trim() || busy}>{busy ? 'Thinking…' : 'Send'}</button>
+          </div>
+          {err && <div className="ddia-verdict bad">{err}</div>}
+        </div>
+      )}
+
+      {state === 'done' && rep && (
+        <div className="iv-report">
+          <div className={`iv-band ${rep.overall >= 0.6 ? 'good' : 'bad'}`}>
+            <b>{rep.band.band}</b> — {Math.round(rep.overall * 100)}%
+            <p>{rep.band.gist}</p>
+          </div>
+
+          <h4>By stage</h4>
+          <table className="iv-scores">
+            <tbody>
+              {Object.entries(rep.byStage).map(([id, st]) => (
+                <tr key={id}>
+                  <td className="k">{st.title}</td>
+                  <td><div className="iv-bar"><span style={{ width: Math.round(st.score * 100) + '%' }} /></div></td>
+                  <td className="n">{st.scorable ? Math.round(st.score * 100) + '%' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {rep.strengths.length > 0 && (<><h4>What went well</h4>
+            <ul className="iv-list">{rep.strengths.map((x, i) => <li key={i}>{x}</li>)}</ul></>)}
+
+          <h4>Areas to improve</h4>
+          {rep.improve.length === 0
+            ? <p className="muted">Nothing material. Run it again on a harder design.</p>
+            : <ul className="iv-list">
+                {rep.improve.map((x, i) => (
+                  <li key={i} className={`sev-${x.severity}`}>
+                    <b>{x.area}.</b> {x.advice}
+                    {x.missed.length > 0 && <div className="iv-missed">Did not mention: {x.missed.join(' · ')}</div>}
+                  </li>
+                ))}
+              </ul>}
+
+          <button className="iv-start" onClick={() => { setTurns([]); setStageIdx(0); setState('idle') }}>Run it again</button>
+        </div>
+      )}
+    </section>
+  )
+}
+
+// small guard so a template with no extracted concepts cannot throw
+function matchConceptsSafe(text, concepts) {
+  try { return matchConcepts(text, concepts || []) } catch { return { hit: [], missed: [] } }
 }
 
 // ── Read aloud ───────────────────────────────────────────────────────────────

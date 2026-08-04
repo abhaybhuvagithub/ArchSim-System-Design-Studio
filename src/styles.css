@@ -899,3 +899,39 @@ select.btn { appearance: auto; }
 .tour-next { background: var(--accent, #0a84ff) !important; border-color: transparent !important; color: #fff !important; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .tour-hole, .tour-tip { transition: none; } }
 .a11y .tour-hole, .a11y .tour-tip { transition: none; }
+
+/* ---- Mock interview ---- */
+.iv h3 { margin: 0 0 8px; }
+.iv h4 { margin: 16px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; opacity: .55; }
+.iv-mode { margin: 10px 0; font-size: 12px; }
+.iv-mode > label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+.iv-key { margin-top: 8px; }
+.iv-clearkey { font: inherit; font-size: 11px; background: none; border: 1px solid var(--line, #e3e3e6); border-radius: 7px; padding: 4px 9px; cursor: pointer; color: inherit; }
+.iv-start, .iv-send { font: inherit; font-size: 12px; font-weight: 600; border: none; border-radius: 9px; padding: 8px 15px; cursor: pointer; background: var(--accent, #0a84ff); color: #fff; }
+.iv-send:disabled { opacity: .4; cursor: default; }
+.iv-note { font-size: 11px; margin-top: 8px; }
+.iv-tape { list-style: none; margin: 12px 0; padding: 0; max-height: 44vh; overflow: auto; }
+.iv-turn { margin-bottom: 12px; }
+.iv-turn p { margin: 2px 0 0; font-size: 12.5px; line-height: 1.6; }
+.iv-who { font-size: 9.5px; letter-spacing: .9px; text-transform: uppercase; opacity: .5; }
+.iv-turn.candidate p { padding-left: 10px; border-left: 2px solid var(--accent, #0a84ff); opacity: .85; }
+.iv-stage { font-size: 10px; letter-spacing: .8px; text-transform: uppercase; opacity: .5; margin-bottom: 5px; }
+.iv-input textarea { width: 100%; font: inherit; font-size: 12.5px; line-height: 1.55; border-radius: 10px; border: 1px solid var(--line, #e3e3e6); padding: 9px 11px; background: transparent; color: inherit; resize: vertical; }
+.iv-btns { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.iv-btns .spacer { flex: 1; }
+.iv-mic, .iv-skip { font: inherit; font-size: 12px; border-radius: 9px; padding: 7px 13px; cursor: pointer; border: 1px solid var(--line, #e3e3e6); background: transparent; color: inherit; }
+.iv-mic.on { background: #e34234; border-color: transparent; color: #fff; }
+.iv-band { border-radius: 12px; padding: 12px 14px; margin-bottom: 6px; border-left: 3px solid; }
+.iv-band.good { background: rgba(52,199,89,.10); border-color: #34c759; }
+.iv-band.bad { background: rgba(227,66,52,.10); border-color: #e34234; }
+.iv-band p { margin: 5px 0 0; font-size: 12px; line-height: 1.55; opacity: .8; }
+.iv-scores { width: 100%; border-collapse: collapse; font-size: 12px; }
+.iv-scores td { padding: 4px 6px; }
+.iv-scores td.k { width: 34%; opacity: .8; }
+.iv-scores td.n { width: 46px; text-align: right; font-variant-numeric: tabular-nums; opacity: .65; }
+.iv-bar { background: rgba(127,127,127,.18); border-radius: 4px; height: 7px; overflow: hidden; }
+.iv-bar span { display: block; height: 100%; background: var(--accent, #0a84ff); border-radius: 4px; }
+.iv-list { margin: 0 0 0 16px; padding: 0; }
+.iv-list li { font-size: 12.5px; line-height: 1.6; margin-bottom: 9px; }
+.iv-list li.sev-high { border-left: 2px solid #e34234; padding-left: 9px; list-style: none; margin-left: -16px; }
+.iv-missed { font-size: 11px; opacity: .6; margin-top: 3px; }
