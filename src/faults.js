@@ -67,7 +67,7 @@ export const FAULTS = [
 
   // ───────────── Network ─────────────
   { id: 'partition', icon: '🌊', name: 'Network Partition', group: 'Network', scope: 'node', secs: 18, needsOutbound: true,
-    desc: 'Split brain: the target can no longer reach anything downstream.',
+    desc: 'One node is cut off downstream: it can no longer reach anything it depends on.',
     hint: 'The link is severed. Restore it, then design a retry and a fallback path for next time.',
     fix: { kind: 'restore' },
     effect: () => ({ node: {}, cutFrom: true }) },
@@ -160,9 +160,33 @@ export const FAULTS = [
     hint: 'Traffic jumped. Right-size for the surge, or shed load at the edge before it reaches you.',
     fix: { kind: 'scale' },
     effect: () => ({ rpsMul: 5 }) },
+
+  // ───────────── Distributed systems ─────────────
+  // These leave the node running, which is what makes them hard: a timeout
+  // cannot tell a paused process from a dead one.
+  { id: 'splitbrain', icon: '🪓', name: 'Split Brain', group: 'Distributed', scope: 'global', secs: 25,
+    desc: 'The network splits in two. Both halves stay healthy and each believes the other has died.',
+    hint: 'Both halves are up and cannot see each other. With a leader, both may promote one. Decide in advance which side stops accepting writes.',
+    fix: { kind: 'none' },
+    effect: () => ({ all: { capMul: 0.5, drop: 0.12 } }) },
+  { id: 'clockskew', icon: '🕰️', name: 'Clock Skew', group: 'Distributed', scope: 'node', secs: 30,
+    desc: 'One node clock drifts ahead of the others. Nothing looks broken.',
+    hint: 'Any last-write-wins scheme now silently prefers the node with the fast clock, whatever actually happened first. Do not order events by wall clock.',
+    fix: { kind: 'none' },
+    effect: () => ({ node: { latMul: 1.05 } }) },
+  { id: 'pause', icon: '⏸️', name: 'Process Pause', group: 'Distributed', scope: 'node', secs: 15,
+    desc: 'A node freezes for seconds — garbage collection, a hypervisor pause — then resumes as if nothing happened.',
+    hint: 'Its lease or lock may have expired while it was frozen. It wakes still believing it holds them, and writes into a world that moved on.',
+    fix: { kind: 'none' },
+    effect: () => ({ node: { latMul: 8, drop: 0.4 } }) },
+  { id: 'asymmetric', icon: '⇥', name: 'One-Way Link Failure', group: 'Distributed', scope: 'node', secs: 20,
+    desc: 'A can reach B, but B cannot reach A. Failure detectors disagree about who is alive.',
+    hint: 'A timeout cannot tell this apart from a slow node. Anything that votes on liveness can reach two different answers at once.',
+    fix: { kind: 'none' },
+    effect: () => ({ node: { drop: 0.5 } }) },
 ]
 
-export const FAULT_GROUPS = ['Infrastructure', 'Network', 'Application', 'Global']
+export const FAULT_GROUPS = ['Infrastructure', 'Network', 'Distributed', 'Application', 'Global']
 export const faultById = id => FAULTS.find(f => f.id === id)
 
 // Which active fault is hurting this node, if any — a fault aimed at it wins over

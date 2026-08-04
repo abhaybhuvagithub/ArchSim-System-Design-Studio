@@ -141,6 +141,118 @@ try {
     check('no single template is made much worse', regressed.length === 0);
   }
 
+  // ── consistency model: quorums, isolation, partitioning ────────────────────
+  {
+    const d = await import(pathToFileURL(path.join(root, 'src/ddia.js')).href);
+    const { review } = await import(pathToFileURL(path.join(root, 'src/advisor.js')).href);
+    const { FAULTS, FAULT_GROUPS } = await import(pathToFileURL(path.join(root, 'src/faults.js')).href);
+    const { DDIA_TRACK, DDIA_COMPARISONS } = await import(pathToFileURL(path.join(root, 'src/learn-ddia.js')).href);
+
+    // Quorum overlap is w + r > n. Test the boundary from both sides, because
+    // off-by-one here is the difference between a correct read and one that
+    // silently goes backwards.
+    check('quorum n=3 w=2 r=2 overlaps', d.quorumOverlaps(3, 2, 2) === true);
+    check('quorum n=3 w=3 r=1 overlaps (write-all)', d.quorumOverlaps(3, 3, 1) === true);
+    check('quorum n=3 w=1 r=3 overlaps (read-all)', d.quorumOverlaps(3, 1, 3) === true);
+    check('quorum n=3 w=1 r=1 does NOT overlap', d.quorumOverlaps(3, 1, 1) === false);
+    check('quorum n=3 w=2 r=1 does NOT overlap — exactly equal is not enough',
+      d.quorumOverlaps(3, 2, 1) === false);
+    check('quorum n=5 w=3 r=3 overlaps', d.quorumOverlaps(5, 3, 3) === true);
+    check('quorum n=5 w=2 r=3 does NOT overlap — sums to n', d.quorumOverlaps(5, 2, 3) === false);
+
+    // Replication consequences must follow from the mode, not from a label.
+    const rep = m => d.replicationEffects({ replication: m, replicas: 3 });
+    check('single node has no stale reads and no conflicts',
+      rep('none').staleReads === false && rep('none').conflicts === false);
+    check('single-leader can serve stale reads but cannot conflict',
+      rep('leader').staleReads === true && rep('leader').conflicts === false);
+    check('multi-leader guarantees write conflicts',
+      rep('multi').conflicts === true && rep('multi').staleReads === true);
+    check('leaderless with a broken quorum reports stale reads',
+      d.replicationEffects({ replication: 'leaderless', quorumN: 3, quorumW: 1, quorumR: 1 }).staleReads === true);
+    check('leaderless with a good quorum does not',
+      d.replicationEffects({ replication: 'leaderless', quorumN: 3, quorumW: 2, quorumR: 2 }).staleReads === false);
+
+    // An isolation level is defined by what it still permits.
+    const permits = l => d.isolationEffects({ isolation: l }).permits;
+    check('read committed prevents dirty reads',
+      !permits('readCommitted').some(x => /dirty/i.test(x)));
+    check('read committed still permits lost updates',
+      permits('readCommitted').some(x => /lost update/i.test(x)));
+    check('snapshot isolation prevents read skew',
+      !permits('snapshot').some(x => /read skew/i.test(x)));
+    check('snapshot isolation STILL permits write skew — the double-booking bug',
+      permits('snapshot').some(x => /write skew/i.test(x)));
+    check('serializable permits nothing', permits('serializable').length === 0);
+    check('snapshot names the double-booking trap explicitly',
+      typeof d.isolationEffects({ isolation: 'snapshot' }).trap === 'string');
+    check('serializable has no trap to name', !d.isolationEffects({ isolation: 'serializable' }).trap);
+
+    // Hotspot maths: 1 + skew * (parts - 1) for an ordered key.
+    const hot = (strategy, keySkew, parts) =>
+      d.partitionEffects({ partitioning: strategy, keySkew, partitions: parts }).hotspotFactor;
+    check('no skew means an even range partition', Math.abs(hot('range', 0, 4) - 1) < 1e-9);
+    check('total skew puts everything on one range partition', Math.abs(hot('range', 1, 4) - 4) < 1e-9);
+    check('range hotspot is linear in skew', Math.abs(hot('range', 0.5, 5) - 3) < 1e-9);
+    check('hashing beats range at the same skew', hot('hash', 0.8, 8) < hot('range', 0.8, 8));
+    check('hashing does not fully clear a single hot key', hot('hash', 0.8, 8) > 1);
+    check('salting clears the hot key that hashing left', hot('salted', 0.8, 8) < hot('hash', 0.8, 8));
+    // A typo in this field must not read as the best case.
+    check('an unknown partitioning strategy is not silently treated as salted',
+      d.partitionEffects({ partitioning: 'salt', keySkew: 0.8, partitions: 8 }).strategy === 'none');
+
+    // Advisor findings must fire when they should — and stay quiet when they
+    // should not. A finding that always fires teaches nothing.
+    const store = extra => [{ id: 'db', type: 'sql', label: 'DB', replicas: 3, ...extra }];
+    const titles = ns => review(ns, [], 1000).map(x => x.title + ' ' + (x.detail || ''));
+    const fires = (ns, re) => titles(ns).some(t => re.test(t));
+    check('broken quorum is reported',
+      fires(store({ replication: 'leaderless', quorumN: 3, quorumW: 1, quorumR: 1 }), /quorum/i));
+    check('a good quorum is NOT reported',
+      !fires(store({ replication: 'leaderless', quorumN: 3, quorumW: 2, quorumR: 2 }), /quorum/i));
+    check('multi-leader conflict handling is flagged',
+      fires(store({ replication: 'multi' }), /conflict/i));
+    check('single-leader is NOT flagged for conflicts',
+      !fires(store({ replication: 'leader' }), /conflict/i));
+    check('snapshot isolation is warned about write skew',
+      fires(store({ isolation: 'snapshot' }), /write skew/i));
+    check('serializable is NOT warned about write skew',
+      !fires(store({ isolation: 'serializable' }), /write skew/i));
+    check('a skewed range partition is flagged as a hotspot',
+      fires(store({ partitioning: 'range', keySkew: 0.9 }), /hot|skew/i));
+    check('an evenly hashed store is NOT flagged as a hotspot',
+      !fires(store({ partitioning: 'hash', keySkew: 0.05 }), /hot partition/i));
+    check('a single replica is flagged as a single copy',
+      fires([{ id: 'db', type: 'sql', label: 'DB', replicas: 1 }], /single copy|one copy/i));
+    check('consistency findings are tagged for the analysis panel',
+      review(store({ replication: 'multi' }), [], 1000).some(x => x.consistency));
+
+    // Four faults that leave the node running — the hard kind.
+    const dist = FAULTS.filter(f => f.group === 'Distributed');
+    check('the four distributed faults are wired into the chaos engine', dist.length === 4);
+    check('Distributed is an offered fault group', FAULT_GROUPS.includes('Distributed'));
+    for (const id of ['splitbrain', 'clockskew', 'pause', 'asymmetric'])
+      check('fault "' + id + '" exists with a working effect', (() => {
+        const f = FAULTS.find(x => x.id === id);
+        return !!f && typeof f.effect === 'function' && typeof f.effect({}) === 'object';
+      })());
+    check('every distributed fault explains what it teaches',
+      dist.every(f => typeof f.hint === 'string' && f.hint.length > 40));
+    check('no duplicate fault ids after the additions',
+      new Set(FAULTS.map(f => f.id)).size === FAULTS.length);
+
+    // The written track.
+    check('the consistency track covers four parts', DDIA_TRACK.length === 4);
+    const steps = DDIA_TRACK.flatMap(p => p.steps);
+    check('the track has at least 15 steps', steps.length >= 15);
+    check('every step says what to do on the canvas, not just what to know',
+      steps.every(st => st.title && st.idea && st.try));
+    check('three comparison tables, each with rows matching their columns',
+      DDIA_COMPARISONS.length === 3 &&
+      DDIA_COMPARISONS.every(c => c.cols.length >= 2 && c.rows.length >= 4 &&
+        c.rows.every(r => r.length === c.cols.length + 1)));
+  }
+
   // ── speech preparation, as pure functions ──────────────────────────────────
   {
     const sp = await import(pathToFileURL(path.join(root, 'src/speech.js')).href);
@@ -830,6 +942,70 @@ try {
   click(byText('.tabs.sub button', 'Rules'));
   await wait(150);
   check('shared principles render', doc.querySelectorAll('.sc-rule').length >= 10);
+
+  // ── the consistency surfaces in the UI ─────────────────────────────────────
+  {
+    click(byText('.tabs button', 'Learn'));
+    await wait(200);
+    const consBtn = byText('.tabs.sub button', 'Consistency');
+    check('Learn has a Consistency sub-tab', !!consBtn);
+    click(consBtn);
+    await wait(250);
+    const txt = doc.body.textContent;
+    check('the consistency track renders its parts',
+      ['Replication', 'Partitioning', 'Transactions'].every(p => txt.includes(p)));
+    check('the track renders every step', doc.querySelectorAll('.tip-try').length >= 15);
+    check('the comparison tables render', doc.querySelectorAll('.cmp table').length === 3);
+    check('the write-skew row is present', /write skew/i.test(txt));
+
+    // Inspector controls: select a datastore on the canvas and drive them.
+    // The inspector renders behind the Capacity tab, and every other tab
+    // clears the selection on the way out.
+    click(byText('.tabs button', 'Capacity'));
+    await wait(150);
+    const gs = [...doc.querySelectorAll('svg g.node')];
+    check('canvas nodes are selectable', gs.length > 0);
+    let found = false;
+    for (const g of gs) {
+      g.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      await wait(80);
+      if (byText('.field label', 'Replication')) { found = true; break }
+    }
+    check('selecting a datastore reveals the replication control', found);
+    if (found) {
+      const selectFor = label => {
+        const f = [...doc.querySelectorAll('.field')].find(x => x.querySelector('label')?.textContent.includes(label));
+        return f?.querySelector('select');
+      };
+      const repSel = selectFor('Replication');
+      check('replication offers all four modes', !!repSel && repSel.options.length === 4);
+      check('partitioning control is present', !!selectFor('Partitioning'));
+
+      repSel.value = 'leaderless';
+      repSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+      await wait(150);
+      check('leaderless reveals the quorum inputs', doc.querySelectorAll('.ddia-quorum input').length === 3);
+      const qi = () => [...doc.querySelectorAll('.ddia-quorum input')];
+      typeInto(qi()[1], '1'); await wait(80);
+      typeInto(qi()[2], '1'); await wait(150);
+      check('a broken quorum is called out as bad in the inspector',
+        !!doc.querySelector('.ddia-verdict.bad'));
+      typeInto(qi()[1], '2'); await wait(80);
+      typeInto(qi()[2], '2'); await wait(150);
+      check('fixing the quorum clears the warning',
+        !!doc.querySelector('.ddia-verdict.good') && !doc.querySelector('.ddia-verdict.bad'));
+      repSel.value = 'leader';
+      repSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+      await wait(150);
+      check('leaving leaderless hides the quorum inputs',
+        doc.querySelectorAll('.ddia-quorum input').length === 0);
+    }
+    check('no crash while driving the consistency controls', errs.length === 0);
+
+    // hand the Scale tab back to the sweep that follows
+    click(byText('.tabs button', 'Scale'));
+    await wait(200);
+  }
 
   // every template must produce a complete Scale tab without crashing
   click(byText('.tabs.sub button', 'Ladder'));   // back to the rung view before sweeping
