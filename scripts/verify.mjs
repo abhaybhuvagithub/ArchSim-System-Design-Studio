@@ -307,6 +307,108 @@ try {
       (broken.length ? ' — broken: ' + broken.map(t => t.name).join(', ') : ''), broken.length === 0);
   }
 
+  // ── mock interview: rubric, and the key never leaving the tab ──────────────
+  {
+    const iv = await import(pathToFileURL(path.join(root, 'src/interview.js')).href);
+    const llm = await import(pathToFileURL(path.join(root, 'src/interview-llm.js')).href);
+    const { breakdownFor } = await import(pathToFileURL(path.join(root, 'src/breakdown.js')).href);
+    const { TEMPLATES } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+
+    const tpl = TEMPLATES.find(t => t.name.includes('Ticketmaster'));
+    const plan = iv.buildInterview(tpl, breakdownFor(tpl));
+    check('the interview has all five stages', plan.stages.length === 5);
+    check('every stage has a question and something to listen for',
+      plan.stages.every(s => s.question && s.question.length > 20 && s.concepts.length > 0));
+    check('the questions name the actual design', plan.stages[0].question.includes(tpl.name));
+
+    // A stage with nothing to listen for can never be earned — it would drag
+    // the score down for a gap in the rubric rather than in the answer.
+    check('a stage with no concepts is excluded rather than scored zero', (() => {
+      const fake = { design: 'X', stages: [{ id: 'a', title: 'A', concepts: [] }, { id: 'b', title: 'B', concepts: iv.UNIVERSAL.filter(c => c.stage === 'estimation') }], concepts: [] };
+      const r = iv.report(fake, [{ role: 'candidate', stage: 'b', text: 'about 50000 rps, read heavy, 2 terabyte of storage' }]);
+      return r.byStage.a.scorable === false && r.overall > 0.9;
+    })());
+
+    // Discrimination: the whole thing is worthless if a thin answer scores well.
+    const thin = [{ role: 'candidate', stage: 'requirements', text: 'We build a ticket site. Users buy tickets.' }];
+    const full = [
+      { role: 'candidate', stage: 'requirements', text: 'Functional: browse events, reserve a seat, pay, confirm. Out of scope: refunds and dynamic pricing. Should we support seat maps?' },
+      { role: 'candidate', stage: 'estimation', text: '10 million daily active users, peak 50000 rps, read heavy about 100 to 1 reads to writes, storage 2 terabyte per year retention.' },
+      { role: 'candidate', stage: 'high-level', text: 'Client to CDN to load balancer to booking service. The bottleneck is seat lock contention. We shard by event id, cache the seat map in redis, and push email to a queue asynchronously with replication on the database.' },
+      { role: 'candidate', stage: 'deep-dives', text: 'Two people click the same seat so we use a distributed lock with a ttl and serializable isolation to avoid write skew. The trade off is throughput in exchange for correctness. If a node fails we retry idempotently.' },
+      { role: 'candidate', stage: 'wrap', text: 'At ten times this load the seat lock service breaks first. I would split it and shard the locks by event.' },
+    ];
+    const rThin = iv.report(plan, thin), rFull = iv.report(plan, full);
+    check('a thin answer scores badly', rThin.overall < 0.2);
+    check('a full answer scores well', rFull.overall > 0.6);
+    check('the two are clearly separated', rFull.overall - rThin.overall > 0.4);
+    check('a thin answer gets more to improve than a full one', rThin.improve.length > rFull.improve.length);
+    check('a thin answer is told its answers were too short',
+      rThin.improve.some(x => /Depth of answer/i.test(x.area)));
+    check('improvement advice names what was not said',
+      rThin.improve.some(x => x.missed.length > 0));
+    check('bands are ordered', (() => {
+      const b = [0.1, 0.45, 0.7, 0.9].map(x => iv.bandFor(x).band);
+      return new Set(b).size === 4 && b[3] === 'Staff+';
+    })());
+
+    // Keyword matching must not credit things that were not said.
+    const est = iv.UNIVERSAL.filter(c => c.stage === 'estimation');
+    check('numbers in an answer are detected', iv.matchConcepts('roughly 20000 rps at peak', est).hit.some(c => c.id === 'scale-numbers'));
+    check('an answer with no numbers is not credited for them',
+      !iv.matchConcepts('it will be quite large and busy', est).hit.some(c => c.id === 'scale-numbers'));
+    check('a stated trade-off is detected', iv.matchConcepts('faster reads, at the cost of staleness', iv.UNIVERSAL).hit.some(c => c.id === 'tradeoff'));
+    check('merely saying the word design is not a trade-off',
+      !iv.matchConcepts('this is a good design and it works', iv.UNIVERSAL).hit.some(c => c.id === 'tradeoff'));
+    check('an empty answer matches nothing', iv.matchConcepts('', iv.UNIVERSAL).hit.length === 0);
+
+    check('asking no clarifying questions is called out',
+      iv.communicationSignals(['a statement.', 'another statement.']).clarifyingQuestions === 0);
+    check('a question is recognised as one',
+      iv.communicationSignals(['what is the read to write ratio?']).clarifyingQuestions === 1);
+
+    // Every template must produce a usable interview, not just Ticketmaster.
+    const badPlans = TEMPLATES.filter(t => {
+      try {
+        const p = iv.buildInterview(t, breakdownFor(t));
+        return p.stages.length !== 5 || p.stages.some(s => !s.question || !s.concepts.length);
+      } catch { return true }
+    });
+    check('every template yields a complete interview' +
+      (badPlans.length ? ' — broken: ' + badPlans.slice(0, 3).map(t => t.name).join(', ') : ''), badPlans.length === 0);
+
+    // The key. This is the part that must not be sloppy.
+    check('the key is held in session storage, not local storage',
+      llm.KEY_STORE && /session/i.test(llm.getKey.toString()));
+    check('a key is redacted if it ever reaches display',
+      llm.redact('oops sk-ant-abcd1234efgh here') === 'oops [key redacted] here');
+    check('the warning states the key is never sent to this site', /never sent to this site/i.test(llm.KEY_WARNING));
+    check('no key means no request is attempted', await (async () => {
+      let called = false;
+      try { await llm.ask({ key: '', system: 's', messages: [], fetchImpl: () => { called = true } }) } catch { /* expected */ }
+      return !called;
+    })());
+    check('the key travels in a header, never in the URL', await (async () => {
+      let seenUrl = '', seenHeaders = null;
+      const fake = async (url, opts) => { seenUrl = url; seenHeaders = opts.headers; return { ok: true, json: async () => ({ content: [{ type: 'text', text: 'ok' }] }) } };
+      await llm.ask({ key: 'sk-ant-secret123', system: 's', messages: [{ role: 'user', content: 'hi' }], fetchImpl: fake });
+      return !seenUrl.includes('secret123') && JSON.stringify(seenHeaders).includes('secret123');
+    })());
+    check('the key is never put in the request body', await (async () => {
+      let body = '';
+      const fake = async (url, opts) => { body = opts.body; return { ok: true, json: async () => ({ content: [] }) } };
+      await llm.ask({ key: 'sk-ant-secret123', system: 's', messages: [{ role: 'user', content: 'hi' }], fetchImpl: fake });
+      return !body.includes('secret123');
+    })());
+    check('a rejected key gives a clear message, not a stack trace', await (async () => {
+      try { await llm.ask({ key: 'x', system: 's', messages: [], fetchImpl: async () => ({ ok: false, status: 401 }) }) }
+      catch (e) { return /rejected that key/i.test(e.message) }
+      return false;
+    })());
+    check('the interviewer prompt tells the model not to write the design',
+      /not write the design/i.test(llm.systemPrompt('X', 'Y')));
+  }
+
   // ── the guided tour: data and geometry ─────────────────────────────────────
   {
     const t = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
@@ -857,7 +959,7 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all nine tabs are tabs', tabBtns.length === 9);
+    check('all ten tabs are tabs', tabBtns.length === 10);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',
@@ -1306,7 +1408,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 330;
+const EXPECTED_MIN = 355;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
