@@ -23,6 +23,7 @@ import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 import { REPLICATION, ISOLATION, PARTITIONING, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
 import { DDIA_TRACK, DDIA_COMPARISONS } from './learn-ddia.js'
 import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from './tour.js'
+import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects } from './ddia2.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1613,6 +1614,14 @@ function EdgeInspector({ e, nodes, sim, step, setEdges, onDelete }) {
         <input value={e.label || ''} placeholder="e.g. cache miss, write"
           onChange={ev => setEdges(es => es.map(x => x.id === e.id ? { ...x, label: ev.target.value } : x))} />
       </div>
+      <div className="field">
+        <label>Encoding</label>
+        <select value={e.encoding || ''} onChange={ev => setEdges(es => es.map(x => x.id === e.id ? { ...x, encoding: ev.target.value || undefined } : x))}>
+          <option value="">Unspecified</option>
+          {Object.keys(ENCODINGS).map(key => <option key={key} value={key}>{ENCODINGS[key].label}</option>)}
+        </select>
+      </div>
+      {e.encoding && <div className="ddia-blurb">{ENCODINGS[e.encoding].blurb}</div>}
       <div className="row"><span>Flow</span><span className="v">{fmt(flow)}/s</span></div>
       {step != null && <div className="row"><span>Step</span><span className="v">#{step}</span></div>}
       <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
@@ -1715,6 +1724,8 @@ function Inspector({ n, sim, setNodes, cloud, cloudMult = 1 }) {
         <input value={n.label} onChange={e => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, label: e.target.value } : x))} />
       </div>
       <ConsistencyFields n={n} setNodes={setNodes} />
+      <ServiceFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
+      <StreamFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
       {!spec.source && (
         <div className="field">
           <label>Replicas</label>
@@ -1979,6 +1990,8 @@ function ConsistencyFields({ n, setNodes }) {
         </>
       )}
 
+      <PhysicalFields n={n} set={set} />
+
       {rep.notes.length > 0 && (
         <ul className="ddia-notes">{rep.notes.map((x, i) => <li key={i}>{x}</li>)}</ul>
       )}
@@ -2070,6 +2083,88 @@ function Tour({ at, setAt, setTab, loadTemplate }) {
         </div>
       </div>
     </div>
+  )
+}
+
+// Storage engine and consistency guarantee — the two that move the simulated
+// numbers rather than only the advice.
+function PhysicalFields({ n, set }) {
+  const ph = physicalEffects(n)
+  const pct = v => (v >= 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + '%'
+  return (
+    <>
+      <div className="field">
+        <label>Storage engine</label>
+        <select value={n.engine || ''} onChange={e => set({ engine: e.target.value || undefined })}>
+          <option value="">Unspecified</option>
+          {Object.keys(ENGINES).map(k => <option key={k} value={k}>{ENGINES[k].label}</option>)}
+        </select>
+      </div>
+      {n.engine && (
+        <>
+          <div className="ddia-blurb">{ENGINES[n.engine].blurb}</div>
+          <div className="ddia-blurb"><b>Write amplification.</b> {ENGINES[n.engine].writeAmp}</div>
+        </>
+      )}
+
+      <div className="field">
+        <label>Consistency</label>
+        <select value={n.consistency || ''} onChange={e => set({ consistency: e.target.value || undefined })}>
+          <option value="">Unspecified</option>
+          {Object.keys(CONSISTENCY).map(k => <option key={k} value={k}>{CONSISTENCY[k].label}</option>)}
+        </select>
+      </div>
+      {n.consistency && <div className="ddia-blurb">{CONSISTENCY[n.consistency].blurb}</div>}
+
+      {(n.engine || n.consistency) && (
+        <div className={`ddia-verdict ${ph.capMul < 0.9 || ph.latMul > 1.3 ? 'bad' : 'good'}`}>
+          The simulator applies this: capacity {pct(ph.capMul)}, latency {pct(ph.latMul)}
+          {ph.tailMul > 1.5 ? `, and p99 runs about ${ph.tailMul.toFixed(1)}× the median.` : '.'}
+        </div>
+      )}
+    </>
+  )
+}
+
+function ServiceFields({ n, set }) {
+  if (!['app', 'micro', 'web', 'worker'].includes(n.type)) return null
+  return (
+    <>
+      <div className="field">
+        <label>Writes to several stores</label>
+        <select value={n.multiWrite || 'none'} onChange={e => set({ multiWrite: e.target.value })}>
+          {Object.keys(MULTI_WRITE).map(k => <option key={k} value={k}>{MULTI_WRITE[k].label}</option>)}
+        </select>
+      </div>
+      <div className="ddia-blurb">{MULTI_WRITE[n.multiWrite || 'none'].blurb}</div>
+    </>
+  )
+}
+
+function StreamFields({ n, set }) {
+  if (n.type !== 'queue' && n.type !== 'kafka') return null
+  return (
+    <>
+      <div className="field">
+        <label>Role</label>
+        <select value={n.streamRole || 'none'} onChange={e => set({ streamRole: e.target.value })}>
+          {Object.keys(STREAM_ROLE).map(k => <option key={k} value={k}>{STREAM_ROLE[k].label}</option>)}
+        </select>
+      </div>
+      <div className="ddia-blurb">{STREAM_ROLE[n.streamRole || 'none'].blurb}</div>
+      <div className="field">
+        <label>Delivery</label>
+        <select value={n.delivery || 'atLeastOnce'} onChange={e => set({ delivery: e.target.value })}>
+          {Object.keys(DELIVERY).map(k => <option key={k} value={k}>{DELIVERY[k].label}</option>)}
+        </select>
+      </div>
+      <div className="ddia-blurb">{DELIVERY[n.delivery || 'atLeastOnce'].blurb}</div>
+      <div className="field">
+        <label>Consumer is idempotent</label>
+        <input type="checkbox" checked={!!n.idempotentConsumer}
+          onChange={e => set({ idempotentConsumer: e.target.checked })} />
+      </div>
+    </>
   )
 }
 

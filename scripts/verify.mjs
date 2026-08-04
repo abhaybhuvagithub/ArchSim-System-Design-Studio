@@ -155,6 +155,81 @@ try {
       offenders.length === 0);
   }
 
+  // ── physical storage, encoding, stream semantics ───────────────────────────
+  {
+    const d2 = await import(pathToFileURL(path.join(root, 'src/ddia2.js')).href);
+    const { simulate } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+    const { review } = await import(pathToFileURL(path.join(root, 'src/advisor.js')).href);
+
+    // The whole point: these change the simulated numbers, not just the advice.
+    const nodes = extra => [
+      { id: 'c', type: 'client', label: 'C', replicas: 1 },
+      { id: 'db', type: 'sql', label: 'DB', replicas: 2, ...extra },
+    ];
+    const edges = [{ id: 'c->db', from: 'c', to: 'db' }];
+    const util = extra => simulate(nodes(extra), edges, 8000).stats.db.util;
+    const lat = extra => simulate(nodes(extra), edges, 4000).stats.db.latency;
+    const base = util({});
+    check('an LSM engine raises write throughput in the simulation', util({ engine: 'lsm' }) < base);
+    check('a column store is worse at row-at-a-time traffic', util({ engine: 'column' }) > base);
+    check('an in-memory engine has the most headroom', util({ engine: 'memory' }) < util({ engine: 'lsm' }));
+    check('linearizability costs capacity in the simulation', util({ consistency: 'linearizable' }) > base);
+    check('linearizability costs latency too', lat({ consistency: 'linearizable' }) > lat({}));
+    check('causal consistency costs less than linearizable',
+      util({ consistency: 'causal' }) < util({ consistency: 'linearizable' }));
+    check('engine and consistency compose rather than override', (() => {
+      const p = d2.physicalEffects({ engine: 'lsm', consistency: 'linearizable' });
+      return Math.abs(p.capMul - 1.6 * 0.6) < 1e-9 && Math.abs(p.latMul - 1.1 * 1.6) < 1e-9;
+    })());
+    check('an unspecified store is left exactly as it was', (() => {
+      const p = d2.physicalEffects({});
+      return p.capMul === 1 && p.latMul === 1 && util({}) === base;
+    })());
+
+    // Tail amplification: fanning out makes the tail dominate.
+    check('tail amplification grows with fan-out',
+      d2.tailAmplification(1) < d2.tailAmplification(10) && d2.tailAmplification(10) < d2.tailAmplification(100));
+    check('one call in the tail is just the tail probability',
+      Math.abs(d2.tailAmplification(1, 0.01) - 0.01) < 1e-9);
+    check('no fan-out means no amplification', d2.tailAmplification(0) === 0);
+    check('a hundred calls at p99 are more likely slow than not', d2.tailAmplification(100) > 0.5);
+
+    // Schema evolution lives on the link.
+    check('a schemaless link across a rolling upgrade is flagged', !!d2.evolutionRisk({ encoding: 'json' }).risk);
+    check('a schema-carrying link is not', !d2.evolutionRisk({ encoding: 'avro' }).risk);
+    check('no encoding stated means no claim made', d2.evolutionRisk({}).encoding === null);
+
+    // Findings fire when they should and stay quiet when they should not.
+    const fires = (ns, es, re) => review(ns, es, 1000).some(x => re.test(x.title + ' ' + (x.detail || '')));
+    const store = e => [{ id: 'db', type: 'sql', label: 'DB', replicas: 2, ...e }];
+    check('a column store on live traffic is flagged', fires(store({ engine: 'column' }), [], /column-oriented/i));
+    check('a column store on an analytics node is not',
+      !fires([{ id: 'w', type: 'analytics', label: 'W', replicas: 2, engine: 'column' }], [], /column-oriented/i));
+    check('a single in-memory copy is flagged', fires(store({ engine: 'memory', replicas: 1, type: 'nosql' }), [], /only copy in memory/i));
+    check('an in-memory cache is not flagged for it',
+      !fires([{ id: 'c', type: 'cache', label: 'C', replicas: 1, engine: 'memory' }], [], /only copy in memory/i));
+
+    const svc = mw => [
+      { id: 's', type: 'micro', label: 'Svc', replicas: 2, ...(mw ? { multiWrite: mw } : {}) },
+      { id: 'a', type: 'sql', label: 'A', replicas: 2 }, { id: 'b', type: 'nosql', label: 'B', replicas: 2 },
+    ];
+    const svcEdges = [{ id: 's->a', from: 's', to: 'a' }, { id: 's->b', from: 's', to: 'b' }];
+    check('writing to two stores with no strategy is flagged', fires(svc(null), svcEdges, /no stated strategy/i));
+    check('declaring an outbox clears it', !fires(svc('outbox'), svcEdges, /no stated strategy/i));
+    check('one store is not a multi-write problem',
+      !fires(svc('none').slice(0, 2), [svcEdges[0]], /no stated strategy/i));
+
+    const q = extra => [{ id: 'q', type: 'queue', label: 'Q', replicas: 2, ...extra }];
+    check('at-least-once without an idempotent consumer is flagged',
+      fires(q({ delivery: 'atLeastOnce' }), [], /duplicates/i));
+    check('an idempotent consumer clears it',
+      !fires(q({ delivery: 'atLeastOnce', idempotentConsumer: true }), [], /duplicates/i));
+    check('event sourcing on a plain queue is called out',
+      fires(q({ streamRole: 'sourcing' }), [], /cannot be an event source/i));
+    check('event sourcing on a log is fine',
+      !fires([{ id: 'k', type: 'kafka', label: 'K', replicas: 3, streamRole: 'sourcing' }], [], /cannot be an event source/i));
+  }
+
   // ── the guided tour: data and geometry ─────────────────────────────────────
   {
     const t = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
@@ -1154,7 +1229,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 275;
+const EXPECTED_MIN = 310;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
