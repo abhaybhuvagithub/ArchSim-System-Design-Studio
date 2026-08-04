@@ -5,6 +5,7 @@
 import { CATALOG } from './catalog.js'
 import { simulate, capacityReport } from './sim.js'
 import { nodeCost, money } from './pricing.js'
+import { ddiaFindings } from './ddia.js'
 
 const NODE_W = 118, NODE_H = 46
 let seq = 0
@@ -702,6 +703,18 @@ export function review(nodes, edges, rps) {
       title: `${n.label} forwards nowhere`,
       detail: `${n.label} is a ${CATALOG[n.type].name} with no downstream, so traffic reaching it is a dead end. Quick fix ${describe(plan)}.`,
       apply: (ns, es) => runPlan(ns, es, n.id, 'out'),
+    })
+  }
+
+  // Correctness findings — replication, quorums, isolation, partitioning.
+  for (const f of ddiaFindings(nodes, edges, rps)) {
+    push({
+      id: 'ddia:' + f.title,
+      icon: f.severity === 'bad' ? '🛑' : f.severity === 'warn' ? '⚠️' : '💡',
+      severity: f.severity === 'bad' ? 'high' : f.severity === 'warn' ? 'med' : 'low',
+      title: f.title,
+      detail: f.why + ' ' + f.fix,
+      consistency: true,
     })
   }
 

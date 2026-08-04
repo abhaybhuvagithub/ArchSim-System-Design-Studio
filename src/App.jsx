@@ -20,6 +20,8 @@ import { speechSupported, extractSpeech, chunkText, RATES, readRate, saveRate, p
   voicesByLanguage, readVoiceName, saveVoiceName, PROSODY, BLOCK_PAUSE_MS } from './speech.js'
 import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
+import { REPLICATION, ISOLATION, PARTITIONING, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
+import { DDIA_TRACK, DDIA_COMPARISONS } from './learn-ddia.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1408,7 +1410,7 @@ function Learn({ done }) {
   return (
     <section>
       <div className="tabs sub">
-        {[['steps', 'Steps'], ['tips', 'Tips'], ['clouds', 'Clouds'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
+        {[['steps', 'Steps'], ['consistency', 'Consistency'], ['tips', 'Tips'], ['clouds', 'Clouds'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
           <button key={k} className={sub === k ? 'on' : ''} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
@@ -1428,6 +1430,43 @@ function Learn({ done }) {
               </div>
               <div className="lesson-do">→ {s.do}</div>
               <div className="lesson-why">{s.why}</div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {sub === 'consistency' && (
+        <>
+          <h3>Consistency, replication and partitioning</h3>
+          <div className="muted" style={{ marginBottom: 10 }}>
+            The simulator models how much a tier can take and how long it holds a request. It says nothing
+            about whether a read can be stale or two writes can conflict — and those decide whether a
+            distributed design is right. Each step here changes something on the canvas.
+          </div>
+          {DDIA_TRACK.map(part => (
+            <div key={part.part} className="tip-g">
+              <div className="tip-gh">{part.part}</div>
+              {part.steps.map(st => (
+                <div key={st.title} className="tip">
+                  <div className="tip-t">{st.title}</div>
+                  <div className="tip-w">{st.idea}</div>
+                  <div className="tip-try">▸ {st.try}</div>
+                </div>
+              ))}
+            </div>
+          ))}
+          {DDIA_COMPARISONS.map(c => (
+            <div key={c.title} className="cmp">
+              <div className="tip-gh">{c.title}</div>
+              <table>
+                <thead><tr><th />{c.cols.map(x => <th key={x}>{x}</th>)}</tr></thead>
+                <tbody>
+                  {c.rows.map((r, i) => (
+                    <tr key={i}><td className="k">{r[0]}</td>{r.slice(1).map((v, j) => <td key={j}>{v}</td>)}</tr>
+                  ))}
+                </tbody>
+              </table>
+              {c.note && <div className="cmp-note">{c.note}</div>}
             </div>
           ))}
         </>
@@ -1668,6 +1707,7 @@ function Inspector({ n, sim, setNodes, cloud, cloudMult = 1 }) {
         <label>Label</label>
         <input value={n.label} onChange={e => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, label: e.target.value } : x))} />
       </div>
+      <ConsistencyFields n={n} setNodes={setNodes} />
       {!spec.source && (
         <div className="field">
           <label>Replicas</label>
@@ -1836,6 +1876,98 @@ function CanvasDescription({ nodes, edges, rps, template }) {
         ))}
       </ul>
     </div>
+  )
+}
+
+// Correctness, as editable properties. The simulator has always shown how much
+// a store can take; this is where you say what it guarantees.
+const STORE_TYPES = new Set(['sql', 'nosql', 'cache', 'search', 'blob', 'warehouse', 'lake'])
+
+function ConsistencyFields({ n, setNodes }) {
+  if (!STORE_TYPES.has(n.type)) return null
+  const set = patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))
+  const rep = replicationEffects(n)
+  const iso = isolationEffects(n)
+  const part = partitionEffects(n)
+  const quorumOk = rep.mode !== 'leaderless' || quorumOverlaps(rep.n, rep.w, rep.r)
+
+  return (
+    <>
+      <div className="field">
+        <label>Replication</label>
+        <select value={rep.mode} onChange={e => set({ replication: e.target.value })}>
+          {Object.keys(REPLICATION).map(k => <option key={k} value={k}>{REPLICATION[k].label}</option>)}
+        </select>
+        <div className="muted ddia-blurb">{REPLICATION[rep.mode]?.blurb}</div>
+      </div>
+
+      {rep.mode === 'leaderless' && (
+        <div className="field">
+          <label>Quorum — n / w / r</label>
+          <div className="ddia-quorum">
+            {[['quorumN', rep.n, 'n'], ['quorumW', rep.w, 'w'], ['quorumR', rep.r, 'r']].map(([k, v, lbl]) => (
+              <label key={k}><span>{lbl}</span>
+                <input type="number" min="1" max="9" value={v}
+                  onChange={e => set({ [k]: Math.max(1, Math.min(9, +e.target.value || 1)) })} />
+              </label>
+            ))}
+          </div>
+          <div className={`ddia-verdict ${quorumOk ? 'good' : 'bad'}`}>
+            {quorumOk
+              ? `w + r = ${rep.w + rep.r} > n = ${rep.n}. Read and write sets overlap, so a read sees the newest write.`
+              : `w + r = ${rep.w + rep.r}, not greater than n = ${rep.n}. A read can miss the write entirely and go backwards.`}
+          </div>
+        </div>
+      )}
+
+      {(rep.mode === 'leader' || rep.mode === 'multi') && (
+        <div className="field">
+          <label>Replication lag (ms)</label>
+          <input type="number" min="0" max="60000" value={rep.lag}
+            onChange={e => set({ replicationLagMs: Math.max(0, +e.target.value || 0) })} />
+        </div>
+      )}
+
+      {n.type === 'sql' && (
+        <div className="field">
+          <label>Isolation level</label>
+          <select value={iso.level} onChange={e => set({ isolation: e.target.value })}>
+            {Object.keys(ISOLATION).map(k => <option key={k} value={k}>{ISOLATION[k].label}</option>)}
+          </select>
+          <div className="ddia-permits">
+            {iso.permits.length === 0
+              ? <div className="ddia-ok">Prevents every anomaly below. The cost is contention.</div>
+              : <>
+                  <div className="ddia-permits-h">Still permits</div>
+                  <ul>{iso.permits.map((a, i) => <li key={i}>{a}</li>)}</ul>
+                </>}
+          </div>
+          {iso.trap && <div className="ddia-verdict bad">{iso.trap}</div>}
+        </div>
+      )}
+
+      <div className="field">
+        <label>Partitioning</label>
+        <select value={part.strategy} onChange={e => set({ partitioning: e.target.value })}>
+          {Object.keys(PARTITIONING).map(k => <option key={k} value={k}>{PARTITIONING[k].label}</option>)}
+        </select>
+        <div className="muted ddia-blurb">{PARTITIONING[part.strategy]?.blurb}</div>
+        {part.strategy !== 'none' && (
+          <>
+            <label style={{ marginTop: 6 }}>Key skew — how concentrated the hot keys are</label>
+            <input type="range" min="0" max="100" value={Math.round((n.keySkew ?? 0.2) * 100)}
+              onChange={e => set({ keySkew: +e.target.value / 100 })} />
+            <div className={`ddia-verdict ${part.hotspotFactor > 2 ? 'bad' : 'good'}`}>
+              Busiest partition takes about {part.hotspotFactor.toFixed(1)}× its fair share.
+            </div>
+          </>
+        )}
+      </div>
+
+      {rep.notes.length > 0 && (
+        <ul className="ddia-notes">{rep.notes.map((x, i) => <li key={i}>{x}</li>)}</ul>
+      )}
+    </>
   )
 }
 
