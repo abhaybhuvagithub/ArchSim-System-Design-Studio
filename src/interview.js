@@ -27,39 +27,39 @@ const words = s => norm(s).split(' ').filter(w => w.length > 2 && !STOP.has(w)).
 // Concepts every system-design answer is expected to touch, whatever the
 // system. Terms are alternatives — any one of them counts as a hit.
 export const UNIVERSAL = [
-  { id: 'scoping-out', label: 'States what is out of scope', stage: 'requirements', weight: 3,
+  { id: 'scoping-out', label: 'States what is out of scope', ack: 'a clear scope boundary', stage: 'requirements', weight: 3,
     terms: ['out of scope', 'not building', 'leave out', 'leaving out', 'exclude', 'excluding', 'we will not', 'not going to', 'ignore', 'assume away'] },
-  { id: 'functional', label: 'Functional requirements', stage: 'requirements', weight: 3,
+  { id: 'functional', label: 'Functional requirements', ack: 'the functional requirements', stage: 'requirements', weight: 3,
     terms: ['functional', 'the user can', 'users can', 'should be able', 'requirement', 'feature', 'we need to support'] },
-  { id: 'nonfunctional', label: 'Non-functional requirements', stage: 'requirements', weight: 2,
+  { id: 'nonfunctional', label: 'Non-functional requirements', ack: 'the non-functional side', stage: 'requirements', weight: 2,
     terms: ['non functional', 'nonfunctional', 'availability', 'latency', 'durability', 'sla', 'uptime', 'p99', 'consistency'] },
-  { id: 'scale-numbers', label: 'Concrete numbers', stage: 'estimation', weight: 3,
+  { id: 'scale-numbers', label: 'Concrete numbers', ack: 'real numbers', stage: 'estimation', weight: 3,
     terms: ['rps', 'qps', 'per second', 'requests per', 'million', 'billion', 'terabyte', 'gigabyte', 'petabyte', 'daily active', 'dau', 'throughput'] },
-  { id: 'read-write-ratio', label: 'Read/write ratio', stage: 'estimation', weight: 2,
+  { id: 'read-write-ratio', label: 'Read/write ratio', ack: 'the read/write ratio', stage: 'estimation', weight: 2,
     terms: ['read heavy', 'write heavy', 'read write ratio', 'reads to writes', 'ratio of read', 'mostly read', 'mostly write'] },
-  { id: 'storage-estimate', label: 'Storage estimate', stage: 'estimation', weight: 2,
+  { id: 'storage-estimate', label: 'Storage estimate', ack: 'a storage estimate', stage: 'estimation', weight: 2,
     terms: ['storage', 'disk', 'how much data', 'data volume', 'retention', 'per year', 'per day'] },
-  { id: 'bottleneck', label: 'Names the bottleneck', stage: 'high-level', weight: 3,
+  { id: 'bottleneck', label: 'Names the bottleneck', ack: 'the bottleneck named', stage: 'high-level', weight: 3,
     terms: ['bottleneck', 'saturate', 'hot spot', 'hotspot', 'contention', 'limiting factor', 'chokepoint'] },
-  { id: 'caching', label: 'Caching', stage: 'high-level', weight: 2,
+  { id: 'caching', label: 'Caching', ack: 'caching', stage: 'high-level', weight: 2,
     terms: ['cache', 'caching', 'cdn', 'memcache', 'redis', 'invalidation', 'ttl'] },
-  { id: 'partitioning', label: 'Partitioning / sharding', stage: 'high-level', weight: 3,
+  { id: 'partitioning', label: 'Partitioning / sharding', ack: 'a sharding story', stage: 'high-level', weight: 3,
     terms: ['shard', 'sharding', 'partition', 'partitioning', 'consistent hashing', 'split the data'] },
-  { id: 'replication', label: 'Replication', stage: 'high-level', weight: 2,
+  { id: 'replication', label: 'Replication', ack: 'replication', stage: 'high-level', weight: 2,
     terms: ['replica', 'replication', 'follower', 'leader', 'failover', 'standby'] },
-  { id: 'consistency', label: 'Consistency model', stage: 'deep-dives', weight: 3,
+  { id: 'consistency', label: 'Consistency model', ack: 'the consistency question', stage: 'deep-dives', weight: 3,
     terms: ['consistency', 'consistent', 'eventual', 'linearizable', 'stale', 'isolation', 'transaction', 'acid', 'quorum'] },
-  { id: 'failure', label: 'Failure handling', stage: 'deep-dives', weight: 3,
+  { id: 'failure', label: 'Failure handling', ack: 'a failure story', stage: 'deep-dives', weight: 3,
     terms: ['fail', 'failure', 'crash', 'retry', 'idempotent', 'timeout', 'outage', 'degrade', 'fallback', 'circuit breaker'] },
-  { id: 'tradeoff', label: 'States a trade-off', stage: 'deep-dives', weight: 3,
+  { id: 'tradeoff', label: 'States a trade-off', ack: 'the trade-off stated', stage: 'deep-dives', weight: 3,
     terms: ['trade off', 'tradeoff', 'in exchange', 'at the cost', 'the downside', 'we give up', 'in return', 'versus', 'instead of', 'cheaper but', 'faster but'] },
-  { id: 'next-order', label: 'What breaks at 10×', stage: 'wrap', weight: 3,
+  { id: 'next-order', label: 'What breaks at 10×', ack: 'the next order of magnitude', stage: 'wrap', weight: 3,
     terms: ['ten times', '10x', '10 times', 'order of magnitude', 'next order', 'an order of', 'as it grows', 'at that scale'] },
-  { id: 'wrap-limit', label: 'Names what fails first', stage: 'wrap', weight: 3,
+  { id: 'wrap-limit', label: 'Names what fails first', ack: 'what gives way first', stage: 'wrap', weight: 3,
     terms: ['break', 'breaks', 'fall over', 'saturate', 'run out', 'limit', 'first thing', 'would fail'] },
-  { id: 'wrap-change', label: 'Names the change to make', stage: 'wrap', weight: 2,
+  { id: 'wrap-change', label: 'Names the change to make', ack: 'a concrete change', stage: 'wrap', weight: 2,
     terms: ['i would', 'we would', 'migrate', 'move to', 'introduce', 'split', 'add a', 'switch to', 'rewrite'] },
-  { id: 'async', label: 'Async / queueing', stage: 'high-level', weight: 2,
+  { id: 'async', label: 'Async / queueing', ack: 'the async path', stage: 'high-level', weight: 2,
     terms: ['queue', 'async', 'asynchronous', 'background', 'worker', 'event', 'kafka', 'stream', 'buffer'] },
 ]
 
@@ -268,4 +268,98 @@ export function pickProbe(stage, answer, alreadyAsked = []) {
   const covered = new Set(hit.map(c => c.id))
   const asked = new Set(alreadyAsked)
   return probes.find(p => !covered.has(p.concept) && !asked.has(p.concept)) || null
+}
+
+// ── talking like a person rather than a form ────────────────────────────────
+//
+// The first version replied with a fixed sentence per stage, which reads as a
+// questionnaire: it never showed it had heard the answer. A real interviewer
+// reflects what you said, reacts to the specific thing you named, and asks the
+// next question out of your own words. That is what this builds.
+//
+// Variation is indexed by turn rather than randomised, so a transcript is
+// reproducible and the tests are not flaky.
+
+const pick = (arr, i) => arr[Math.abs(i) % arr.length]
+
+// Pull back a phrase the candidate actually used, so the reply can quote them.
+export function salientPhrase(answer, concept) {
+  const sentences = String(answer).split(/(?<=[.!?])\s+/)
+  for (const t of concept?.terms || []) {
+    const s = sentences.find(x => norm(x).includes(norm(t)))
+    if (s) return s.trim().replace(/[.!?]+$/, '')
+  }
+  return null
+}
+
+const ACK = [
+  a => `Right — ${a}.`,
+  a => `Okay, so ${a}.`,
+  a => `Good. ${a[0].toUpperCase()}${a.slice(1)}.`,
+  a => `That works — ${a}.`,
+]
+
+const PUSH = [
+  q => `Let me push on that. ${q}`,
+  q => `Before we move on — ${q[0].toLowerCase()}${q.slice(1)}`,
+  q => q,
+  q => `Alright. ${q}`,
+]
+
+const MOVE = [
+  q => q,
+  q => `Good. ${q}`,
+  q => `That holds up. ${q}`,
+  q => `Fine — let's move on. ${q}`,
+]
+
+// Short, specific summary of what they covered, in their terms.
+function summarise(hit, answer) {
+  const named = hit.slice(0, 2).map(c => (c.ack || c.label).replace(/\.$/, ''))
+  if (!named.length) return null
+  if (named.length === 1) return `you've got ${named[0]}`
+  return `you've got ${named[0]} and ${named[1]}`
+}
+
+// If they asked something, answer it — ignoring a direct question is the most
+// obviously robotic thing an interviewer can do.
+export function answerQuestion(question, ctx = {}) {
+  const q = norm(question)
+  if (/scale|traffic|how many|how much|rps|users|load/.test(q))
+    return `Assume ${ctx.rps ? ctx.rps.toLocaleString() + ' requests per second at peak' : 'a large consumer scale'} — but tell me what you would do differently at ten times that.`
+  if (/scope|should (i|we)|do (i|we) need|include|out of/.test(q))
+    return `Your call — decide, say why, and I will hold you to it.`
+  if (/consisten|stale|transaction|acid/.test(q))
+    return `You choose. I care more about whether you can say what that choice costs.`
+  if (/budget|cost|money|cheap/.test(q))
+    return `Assume cost matters but is not the binding constraint. Correctness first.`
+  return `Make an assumption, say it out loud, and carry on — that is what I am looking for.`
+}
+
+export const hasQuestion = t => /\?/.test(String(t || ''))
+
+// The interviewer's whole turn: react to what was said, then ask what is next.
+export function respond({ stage, answer, turnIndex = 0, nextStage = null, askedProbes = [], ctx = {} }) {
+  const { hit } = matchConcepts(answer, stage.concepts || [])
+  const probe = pickProbe(stage, answer, askedProbes)
+  const parts = []
+
+  if (hasQuestion(answer)) parts.push(answerQuestion(answer, ctx))
+
+  const gist = summarise(hit, answer)
+  if (gist) parts.push(pick(ACK, turnIndex)(gist))
+
+  if (probe) {
+    // Anchor the challenge in their own words where we can.
+    const quoted = hit.length ? salientPhrase(answer, hit[0]) : null
+    const lead = quoted && quoted.length < 90 ? `You said "${quoted}". ` : ''
+    parts.push(lead + pick(PUSH, turnIndex)(probe.text))
+    return { text: parts.join(' '), probe: probe.concept, advance: false }
+  }
+
+  if (nextStage) {
+    parts.push(pick(MOVE, turnIndex)(nextStage.question))
+    return { text: parts.join(' '), probe: null, advance: true }
+  }
+  return { text: parts.join(' ') || 'Good. That is everything I wanted to cover.', probe: null, advance: true, end: true }
 }
