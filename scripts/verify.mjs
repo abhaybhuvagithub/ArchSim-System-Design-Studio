@@ -414,6 +414,26 @@ try {
     check('an unanswerable question still gets a usable reply',
       iv.answerQuestion('what colour is the logo?').length > 20);
 
+    // "Good. Good. Now put numbers on it." — the transition prepends an opener
+    // and the question already had one. Caught on the deployed site.
+    check('a reply never doubles its opening word', (() => {
+      const texts = [];
+      for (let i = 0; i < 8; i++) for (const st of plan.stages.slice(0, 4)) {
+        const nxt = plan.stages[plan.stages.indexOf(st) + 1] || null;
+        texts.push(iv.respond({ stage: st, answer: good, nextStage: nxt, turnIndex: i }).text);
+      }
+      return !texts.some(t => /\b(good|right|okay|alright|fine)[.,!]\s+(good|right|okay|alright|fine)[.,!]/i.test(t));
+    })());
+    check('no stage question carries its own opener',
+      plan.stages.every(s => iv.stripOpener(s.question) === s.question));
+    check('stripOpener removes a leading filler and leaves the rest alone',
+      iv.stripOpener('Good. Now put numbers on it.') === 'Now put numbers on it.' &&
+      iv.stripOpener('Walk me through the design.') === 'Walk me through the design.');
+    check('a reply never contains a double space or a stray gap', (() => {
+      const r = iv.respond({ stage: plan.stages[0], answer: good, nextStage: plan.stages[1], turnIndex: 3 });
+      return !/\s{2,}/.test(r.text) && r.text === r.text.trim();
+    })());
+
     // Keyword matching must not credit things that were not said.
     const est = iv.UNIVERSAL.filter(c => c.stage === 'estimation');
     check('numbers in an answer are detected', iv.matchConcepts('roughly 20000 rps at peak', est).hit.some(c => c.id === 'scale-numbers'));
@@ -1470,7 +1490,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 372;
+const EXPECTED_MIN = 376;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

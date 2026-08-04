@@ -109,7 +109,7 @@ export const STAGES = [
       { concept: 'nonfunctional', text: 'And the non-functional side — availability, latency, durability. Which of those actually matters here?' },
     ] },
   { id: 'estimation', title: 'Scale',
-    ask: () => 'Good. Now put numbers on it. How much traffic, how much data, and what is the read to write ratio?',
+    ask: () => 'Now put numbers on it. How much traffic, how much data, and what is the read to write ratio?',
     probes: [
       { concept: 'scale-numbers', text: 'Give me a rough number rather than a category — even an order of magnitude changes the design.' },
       { concept: 'read-write-ratio', text: 'What is the read to write ratio? That one number decides most of the design.' },
@@ -282,6 +282,13 @@ export function pickProbe(stage, answer, alreadyAsked = []) {
 
 const pick = (arr, i) => arr[Math.abs(i) % arr.length]
 
+// A transition prepends an opener, so a question that already starts with one
+// produced "Good. Good. Now put numbers on it." Strip the leading filler rather
+// than relying on every question being worded to suit every transition.
+const OPENERS = /^(good|right|okay|ok|alright|fine|great)[.,!]?\s+/i
+export const stripOpener = q => String(q || '').replace(OPENERS, '')
+const joinTurn = parts => parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+
 // Pull back a phrase the candidate actually used, so the reply can quote them.
 export function salientPhrase(answer, concept) {
   const sentences = String(answer).split(/(?<=[.!?])\s+/)
@@ -353,13 +360,13 @@ export function respond({ stage, answer, turnIndex = 0, nextStage = null, askedP
     // Anchor the challenge in their own words where we can.
     const quoted = hit.length ? salientPhrase(answer, hit[0]) : null
     const lead = quoted && quoted.length < 90 ? `You said "${quoted}". ` : ''
-    parts.push(lead + pick(PUSH, turnIndex)(probe.text))
-    return { text: parts.join(' '), probe: probe.concept, advance: false }
+    parts.push(lead + pick(PUSH, turnIndex)(stripOpener(probe.text)))
+    return { text: joinTurn(parts), probe: probe.concept, advance: false }
   }
 
   if (nextStage) {
-    parts.push(pick(MOVE, turnIndex)(nextStage.question))
-    return { text: parts.join(' '), probe: null, advance: true }
+    parts.push(pick(MOVE, turnIndex)(stripOpener(nextStage.question)))
+    return { text: joinTurn(parts), probe: null, advance: true }
   }
-  return { text: parts.join(' ') || 'Good. That is everything I wanted to cover.', probe: null, advance: true, end: true }
+  return { text: joinTurn(parts) || 'Good. That is everything I wanted to cover.', probe: null, advance: true, end: true }
 }
