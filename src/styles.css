@@ -867,3 +867,35 @@ select.btn { appearance: auto; }
 
 /* These sit outside .field (a flex row) so they get the full panel width. */
 .ddia-blurb, .ddia-verdict, .ddia-permits, .ddia-notes { width: 100%; }
+
+/* ---- First-run guided tour ---- */
+.tour { position: fixed; inset: 0; z-index: 9000; }
+.tour-scrim { position: absolute; inset: 0; }
+.tour-hole {
+  position: absolute; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.58), 0 0 0 2px var(--accent, #0a84ff) inset;
+  transition: left .22s ease, top .22s ease, width .22s ease, height .22s ease;
+}
+/* No target: dim the whole screen instead of cutting a hole. */
+.tour-tip.center ~ .tour-hole, .tour:not(:has(.tour-hole)) .tour-scrim { background: rgba(0,0,0,.58); }
+.tour-tip {
+  position: absolute; width: 340px; max-width: calc(100vw - 28px);
+  background: var(--panel, #fff); color: var(--fg, #1d1d1f);
+  border-radius: 14px; padding: 16px 18px 14px;
+  box-shadow: 0 18px 48px rgba(0,0,0,.32); border: 1px solid var(--line, #e3e3e6);
+  transition: left .22s ease, top .22s ease;
+}
+.tour-tip:focus { outline: none; }
+.tour-count { font-size: 10px; letter-spacing: .9px; text-transform: uppercase; opacity: .5; margin-bottom: 6px; }
+.tour-tip h3 { margin: 0 0 7px; font-size: 15px; }
+.tour-tip p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.6; opacity: .82; }
+.tour-dots { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.tour-dots span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .2; }
+.tour-dots span.on { opacity: .85; }
+.tour-btns { display: flex; align-items: center; gap: 8px; }
+.tour-btns .spacer { flex: 1; }
+.tour-btns button { font: inherit; font-size: 12px; border-radius: 8px; padding: 6px 13px; cursor: pointer; border: 1px solid var(--line, #e3e3e6); background: transparent; color: inherit; }
+.tour-skip { opacity: .55; border-color: transparent !important; padding-left: 0 !important; }
+.tour-next { background: var(--accent, #0a84ff) !important; border-color: transparent !important; color: #fff !important; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .tour-hole, .tour-tip { transition: none; } }
+.a11y .tour-hole, .a11y .tour-tip { transition: none; }

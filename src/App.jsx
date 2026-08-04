@@ -22,6 +22,7 @@ import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 import { REPLICATION, ISOLATION, PARTITIONING, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
 import { DDIA_TRACK, DDIA_COMPARISONS } from './learn-ddia.js'
+import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from './tour.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -72,6 +73,7 @@ export default function App() {
   const [reqLog, setReqLog] = useState({})        // checklist index -> what it added
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
+  const [tourAt, setTourAt] = useState(null)
   const [a11y, setA11y] = useState(() => {
     try { return localStorage.getItem('archsim.a11y') === '1' } catch (e) { return false }
   })
@@ -685,7 +687,7 @@ export default function App() {
             <button className={`btn ${drawer === 'right' ? 'active' : ''}`} onClick={() => setDrawer(d => d === 'right' ? null : 'right')}>▤</button>
           </>
         )}
-        <select className="btn" value="" onChange={e => loadTemplate(e.target.value)}>
+        <select className="btn" data-tour="templates" value="" onChange={e => loadTemplate(e.target.value)}>
           <option value="">📚 New / load template…</option>
           <optgroup label="Start from scratch">
             <option value="blank">＋ Blank canvas</option>
@@ -697,13 +699,13 @@ export default function App() {
             </optgroup>
           ))}
         </select>
-        <button className={`btn ${simOn ? 'active' : ''}`} onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
-        <button className={`btn ${chaosOn ? 'danger' : ''}`} onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">Chaos {chaosOn ? 'ON' : 'off'}</button>
-        <button className={`btn ${tab === 'improve' ? 'active' : ''}`} onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
+        <button className={`btn ${simOn ? 'active' : ''}`} data-tour="simulate" onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
+        <button className={`btn ${chaosOn ? 'danger' : ''}`} data-tour="chaos" onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">Chaos {chaosOn ? 'ON' : 'off'}</button>
+        <button className={`btn ${tab === 'improve' ? 'active' : ''}`} data-tour="improve" onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
           title="Review the design and suggest components to add, wired in automatically">
           ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
         </button>
-        <div className="rps">
+        <div className="rps" data-tour="traffic">
           <span>Traffic</span>
           <input type="range" min={2} max={6} step={0.05} value={Math.log10(rps)} onChange={e => setRps(Math.round(10 ** +e.target.value))} />
           <b>{fmt(rps)} rps</b>
@@ -729,9 +731,9 @@ export default function App() {
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
           {THEME_LABEL[theme]}
         </button>
-        <button className="btn" onClick={arrange} title="Auto-arrange into clean left-to-right layers with fewer crossing lines">⧉ Arrange</button>
+        <button className="btn" data-tour="arrange" onClick={arrange} title="Auto-arrange into clean left-to-right layers with fewer crossing lines">⧉ Arrange</button>
         <button className="btn" onClick={() => fitView(nodes)} title="Fit the whole diagram in view">⤢ Fit</button>
-        <select className={`btn ${exporting ? 'active' : ''}`} value="" onChange={onExportPick} disabled={!!exporting}
+        <select className={`btn ${exporting ? 'active' : ''}`} data-tour="export" value="" onChange={onExportPick} disabled={!!exporting}
           title="Export the design — documents include every table, finding and figure on screen">
           <option value="">{exporting ? `⏳ Building ${exporting.toUpperCase()}…` : '⤓ Export…'}</option>
           <optgroup label="Full architecture document">
@@ -746,15 +748,19 @@ export default function App() {
         </select>
         <label className="btn">JSON ↑<input type="file" accept=".json" style={{ display: 'none' }} onChange={importJSON} /></label>
         <button className="btn" onClick={clearAll}>Clear</button>
-        <button className={`btn ${a11y ? 'active' : ''}`} onClick={() => setA11y(v => !v)}
+        <button className="btn" data-tour="help" onClick={() => setTourAt(0)}
+          title="Replay the guided tour of the app">? Tour</button>
+        <button className={`btn ${a11y ? 'active' : ''}`} data-tour="a11y" onClick={() => setA11y(v => !v)}
           aria-pressed={a11y}
           title="Screen-reader mode: a text equivalent of the diagram, stronger focus outlines and no motion">
           ♿ {a11y ? 'A11y on' : 'A11y'}
         </button>
       </header>
 
+      <Tour at={tourAt} setAt={setTourAt} setTab={setTab} loadTemplate={loadTemplate} />
+
       <div className="body">
-        <nav aria-label="Components" className={`palette ${floatPanel.left ? 'floating' : ''} ${maxed === 'left' ? 'maxed' : ''} ${compact ? 'drawer left' : ''} ${compact && drawer === 'left' ? 'open' : ''}`}
+        <nav aria-label="Components" data-tour="palette" className={`palette ${floatPanel.left ? 'floating' : ''} ${maxed === 'left' ? 'maxed' : ''} ${compact ? 'drawer left' : ''} ${compact && drawer === 'left' ? 'open' : ''}`}
           style={compact ? undefined : floatPanel.left
             ? { left: floatPanel.left.x, top: floatPanel.left.y, width: floatPanel.left.w, height: floatPanel.left.h }
             : maxed === 'left' ? undefined            // width comes from .maxed, so it stays responsive
@@ -854,7 +860,7 @@ export default function App() {
               <button className="tpl-header-x" title="Clear the canvas" onClick={blank}>✕</button>
             </div>
           )}
-          <svg ref={svgRef} onPointerDown={onCanvasDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onWheel={onWheel} style={{ touchAction: 'none' }}>
+          <svg ref={svgRef} data-tour="canvas" onPointerDown={onCanvasDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onWheel={onWheel} style={{ touchAction: 'none' }}>
             <defs>
               <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill={T.arrow} />
@@ -937,7 +943,7 @@ export default function App() {
               </button>
             </span>
           </div>
-          <div className="tabs" role="tablist" aria-label="Analysis views">
+          <div className="tabs" role="tablist" aria-label="Analysis views" data-tour="analysis">
             {[
               ['brief', 'Brief', null, 'Written description of this architecture'],
               ['capacity', 'Capacity', null, 'Bottlenecks and the replicas each tier needs'],
@@ -950,6 +956,7 @@ export default function App() {
               ['about', 'About', null, 'What this simulator is and how it differs'],
             ].map(([key, label, badge, hint]) => (
               <button key={key} role="tab" id={`tab-${key}`} aria-selected={tab === key}
+                data-tour={`tab-${key}`}
                 title={hint}
                 className={`${tab === key ? 'on' : ''} ${key === 'chaos' && faults.length ? 'alarm' : ''}`}
                 onClick={() => { setTab(key); if (key !== 'capacity' && key !== 'brief') setSel(null) }}>
@@ -1976,6 +1983,93 @@ function ConsistencyFields({ n, setNodes }) {
         <ul className="ddia-notes">{rep.notes.map((x, i) => <li key={i}>{x}</li>)}</ul>
       )}
     </>
+  )
+}
+
+// The first-run tour. A spotlight is just a hole in a dimmed overlay: an
+// absolutely-positioned box with an enormous outset box-shadow. That avoids
+// clip-path, which is patchy in older Safari.
+function Tour({ at, setAt, setTab, loadTemplate }) {
+  const steps = useMemo(() => (typeof document === 'undefined' ? TOUR_STEPS : stepsFor(document)), [at != null])
+  const step = at == null ? null : steps[at]
+  const tipRef = useRef(null)
+  const [box, setBox] = useState(null)
+
+  // Auto-start once, ever. Deliberately after a beat so the layout has settled
+  // and we measure where things actually are, not where they start.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!shouldAutoStart(window.localStorage)) return
+    const t = setTimeout(() => setAt(0), 600)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Side effects the step asks for, before we measure.
+  useEffect(() => {
+    if (!step) return
+    if (step.tab) setTab(step.tab)
+    if (step.load) loadTemplate(String(TEMPLATES.findIndex(t => t.name.includes(step.load))))
+  }, [at])
+
+  useEffect(() => {
+    if (!step) return
+    const measure = () => {
+      const el = step.target && document.querySelector(step.target)
+      const r = el?.getBoundingClientRect()
+      const tip = tipRef.current?.getBoundingClientRect()
+      const vp = { w: window.innerWidth, h: window.innerHeight }
+      const t = r && r.width ? { x: r.left, y: r.top, w: r.width, h: r.height } : null
+      setBox({ target: t, ...placeTooltip(t, { w: tip?.width || 340, h: tip?.height || 190 }, vp) })
+    }
+    measure()
+    const id = setTimeout(measure, 60)     // after the tab switch paints
+    window.addEventListener('resize', measure)
+    window.addEventListener('scroll', measure, true)
+    return () => { clearTimeout(id); window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure, true) }
+  }, [at])
+
+  const end = () => { markSeen(window.localStorage); setAt(null) }
+  const next = () => (at >= steps.length - 1 ? end() : setAt(at + 1))
+  const prev = () => setAt(Math.max(0, at - 1))
+
+  useEffect(() => {
+    if (at == null) return
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); end() }
+      else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); next() }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); prev() }
+    }
+    window.addEventListener('keydown', onKey)
+    tipRef.current?.focus()
+    return () => window.removeEventListener('keydown', onKey)
+  }, [at, steps.length])
+
+  if (at == null || !step) return null
+  const t = box?.target
+
+  return (
+    <div className="tour" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+      <div className="tour-scrim" onClick={end} />
+      {t && (
+        <div className="tour-hole" style={{ left: t.x - 6, top: t.y - 6, width: t.w + 12, height: t.h + 12 }} />
+      )}
+      <div ref={tipRef} tabIndex={-1}
+        className={`tour-tip ${box?.placement || 'center'}`}
+        style={{ left: box?.x ?? 0, top: box?.y ?? 0 }}>
+        <div className="tour-count">Step {at + 1} of {steps.length}</div>
+        <h3 id="tour-title">{step.title}</h3>
+        <p>{step.body}</p>
+        <div className="tour-dots" aria-hidden="true">
+          {steps.map((s, i) => <span key={s.id} className={i === at ? 'on' : ''} />)}
+        </div>
+        <div className="tour-btns">
+          <button className="tour-skip" onClick={end}>Skip tour</button>
+          <span className="spacer" />
+          {at > 0 && <button className="tour-back" onClick={prev}>Back</button>}
+          <button className="tour-next" onClick={next}>{at >= steps.length - 1 ? 'Done' : 'Next'}</button>
+        </div>
+      </div>
+    </div>
   )
 }
 

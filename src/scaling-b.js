@@ -110,23 +110,6 @@ export default {
   wall: { t: 'Shared national infrastructure', d: 'When NPCI or a major bank degrades, every UPI app degrades together. The engineering response is graceful degradation and honest status messaging, because there is no capacity you can add to route around it.' },
 },
 
-'NHAI FASTag Tolling': {
-  constraint: 'A hard real-time deadline at the barrier — a decision in under a second, whether or not the network is up.',
-  ladder: [
-    ['100 plazas', '~50 rps', 'Lane controller calls the central API for each read. Works while connectivity holds.'],
-    ['1K plazas', '~500 rps', 'Local hotlist cached at the plaza so the barrier decision is local. Store-and-forward when the uplink drops.'],
-    ['5K plazas', '~2K rps', 'Async settlement to NETC and issuers. Duplicate-read dedupe per tag per plaza. ANPR fallback for unreadable tags.'],
-    ['national', '~10K rps peak', 'Regional aggregation, batched settlement, and a reconciliation pipeline that treats disputed reads as routine.'],
-  ],
-  levers: [
-    { t: 'Decide locally, settle centrally', d: 'The barrier cannot wait for a network round trip. A cached hotlist and local balance hint let the lane decide in milliseconds; the actual debit settles afterwards.', n: ['hot', 'lane', 'plaza'] },
-    { t: 'Store and forward', d: 'Plaza uplinks fail regularly. Buffer transactions locally and replay on reconnect — the toll still gets collected, just later.', n: ['plaza', 'k'] },
-    { t: 'Dedupe per tag per plaza', d: 'A vehicle crawling through generates multiple reads. Without a short-window dedupe you double-charge, which is the most damaging failure mode in a public system.', n: ['lane', 'api'] },
-    { t: 'Images out of band', d: 'ANPR photographs are large and only needed for disputes. They go to object storage asynchronously and must never be in the barrier path.', n: ['img', 'anpr'] },
-    { t: 'Batch settlement', d: 'Per-transaction calls to issuers would swamp them. Aggregate and settle in batches with a reconciliation loop.', n: ['netc', 'settle', 'recon'] },
-  ],
-  wall: { t: 'Physics at the barrier', d: 'A vehicle at 30km/h gives you a fraction of a second. That deadline is fixed by the road, not the software, which is why the entire design is shaped around deciding without the network rather than deciding faster with it.' },
-},
 
 'Continuous Testing Platform': {
   constraint: 'Test execution capacity and flakiness — both grow superlinearly with the size of the codebase.',

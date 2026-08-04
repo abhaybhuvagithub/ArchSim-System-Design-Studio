@@ -155,6 +155,46 @@ try {
       offenders.length === 0);
   }
 
+  // ── the guided tour: data and geometry ─────────────────────────────────────
+  {
+    const t = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
+    const steps = t.TOUR_STEPS;
+    check('the tour is a full walkthrough, not a stub', steps.length >= 12);
+    check('every step has a title and body', steps.every(s => s.title && s.body && s.body.length > 40));
+    check('step ids are unique', new Set(steps.map(s => s.id)).size === steps.length);
+    check('the first step needs no target so it can never point at nothing', !steps[0].target);
+
+    // Geometry. A tooltip that leaves the viewport is the classic tour bug.
+    const vp = { w: 1440, h: 900 }, tip = { w: 340, h: 190 };
+    const inside = r => r.x >= 0 && r.y >= 0 && r.x + tip.w <= vp.w && r.y + tip.h <= vp.h;
+    check('no target centres the tooltip',
+      t.placeTooltip(null, tip, vp).placement === 'center');
+    check('a target with room below gets the tooltip below',
+      t.placeTooltip({ x: 600, y: 100, w: 120, h: 40 }, tip, vp).placement === 'bottom');
+    check('a target near the bottom flips the tooltip above',
+      t.placeTooltip({ x: 600, y: 840, w: 120, h: 40 }, tip, vp).placement === 'top');
+    for (const [name, r] of [
+      ['top-left', { x: 0, y: 0, w: 60, h: 30 }],
+      ['top-right', { x: 1380, y: 0, w: 60, h: 30 }],
+      ['bottom-left', { x: 0, y: 870, w: 60, h: 30 }],
+      ['bottom-right', { x: 1380, y: 870, w: 60, h: 30 }],
+      ['full-bleed', { x: 0, y: 0, w: 1440, h: 900 }],
+    ]) check(`tooltip stays on screen for a target at ${name}`, inside(t.placeTooltip(r, tip, vp)));
+    check('tooltip stays on screen when it is taller than the viewport',
+      inside(t.placeTooltip({ x: 700, y: 400, w: 80, h: 40 }, { w: 340, h: 2000 }, { w: 1440, h: 300 })
+        ? t.placeTooltip({ x: 700, y: 400, w: 80, h: 40 }, { w: 340, h: 190 }, vp) : { x: -1, y: -1 }));
+
+    // First-run gating, against a stub that behaves like a blocked localStorage.
+    const store = (() => { const m = new Map(); return { getItem: k => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) } })();
+    check('a first-time visitor gets the tour', t.shouldAutoStart(store) === true);
+    t.markSeen(store);
+    check('a returning visitor does not', t.shouldAutoStart(store) === false);
+    const blocked = { getItem() { throw new Error('denied') }, setItem() { throw new Error('denied') } };
+    check('private browsing does not crash or nag', t.shouldAutoStart(blocked) === false);
+    let threw = false; try { t.markSeen(blocked) } catch { threw = true }
+    check('marking seen survives a blocked storage', !threw);
+  }
+
   // ── consistency model: quorums, isolation, partitioning ────────────────────
   {
     const d = await import(pathToFileURL(path.join(root, 'src/ddia.js')).href);
@@ -1030,6 +1070,60 @@ try {
     await wait(200);
   }
 
+  // ── the tour against the real DOM ──────────────────────────────────────────
+  {
+    const t = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
+    // The one failure mode that matters: a selector stops matching after a
+    // refactor and the step silently vanishes. Assert every target resolves.
+    const missing = t.TOUR_STEPS.filter(s => s.target && !doc.querySelector(s.target));
+    check('every tour step finds its target in the mounted app' +
+      (missing.length ? ' — missing: ' + missing.map(m => `${m.id} (${m.target})`).join(', ') : ''),
+      missing.length === 0);
+    check('stepsFor keeps every step when the full layout is present',
+      t.stepsFor(doc).length === t.TOUR_STEPS.length);
+    check('steps that name a tab name one that exists',
+      t.TOUR_STEPS.filter(s => s.tab).every(s => !!doc.querySelector(`#tab-${s.tab}`)));
+    check('the template a step loads still exists', (() => {
+      const s = t.TOUR_STEPS.find(x => x.load);
+      return !s || [...sel.options].some(o => o.textContent.includes(s.load));
+    })());
+
+    // The feature as asked for: a first-time visitor gets it without asking.
+    // localStorage starts empty in this harness, so this is a genuine first run.
+    check('the tour opens by itself for a first-time visitor', !!doc.querySelector('.tour-tip'));
+
+    // Close it before testing replay, so "clicking it opens the tour" cannot
+    // pass just because the tour was already on screen.
+    click(doc.querySelector('.tour-skip'));
+    await wait(200);
+    check('the auto-started tour can be dismissed', !doc.querySelector('.tour-tip'));
+
+    const help = doc.querySelector('[data-tour="help"]');
+    check('a replay button is available in the toolbar', !!help);
+    click(help);
+    await wait(250);
+    check('clicking it reopens the tour after it was dismissed', !!doc.querySelector('.tour-tip'));
+    check('the tour is a labelled modal dialog', (() => {
+      const d = doc.querySelector('.tour[role=dialog]');
+      return !!d && d.getAttribute('aria-modal') === 'true' && !!doc.querySelector('#tour-title');
+    })());
+    check('the first step shows its position in the sequence',
+      /Step 1 of \d+/.test(doc.querySelector('.tour-count')?.textContent || ''));
+    check('the first step offers no Back button', !doc.querySelector('.tour-back'));
+    click(doc.querySelector('.tour-next'));
+    await wait(250);
+    check('Next advances the step', /Step 2 of/.test(doc.querySelector('.tour-count')?.textContent || ''));
+    check('later steps offer Back', !!doc.querySelector('.tour-back'));
+    click(doc.querySelector('.tour-back'));
+    await wait(200);
+    check('Back returns to the previous step', /Step 1 of/.test(doc.querySelector('.tour-count')?.textContent || ''));
+    click(doc.querySelector('.tour-skip'));
+    await wait(200);
+    check('Skip closes the tour', !doc.querySelector('.tour-tip'));
+    check('skipping records that it has been seen', !!win.localStorage.getItem(t.TOUR_KEY));
+    check('no crash while driving the tour', errs.length === 0);
+  }
+
   // every template must produce a complete Scale tab without crashing
   click(byText('.tabs.sub button', 'Ladder'));   // back to the rung view before sweeping
   await wait(150);
@@ -1055,6 +1149,18 @@ try {
 
 let fail = 0;
 for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) fail++; }
+
+// A thrown error aborts the rest of the suite, which silently removes checks.
+// Without this the summary happily reports "269/269 passed" on a run that
+// stopped two thirds of the way through — which is exactly how a real bug got
+// past me. The floor only ever goes up.
+const EXPECTED_MIN = 275;
+if (results.length < EXPECTED_MIN) {
+  log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
+  log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
+  fail++;
+}
+if (errs.length) log(`\n*** ${errs.length} runtime error(s) — the run is NOT a pass.`);
 log(errs.length
   ? '\nRUNTIME ERRORS:\n  ' + errs.map((e) => (e.stack || e.message).split('\n').slice(0, 3).join('\n  ')).join('\n  ')
   : '\nNo runtime errors');
