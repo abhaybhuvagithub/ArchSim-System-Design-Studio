@@ -339,61 +339,6 @@ export default {
   },
 },
 
-'NHAI FASTag Tolling': {
-  meta: 'India · fintech · a hard real-time deadline at the barrier',
-  overview: 'Read a tag as a vehicle approaches, decide whether to raise the barrier in under a second, and settle the toll afterwards. The deadline is set by the road, not by the software.',
-  scope: 'Deciding locally without the network, duplicate-read handling and store-and-forward are the interview. Issuer settlement mechanics are below the line beyond batching.',
-  planning: 'State the deadline first — a vehicle at 30km/h gives you a fraction of a second — and note that plaza uplinks are unreliable. Together those force a local decision with asynchronous settlement, which is the whole architecture.',
-  fr: {
-    core: ['Read a tag at the lane and decide within a second', 'Fall back to number-plate recognition', 'Settle the toll with the issuer', 'Reconcile and handle disputes'],
-    out: ['Tag issuance and KYC', 'Physical barrier hardware'],
-  },
-  nfr: {
-    core: ['Barrier decision under one second, network or not', 'Never double-charge a vehicle', 'No lost transactions when the uplink drops', 'Every charge evidenced for disputes'],
-    out: ['Real-time balance accuracy at the lane'],
-  },
-  nums: [['~2K/s', 'nationally at peak'], ['<1s', 'barrier decision budget'], ['~30 km/h', 'approach speed'], ['hours', 'typical uplink outage to survive']],
-  entities: [
-    ['Tag', 'the vehicle identifier, with a cached status'],
-    ['Hotlist', 'locally cached blocked and low-balance tags'],
-    ['LaneTransaction', 'one read at one lane, deduplicated'],
-    ['Settlement', 'the batched claim against the issuer'],
-  ],
-  apiIntro: 'The lane controller talks to a local plaza server. Everything beyond the plaza is asynchronous and batched.',
-  api: [
-    { dir: '→', name: 'lane: tagRead', body: '{ tagId, laneId, ts } → { decision } // local, <100ms' },
-    { dir: '→', name: 'plaza: forward', body: 'batched transactions, replayed after any outage' },
-    { dir: '↔', name: 'netc: settle', body: 'aggregated claims against issuing banks' },
-  ],
-  dives: [
-    {
-      title: 'Decide locally, settle centrally', focus: ['hot', 'lane', 'plaza'],
-      blocks: [
-        ['p', 'The barrier cannot wait for a network round trip. A cached hotlist and a local balance hint let the lane decide in milliseconds; the actual debit settles afterwards.'],
-        ['note', 'This means occasionally letting through a vehicle that should have been blocked. That is the correct trade — a stuck barrier causes a traffic incident, a missed toll causes a recovery claim.'],
-      ],
-    },
-    {
-      title: 'A vehicle crawling through generates many reads', focus: ['lane', 'api'],
-      blocks: [
-        ['p', 'Without a short-window dedupe per tag per plaza you double-charge, which is the most damaging failure mode in a public system — it generates complaints, disputes and press.'],
-        ['warn', 'Dedupe at the lane, not centrally. If the uplink is down when the duplicate happens, central dedupe never sees it.'],
-      ],
-    },
-    {
-      title: 'Store and forward', focus: ['plaza', 'k', 'img'],
-      blocks: [
-        ['p', 'Plaza uplinks fail regularly and are shared with other systems. Buffer transactions locally and replay on reconnect — a toll collected late is fine, a toll lost is not.'],
-        ['p', 'Number-plate images are large and only needed for disputes. They go to object storage asynchronously and must never sit in the barrier path.'],
-      ],
-    },
-  ],
-  bar: {
-    mid: 'Recognise the latency deadline and cache enough locally to meet it.',
-    senior: 'Design store-and-forward, per-lane dedupe, and batched settlement.',
-    staff: 'Cover reconciliation with issuers, dispute evidence retention, and the operational reality of thousands of unreliable remote sites.',
-  },
-},
 
 'Continuous Testing Platform': {
   meta: 'Quality & testing · medium · feedback latency is the constraint',
