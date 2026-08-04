@@ -352,6 +352,31 @@ try {
       return new Set(b).size === 4 && b[3] === 'Staff+';
     })());
 
+    // The bug that live testing caught: a short but complete answer was probed
+    // about the very thing it had just covered, because the probe fired on word
+    // count. Never chase something they already said.
+    const reqStage = plan.stages.find(s => s.id === 'requirements');
+    const scoped = 'Functional: browse events, hold seats, pay. Out of scope: refunds and dynamic pricing.';
+    check('a stated scope is never probed for scope', (() => {
+      const p = iv.pickProbe(reqStage, scoped);
+      return !p || p.concept !== 'scoping-out';
+    })());
+    check('an answer that omits scope is probed for it',
+      iv.pickProbe(reqStage, 'We let users browse events and buy tickets.')?.concept === 'scoping-out');
+    check('a probe is never repeated within a stage', (() => {
+      const first = iv.pickProbe(reqStage, 'users buy tickets');
+      const second = iv.pickProbe(reqStage, 'users buy tickets', [first.concept]);
+      return second === null || second.concept !== first.concept;
+    })());
+    const estStage = plan.stages.find(s => s.id === 'estimation');
+    check('giving numbers but no ratio is probed for the ratio',
+      iv.pickProbe(estStage, 'about 50000 rps at peak and 2 terabyte of storage')?.concept === 'read-write-ratio');
+    check('a fully covered stage yields no probe at all',
+      iv.pickProbe(estStage, 'about 50000 rps, read heavy roughly 100 to 1 reads to writes, 2 terabyte of storage per year retention') === null);
+    check('every stage has at least one probe tied to a concept it listens for',
+      plan.stages.every(s => (s.probes || []).length > 0 &&
+        s.probes.every(p => s.concepts.some(c => c.id === p.concept))));
+
     // Keyword matching must not credit things that were not said.
     const est = iv.UNIVERSAL.filter(c => c.stage === 'estimation');
     check('numbers in an answer are detected', iv.matchConcepts('roughly 20000 rps at peak', est).hit.some(c => c.id === 'scale-numbers'));
@@ -1408,7 +1433,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 355;
+const EXPECTED_MIN = 362;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
