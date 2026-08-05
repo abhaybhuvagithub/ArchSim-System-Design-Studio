@@ -474,20 +474,25 @@ try {
 
     // Claude is the engine; the rubric is the fallback when there is no key.
     check('Claude is the default provider', (await import(pathToFileURL(path.join(root, 'src/interview-llm.js')).href)).PROVIDERS.anthropic.model.includes('claude'));
-    check('BharatGPT is offered', !!llm.PROVIDERS.bharatgpt);
-    check('BharatGPT asks for a base URL rather than guessing one',
-      llm.PROVIDERS.bharatgpt.needsBaseUrl === true &&
-      !llm.PROVIDERS.bharatgpt.base &&
-      /corover|tenant|serving/i.test(llm.PROVIDERS.bharatgpt.note || ''));
+    check('a self-hosted option is offered', !!llm.PROVIDERS.custom);
+    check('the self-hosted option asks for a base URL rather than guessing one',
+      llm.PROVIDERS.custom.needsBaseUrl === true && !llm.PROVIDERS.custom.base);
+    // Removing the four named-but-unusable entries must not remove the ability
+    // to reach them — the generic option has to name them so nobody assumes
+    // the capability went away with the labels.
+    check('it still names what it replaced, so the capability is discoverable',
+      ['BharatGPT', 'AI4Bharat', 'BharatGen', 'Llama'].every(n => llm.PROVIDERS.custom.note.includes(n)));
+    check('every provider now either works out of the box or asks for a URL',
+      Object.values(llm.PROVIDERS).every(p2 => (!!p2.base) !== (!!p2.needsBaseUrl)));
     check('a missing base URL fails loudly instead of hitting a wrong host', await (async () => {
       let called = false;
-      try { await llm.ask({ provider: 'bharatgpt', key: 'k', system: 's', messages: [{ role: 'user', content: 'hi' }], fetchImpl: () => { called = true } }) }
+      try { await llm.ask({ provider: 'custom', key: 'k', system: 's', messages: [{ role: 'user', content: 'hi' }], fetchImpl: () => { called = true } }) }
       catch (e) { return !called && /base URL/i.test(e.message) }
       return false;
     })());
     check('a supplied base URL is used verbatim, with one slash', await (async () => {
       let seen = '';
-      await llm.ask({ provider: 'bharatgpt', key: 'k', baseUrl: 'https://tenant.example.com/v1/', system: 's', messages: [{ role: 'user', content: 'hi' }],
+      await llm.ask({ provider: 'custom', key: 'k', baseUrl: 'https://tenant.example.com/v1/', system: 's', messages: [{ role: 'user', content: 'hi' }],
         fetchImpl: async u => { seen = u; return { ok: true, json: async () => ({ choices: [{ message: { content: 'hi' } }] }) } } });
       return seen === 'https://tenant.example.com/v1/chat/completions';
     })());
@@ -564,8 +569,8 @@ try {
 
     // Providers: a published base URL is used, an unpublished one is asked for.
     const P = llm.PROVIDERS;
-    check('all twelve providers are offered', Object.keys(P).length === 12);
-    for (const id of ['anthropic', 'openai', 'google', 'deepseek', 'qwen', 'kimi', 'meta', 'sarvam', 'krutrim', 'bharatgpt', 'ai4bharat', 'bharatgen'])
+    check('nine providers are offered', Object.keys(P).length === 9);
+    for (const id of ['anthropic', 'openai', 'google', 'deepseek', 'qwen', 'kimi', 'sarvam', 'krutrim', 'custom'])
       check(`provider "${id}" is present and complete`,
         !!P[id] && !!P[id].label && !!P[id].model && (P[id].models || []).length > 0 &&
         typeof P[id].url === 'function' && typeof P[id].headers === 'function' &&
@@ -573,7 +578,7 @@ try {
 
     // The distinction that matters: guessing an endpoint would fail silently.
     const hosted = ['anthropic', 'openai', 'google', 'deepseek', 'qwen', 'kimi', 'sarvam', 'krutrim'];
-    const selfHosted = ['meta', 'bharatgpt', 'ai4bharat', 'bharatgen'];
+    const selfHosted = ['custom'];
     check('providers with a published endpoint have one built in',
       hosted.every(id => !!P[id].base && P[id].needsBaseUrl === false));
     check('providers without a published endpoint ask for one instead of guessing',
@@ -2118,7 +2123,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 555;
+const EXPECTED_MIN = 552;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
