@@ -755,6 +755,41 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── level expectations ─────────────────────────────────────────────────────
+  {
+    const lv = await import(pathToFileURL(path.join(root, 'src/levels.js')).href);
+    const iv2 = await import(pathToFileURL(path.join(root, 'src/interview.js')).href);
+    check('three bands, in order', lv.bandNames().join() === 'Mid-level,Senior,Staff+');
+    check('each band maps to titles across several companies',
+      lv.LADDER.every(l => (l.titles.match(/·/g) || []).length >= 3));
+    check('each band says what scope it owns',
+      lv.LADDER.every(l => l.scope && l.scope.length > 30));
+    check('Indian ladder context is given', lv.LADDER.every(l => l.india && l.india.length > 20));
+
+    // The line I will not cross: their dataset is theirs, and it would be stale
+    // in a static file within weeks.
+    const all = JSON.stringify(lv.LADDER) + JSON.stringify(lv.SIGNALS);
+    check('no compensation figures are reproduced',
+      !/\$|₹|salary|compensation|\bCTC\b|lakh|LPA|median pay/i.test(all));
+    check('no personal or profile data is present',
+      !/linkedin|profile|@[a-z]+\.[a-z]{2,}/i.test(all));
+
+    check('every band says what it shows and what to do next',
+      lv.bandNames().every(b => { const s2 = lv.signalsFor(b); return s2.does.length >= 3 && s2.next.length > 40 }));
+    check('the two lower bands name what holds them back',
+      ['Mid-level', 'Senior'].every(b => lv.signalsFor(b).missing.length >= 1));
+    check('the ladder has a top', lv.nextBand('Staff+') === null);
+    check('and each band below points at the next',
+      lv.nextBand('Mid-level') === 'Senior' && lv.nextBand('Senior') === 'Staff+');
+    check('an unknown band does not throw', lv.ladderFor('Nope') === null && lv.signalsFor('Nope') == null);
+
+    // The band the interview produces must be one the ladder knows about,
+    // otherwise the report shows a level with no expectations behind it.
+    const known = new Set([...lv.bandNames(), 'Below mid-level']);
+    check('every band the interview can award is covered by the ladder',
+      [0, 0.2, 0.45, 0.7, 0.95].every(x => known.has(iv2.bandFor(x).band)));
+  }
+
   // ── identity, MFA and entitlement ──────────────────────────────────────────
   {
     const id = await import(pathToFileURL(path.join(root, 'src/identity.js')).href);
@@ -2075,7 +2110,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 540;
+const EXPECTED_MIN = 550;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
