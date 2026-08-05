@@ -59,6 +59,14 @@ export const PROVIDERS = {
   deepseek: oai('DeepSeek', 'https://api.deepseek.com/v1',
     ['deepseek-chat', 'deepseek-reasoner']),
 
+  qwen: oai('Qwen (Alibaba)', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    ['qwen-max', 'qwen-plus', 'qwen-turbo'],
+    { note: 'Alibaba Model Studio\u2019s OpenAI-compatible endpoint. This is the international host; mainland China and the per-region hosts use different base URLs, so override it above if yours differs.' }),
+
+  kimi: oai('Kimi (Moonshot AI)', 'https://api.moonshot.ai/v1',
+    ['kimi-k2.5', 'moonshot-v1-32k', 'moonshot-v1-128k'],
+    { note: 'Moonshot\u2019s OpenAI-compatible endpoint. The .ai host is the international one; api.moonshot.cn serves mainland China.' }),
+
   meta: oai('Meta — Llama (self-hosted)', null,
     ['llama-3.3-70b-instruct'],
     { note: 'Meta publishes Llama as open weights rather than running a public API. Point this at whoever serves it for you \u2014 Bedrock, Groq, Together, Fireworks, vLLM or Ollama \u2014 using their OpenAI-compatible base URL.' }),
