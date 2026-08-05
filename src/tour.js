@@ -106,26 +106,26 @@ export const TOUR_STEPS = [
   },
   {
     id: 'arrange',
-    target: '[data-tour="arrange"]',
+    target: '[data-tour="view"]',
     title: 'Tidy up',
-    body: 'Arrange lays the diagram out in clean left-to-right layers with as few crossing lines as it can manage. Fit brings everything back into view, and ①②③ numbers the connections in request order.',
+    body: 'The View menu holds Arrange, which lays the diagram out in clean left-to-right layers with as few crossing lines as it can manage. Fit brings everything back into view, and ①②③ numbers the connections in request order.',
   },
   {
     id: 'export',
-    target: '[data-tour="export"]',
+    target: '[data-tour="design"]',
     title: 'Take it with you',
-    body: 'Export a full architecture document as PDF or Word — every table, finding and figure on screen — or just the diagram as PNG. Design JSON round-trips, so you can save and reload your work.',
+    body: 'The Design menu exports a full architecture document as PDF or Word — every table, finding and figure on screen — or just the diagram as PNG. Design JSON round-trips, so you can save and reload your work.',
   },
   {
     id: 'a11y',
-    target: '[data-tour="a11y"]',
+    target: '[data-tour="view"]',
     title: 'Built to be readable',
-    body: 'A11y mode adds a text equivalent of the diagram for screen readers, stronger focus outlines and no motion. The Brief, Breakdown and About tabs can also be read aloud.',
+    body: 'Screen-reader mode, also under View, adds a text equivalent of the diagram, stronger focus outlines and no motion. The Brief, Breakdown and About tabs can also be read aloud.',
   },
   {
     id: 'done',
     target: '[data-tour="help"]',
-    title: 'That is the tour',
+    title: 'That is the guide',
     body: 'Press this button any time to run it again. Now load a design you care about and turn the traffic up until something goes red.',
   },
 ]

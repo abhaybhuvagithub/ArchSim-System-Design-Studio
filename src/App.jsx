@@ -714,51 +714,55 @@ export default function App() {
           <input type="range" min={2} max={6} step={0.05} value={Math.log10(rps)} onChange={e => setRps(Math.round(10 ** +e.target.value))} />
           <b>{fmt(rps)} rps</b>
         </div>
-        <select className={`btn ${cloud !== 'generic' ? 'active' : ''}`} value={cloud} onChange={e => setCloud(e.target.value)}
-          title="Show the equivalent managed service on each cloud, and price accordingly">
-          {CLOUDS.map(c => <option key={c.id} value={c.id}>{c.id === 'generic' ? '☁ Generic' : '☁ ' + c.name}</option>)}
-        </select>
-        <select className="btn" value={currency} onChange={e => setCur(e.target.value)}
-          title="Display costs in this currency (static conversion from USD list prices)">
-          {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.symbol.trim()} {c.code}</option>)}
-        </select>
-        <button className={`btn ${steps ? 'active' : ''}`} onClick={() => setSteps(s => !s)}
-          title="Number the connections in request order, like a walkthrough diagram">①②③ Steps</button>
         <div className="spacer" />
         {visitors != null && (
           <span className="visitors" title={`${visitors.toLocaleString()} visits to this studio`}>
             👥 {formatVisitors(visitors)}
           </span>
         )}
-        <button className="btn"
-          onClick={() => setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length])}
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
-          {THEME_LABEL[theme]}
-        </button>
-        <button className="btn" data-tour="arrange" onClick={arrange} title="Auto-arrange into clean left-to-right layers with fewer crossing lines">⧉ Arrange</button>
-        <button className="btn" onClick={() => fitView(nodes)} title="Fit the whole diagram in view">⤢ Fit</button>
-        <select className={`btn ${exporting ? 'active' : ''}`} data-tour="export" value="" onChange={onExportPick} disabled={!!exporting}
-          title="Export the design — documents include every table, finding and figure on screen">
-          <option value="">{exporting ? `⏳ Building ${exporting.toUpperCase()}…` : '⤓ Export…'}</option>
-          <optgroup label="Full architecture document">
-            <option value="pdf">📄 PDF report</option>
-            <option value="docx">📝 Word document (.docx)</option>
-            <option value="doc">📝 Word / Docs (.doc)</option>
-          </optgroup>
-          <optgroup label="Raw">
-            <option value="png">🖼 Diagram (.png)</option>
-            <option value="json">⌗ Design (.json)</option>
-          </optgroup>
-        </select>
-        <label className="btn">JSON ↑<input type="file" accept=".json" style={{ display: 'none' }} onChange={importJSON} /></label>
-        <button className="btn" onClick={clearAll}>Clear</button>
+
+        <Menu id="view" label="View" tour="view">
+          <MenuItem onSelect={arrange} hint="Clean left-to-right layers with fewer crossing lines">⧉ Arrange</MenuItem>
+          <MenuItem onSelect={() => fitView(nodes)} hint="Fit the whole diagram in view">⤢ Fit</MenuItem>
+          <MenuItem onSelect={() => setSteps(v => !v)} checked={steps}
+            hint="Number the connections in request order">①②③ Step numbers</MenuItem>
+          <MenuSep />
+          <MenuItem onSelect={() => setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length])}
+            hint={`Currently ${theme}`}>{THEME_LABEL[theme]} Theme</MenuItem>
+          <MenuItem onSelect={() => setA11y(v => !v)} checked={a11y}
+            hint="Text equivalent of the diagram, stronger focus, no motion">♿ Screen-reader mode</MenuItem>
+        </Menu>
+
+        <Menu id="design" label="Design" tour="design">
+          <MenuLabel>Export</MenuLabel>
+          <MenuItem onSelect={() => onExportPick({ target: { value: 'pdf' } })} disabled={!!exporting}>📄 PDF report</MenuItem>
+          <MenuItem onSelect={() => onExportPick({ target: { value: 'docx' } })} disabled={!!exporting}>📝 Word (.docx)</MenuItem>
+          <MenuItem onSelect={() => onExportPick({ target: { value: 'doc' } })} disabled={!!exporting}>📝 Word / Docs (.doc)</MenuItem>
+          <MenuItem onSelect={() => onExportPick({ target: { value: 'png' } })} disabled={!!exporting}>🖼 Diagram (.png)</MenuItem>
+          <MenuItem onSelect={() => onExportPick({ target: { value: 'json' } })} disabled={!!exporting}>⌗ Design (.json)</MenuItem>
+          <MenuSep />
+          <MenuFile onFile={importJSON}>⌗ Import design JSON…</MenuFile>
+          <MenuItem onSelect={clearAll} danger>✕ Clear the canvas</MenuItem>
+        </Menu>
+
+        <Menu id="settings" label="Settings" tour="settings">
+          <MenuLabel>Cloud</MenuLabel>
+          {CLOUDS.map(c => (
+            <MenuItem key={c.id} onSelect={() => setCloud(c.id)} checked={cloud === c.id}>
+              {c.id === 'generic' ? '☁ Generic' : '☁ ' + c.name}
+            </MenuItem>
+          ))}
+          <MenuSep />
+          <MenuLabel>Currency</MenuLabel>
+          {CURRENCIES.map(c => (
+            <MenuItem key={c.code} onSelect={() => setCur(c.code)} checked={currency === c.code}>
+              {c.symbol.trim()} {c.code}
+            </MenuItem>
+          ))}
+        </Menu>
+
         <button className="btn" data-tour="help" onClick={() => setTourAt(0)}
-          title="Replay the guided tour of the app">? Tour</button>
-        <button className={`btn ${a11y ? 'active' : ''}`} data-tour="a11y" onClick={() => setA11y(v => !v)}
-          aria-pressed={a11y}
-          title="Screen-reader mode: a text equivalent of the diagram, stronger focus outlines and no motion">
-          ♿ {a11y ? 'A11y on' : 'A11y'}
-        </button>
+          title="Replay the guided walkthrough of the app">? Guide</button>
       </header>
 
       <Tour at={tourAt} setAt={setTourAt} setTab={setTab} loadTemplate={loadTemplate} />
@@ -2428,6 +2432,93 @@ function Interview({ template }) {
 function matchConceptsSafe(text, concepts) {
   try { return matchConcepts(text, concepts || []) } catch { return { hit: [], missed: [] } }
 }
+
+// A toolbar menu. Keyboard-operable because a menu that only works with a
+// mouse is worse than the row of buttons it replaced: Escape closes, arrows
+// move, Home/End jump, and focus returns to the trigger on close.
+const MenuCtx = React.createContext(null)
+
+function Menu({ id, label, tour, children }) {
+  const [open, setOpen] = useState(false)
+  const btnRef = useRef(null)
+  const popRef = useRef(null)
+
+  const close = (refocus = true) => { setOpen(false); if (refocus) btnRef.current?.focus() }
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = e => {
+      if (!popRef.current?.contains(e.target) && !btnRef.current?.contains(e.target)) setOpen(false)
+    }
+    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close() } }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [open])
+
+  useEffect(() => {
+    if (open) popRef.current?.querySelector('[role="menuitem"]:not([aria-disabled="true"])')?.focus()
+  }, [open])
+
+  const onPopKey = e => {
+    const items = [...(popRef.current?.querySelectorAll('[role="menuitem"]:not([aria-disabled="true"])') || [])]
+    if (!items.length) return
+    const i = items.indexOf(document.activeElement)
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus() }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus() }
+    else if (e.key === 'Home') { e.preventDefault(); items[0].focus() }
+    else if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus() }
+    else if (e.key === 'Tab') close(false)
+  }
+
+  return (
+    <div className="menu">
+      <button ref={btnRef} className={`btn ${open ? 'active' : ''}`} data-tour={tour}
+        aria-haspopup="menu" aria-expanded={open} aria-controls={`menu-${id}`}
+        onClick={() => setOpen(o => !o)}
+        onKeyDown={e => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true) } }}>
+        {label} <span className="menu-caret" aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div ref={popRef} id={`menu-${id}`} className="menu-pop" role="menu" aria-label={label} onKeyDown={onPopKey}>
+          <MenuCtx.Provider value={{ close }}>{children}</MenuCtx.Provider>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MenuItem({ children, onSelect, hint, checked, disabled, danger }) {
+  const ctx = React.useContext(MenuCtx)
+  return (
+    <button role="menuitem" className={`menu-item ${danger ? 'danger' : ''} ${checked ? 'on' : ''}`}
+      aria-disabled={disabled ? 'true' : undefined}
+      {...(checked !== undefined ? { role: 'menuitemcheckbox', 'aria-checked': !!checked } : {})}
+      onClick={() => { if (disabled) return; onSelect?.(); ctx?.close() }}>
+      <span className="menu-tick" aria-hidden="true">{checked ? '✓' : ''}</span>
+      <span className="menu-text">
+        {children}
+        {hint && <small>{hint}</small>}
+      </span>
+    </button>
+  )
+}
+
+function MenuFile({ children, onFile }) {
+  const ctx = React.useContext(MenuCtx)
+  return (
+    <label role="menuitem" tabIndex={0} className="menu-item"
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.querySelector('input')?.click() } }}>
+      <span className="menu-tick" aria-hidden="true" />
+      <span className="menu-text">{children}</span>
+      <input type="file" accept=".json" style={{ display: 'none' }}
+        onChange={e => { onFile(e); ctx?.close() }} />
+    </label>
+  )
+}
+
+const MenuLabel = ({ children }) => <div className="menu-label">{children}</div>
+const MenuSep = () => <div className="menu-sep" role="separator" />
 
 // ── Read aloud ───────────────────────────────────────────────────────────────
 // Wraps any panel section and reads its prose, highlighting each block as it
