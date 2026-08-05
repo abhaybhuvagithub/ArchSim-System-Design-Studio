@@ -1677,8 +1677,8 @@ try {
   {
     await closeMenus();
     const triggers = [...doc.querySelectorAll('.toolbar .menu > button')];
-    check('the toolbar has View, Design and Settings menus',
-      ['View', 'Design', 'Settings'].every(l => triggers.some(b => b.textContent.trim().startsWith(l))));
+    check('the toolbar has View, Design and Configuration menus',
+      ['View', 'Design', 'Configuration'].every(l => triggers.some(b => b.textContent.trim().startsWith(l))));
     check('the guide button says Guide, not Tour', (() => {
       const b = doc.querySelector('[data-tour="help"]');
       return !!b && /Guide/.test(b.textContent) && !/Tour/.test(b.textContent);
@@ -1722,8 +1722,8 @@ try {
     check('no toolbar action was lost in the move to menus' + (lost.length ? ' — missing: ' + lost.join(', ') : ''),
       lost.length === 0);
 
-    await openMenu('Settings');
-    check('cloud and currency both moved into Settings',
+    await openMenu('Configuration');
+    check('cloud and currency both moved into Configuration',
       !!menuItem('Generic') && !!menuItem('INR'));
     check('the current cloud and currency are shown as checked',
       [...doc.querySelectorAll('.menu-pop [aria-checked="true"]')].length >= 2);
@@ -1733,6 +1733,8 @@ try {
     await closeMenus();
     check('clicking outside dismisses an open menu',
       [...doc.querySelectorAll('.toolbar .menu > button')].every(b => b.getAttribute('aria-expanded') === 'false'));
+    check('no menu is still labelled Settings',
+      ![...doc.querySelectorAll('.toolbar .menu > button')].some(b => /\bSettings\b/.test(b.textContent)));
     check('the toolbar is no longer a wall of buttons',
       doc.querySelectorAll('.toolbar > button, .toolbar > select, .toolbar > label').length <= 8);
     check('no crash while driving the menus', errs.length === 0);
@@ -1822,7 +1824,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 474;
+const EXPECTED_MIN = 475;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

@@ -745,7 +745,7 @@ export default function App() {
           <MenuItem onSelect={clearAll} danger>✕ Clear the canvas</MenuItem>
         </Menu>
 
-        <Menu id="settings" label="Settings" tour="settings">
+        <Menu id="configuration" label="Configuration" tour="configuration">
           <MenuLabel>Cloud</MenuLabel>
           {CLOUDS.map(c => (
             <MenuItem key={c.id} onSelect={() => setCloud(c.id)} checked={cloud === c.id}>
