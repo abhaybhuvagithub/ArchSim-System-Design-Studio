@@ -27,6 +27,7 @@ import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, ph
 import { buildInterview, report as interviewReport, STAGES } from './interview.js'
 import * as LLM from './interview-llm.js'
 import { matchConcepts, pickProbe, respond as interviewRespond } from './interview.js'
+import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -78,6 +79,7 @@ export default function App() {
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
   const [tourAt, setTourAt] = useState(null)
+  const [flow, setFlow] = useState('all')
   const [a11y, setA11y] = useState(() => {
     try { return localStorage.getItem('archsim.a11y') === '1' } catch (e) { return false }
   })
@@ -660,6 +662,8 @@ export default function App() {
   }
   const dl = (href, name) => { const a = document.createElement('a'); a.href = href; a.download = name; a.click() }
 
+  const flowSet = useMemo(() => flowSubset(nodes, edges, flow), [nodes, edges, flow])
+  const flowInfo = useMemo(() => flowSummary(nodes, edges, flow), [nodes, edges, flow])
   const selNode = nodes.find(n => n.id === sel)
   const selEdgeObj = edges.find(e => e.id === selEdge)
   const hoverNode = nodes.find(n => n.id === hover)
@@ -886,7 +890,7 @@ export default function App() {
                   selected={selEdge === e.id}
                   step={steps ? stepMap[e.id] : null}
                   hot={hover ? e.from === hover || e.to === hover : false}
-                  dimmed={hover ? !(e.from === hover || e.to === hover) : false}
+                  dimmed={(hover ? !(e.from === hover || e.to === hover) : false) || !flowSet.edges.has(e.id)}
                   onSelect={() => { setSelEdge(e.id); setSel(null); setTab('capacity') }} />
               ))}
               {drag.current?.kind === 'wire' && (() => {
@@ -898,7 +902,7 @@ export default function App() {
                 <Node key={n.id} n={n} sim={sim} simOn={simOn} t={T} cloud={cloud}
                   selected={sel === n.id}
                   hovered={hover === n.id}
-                  dimmed={neighbours ? !neighbours.has(n.id) : false}
+                  dimmed={(neighbours ? !neighbours.has(n.id) : false) || !flowSet.nodes.has(n.id)}
                   onDown={onNodeDown} onPortDown={onPortDown}
                   onEnter={() => setHover(n.id)} onLeave={() => setHover(h => (h === n.id ? null : h))} />
               ))}
@@ -928,6 +932,18 @@ export default function App() {
           <CanvasDescription nodes={nodes} edges={edges} rps={rps} template={template} />
         </main>
 
+        <div className="flowbar" role="group" aria-label="Filter the diagram by traffic type">
+          {FLOW_MODES.map(m => (
+            <button key={m.id} className={flow === m.id ? 'on' : ''} title={m.hint}
+              aria-pressed={flow === m.id} onClick={() => setFlow(m.id)}>{m.label}</button>
+          ))}
+          {flow !== 'all' && (
+            <span className="flowbar-note">
+              {flowInfo.shownEdges} of {flowInfo.totalEdges} connections
+              {flowInfo.unclassified > 0 && ` · ${flowInfo.unclassified} have no declared read/write mix, so they show in both`}
+            </span>
+          )}
+        </div>
         {!compact && !floatPanel.right && <div className="splitter" onPointerDown={e => startResize('right', e)} onDoubleClick={() => resetPanel('right')} title="Drag to resize · double-click to reset" />}
 
         <aside id="analysis" aria-label="Analysis" className={`side ${floatPanel.right ? 'floating' : ''} ${maxed === 'right' ? 'maxed' : ''} ${compact ? 'drawer right' : ''} ${compact && drawer === 'right' ? 'open' : ''}`}

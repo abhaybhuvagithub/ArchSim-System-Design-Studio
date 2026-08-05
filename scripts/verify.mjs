@@ -755,6 +755,83 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── flow filter ────────────────────────────────────────────────────────────
+  {
+    const fl = await import(pathToFileURL(path.join(root, 'src/flow.js')).href);
+    const { TEMPLATES: TP } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+    const N = [{ id: 'c', type: 'client' }, { id: 'app', type: 'app' }, { id: 'cache', type: 'cache' },
+               { id: 'db', type: 'sql' }, { id: 'q', type: 'queue' }, { id: 'w', type: 'worker' }];
+    const byId = Object.fromEntries(N.map(n => [n.id, n]));
+
+    check('a read-leaning link classifies as read',
+      fl.classifyEdge({ from: 'app', to: 'cache', readFrac: 0.95 }, byId) === 'read');
+    check('a write-leaning link classifies as write',
+      fl.classifyEdge({ from: 'app', to: 'db', readFrac: 0.05 }, byId) === 'write');
+    check('an even link is mixed rather than forced into one side',
+      fl.classifyEdge({ from: 'app', to: 'db', readFrac: 0.5 }, byId) === 'mixed');
+    // Async is a property of the hop, not of the mix — a write into a queue is
+    // async, and calling it a write hides the thing that matters about it.
+    check('a hop into a queue is async whatever its mix says',
+      fl.classifyEdge({ from: 'app', to: 'q', readFrac: 0.02 }, byId) === 'async');
+    check('a hop out of a queue is async too',
+      fl.classifyEdge({ from: 'q', to: 'w', readFrac: 0.9 }, byId) === 'async');
+    check('an explicitly async link is honoured',
+      fl.classifyEdge({ from: 'app', to: 'db', async: true }, byId) === 'async');
+
+    check('a mixed link appears in both the read and the write view', (() => {
+      const e = { from: 'app', to: 'db', readFrac: 0.5 };
+      return fl.edgeMatches(e, byId, 'read') && fl.edgeMatches(e, byId, 'write');
+    })());
+    check('a mixed link does not appear in the async view',
+      !fl.edgeMatches({ from: 'app', to: 'db', readFrac: 0.5 }, byId, 'async'));
+    check('an async link appears only in the async view', (() => {
+      const e = { from: 'app', to: 'q' };
+      return fl.edgeMatches(e, byId, 'async') && !fl.edgeMatches(e, byId, 'read') && !fl.edgeMatches(e, byId, 'write');
+    })());
+
+    const E = [
+      { id: 'a', from: 'c', to: 'app', readFrac: 0.9 },
+      { id: 'b', from: 'app', to: 'db', readFrac: 0.05 },
+      { id: 'c2', from: 'app', to: 'q' },
+      { id: 'd', from: 'q', to: 'w' },
+    ];
+    check('the all view hides nothing',
+      fl.flowSubset(N, E, 'all').edges.size === E.length);
+    check('the read view drops the write-only link',
+      !fl.flowSubset(N, E, 'read').edges.has('b'));
+    check('the write view drops the read-only link',
+      !fl.flowSubset(N, E, 'write').edges.has('a'));
+    check('the async view keeps only the queue hops', (() => {
+      const s = fl.flowSubset(N, E, 'async');
+      return s.edges.size === 2 && s.edges.has('c2') && s.edges.has('d');
+    })());
+    check('a node survives if any surviving link touches it',
+      fl.flowSubset(N, E, 'async').nodes.has('w'));
+    check('an unconnected node is never hidden, in any view', (() => {
+      const lone = [...N, { id: 'lone', type: 'blob' }];
+      return ['all', 'read', 'write', 'async'].every(m => fl.flowSubset(lone, E, m).nodes.has('lone'));
+    })());
+
+    check('the summary counts links with no declared mix', (() => {
+      const s = fl.flowSummary(N, [{ id: 'x', from: 'app', to: 'db' }], 'read');
+      return s.unclassified === 1;
+    })());
+    check('a declared even mix is not counted as undeclared', (() => {
+      const s = fl.flowSummary(N, [{ id: 'x', from: 'app', to: 'db', readFrac: 0.5 }], 'read');
+      return s.unclassified === 0;
+    })());
+
+    // No template may vanish under a filter — an empty canvas reads as a bug.
+    const empty = [];
+    for (const t2 of TP) for (const m of ['read', 'write']) {
+      if (fl.flowSubset(t2.nodes, t2.edges, m).edges.size === 0 && t2.edges.length > 0) empty.push(t2.name + '/' + m);
+    }
+    check('no template goes completely blank under the read or write filter' +
+      (empty.length ? ' — ' + empty.slice(0, 3).join(', ') : ''), empty.length === 0);
+    check('every mode has a label and an explanation',
+      fl.FLOW_MODES.length === 4 && fl.FLOW_MODES.every(m => m.label && m.hint && m.hint.length > 15));
+  }
+
   // ── the guided tour: data and geometry ─────────────────────────────────────
   {
     const t = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
@@ -1673,6 +1750,28 @@ try {
     await wait(200);
   }
 
+  // ── flow filter in the UI ──────────────────────────────────────────────────
+  {
+    const bar = doc.querySelector('.flowbar');
+    check('the flow filter is on the canvas', !!bar);
+    check('it offers all four views',
+      [...bar.querySelectorAll('button')].map(b => b.textContent.trim()).join(',') === 'All,Read,Write,Async');
+    check('it is a labelled group for assistive tech',
+      bar.getAttribute('role') === 'group' && !!bar.getAttribute('aria-label'));
+    check('the active view is announced, not just coloured',
+      [...bar.querySelectorAll('button')].filter(b => b.getAttribute('aria-pressed') === 'true').length === 1);
+    const writeBtn = [...bar.querySelectorAll('button')].find(b => b.textContent.trim() === 'Write');
+    click(writeBtn); await wait(200);
+    check('choosing a view marks it pressed', writeBtn.getAttribute('aria-pressed') === 'true');
+    check('and says how much of the diagram it is showing',
+      /\d+ of \d+ connections/.test(doc.querySelector('.flowbar-note')?.textContent || ''));
+    check('it says outright when links have no declared mix, rather than guessing',
+      /no declared read\/write mix/.test(doc.querySelector('.flowbar-note')?.textContent || ''));
+    click([...bar.querySelectorAll('button')].find(b => b.textContent.trim() === 'All')); await wait(150);
+    check('returning to All clears the note', !doc.querySelector('.flowbar-note'));
+    check('no crash while switching views', errs.length === 0);
+  }
+
   // ── toolbar menus ──────────────────────────────────────────────────────────
   {
     await closeMenus();
@@ -1824,7 +1923,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 475;
+const EXPECTED_MIN = 495;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
