@@ -755,6 +755,74 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── regions, availability zones and the map ────────────────────────────────
+  {
+    const geo = await import(pathToFileURL(path.join(root, 'src/geo.js')).href);
+    const { review } = await import(pathToFileURL(path.join(root, 'src/advisor.js')).href);
+
+    check('regions carry real coordinates and an AZ count',
+      geo.REGIONS.length >= 10 && geo.REGIONS.every(r =>
+        Math.abs(r.lat) <= 90 && Math.abs(r.lon) <= 180 && r.azs >= 2 && r.name && r.cloud));
+    check('region ids are unique', new Set(geo.REGIONS.map(r => r.id)).size === geo.REGIONS.length);
+    check('India is represented', geo.REGIONS.some(r => /Mumbai|Hyderabad/.test(r.name)));
+
+    // Distance is the constraint you cannot engineer around, so the arithmetic
+    // has to be right rather than roughly right.
+    const mum = geo.regionById('ap-south-1'), vir = geo.regionById('us-east-1'), fra = geo.regionById('eu-central-1');
+    const d = geo.greatCircleKm(mum, vir);
+    check('Mumbai to Virginia is about 12,900 km', Math.abs(d - 12900) < 400);
+    check('the round-trip floor for that hop is about 180ms', Math.abs(geo.rttFloorMs(mum, vir) - 180) < 25);
+    check('a shorter hop costs proportionally less', geo.rttFloorMs(mum, fra) < geo.rttFloorMs(mum, vir));
+    check('distance to itself is zero', geo.greatCircleKm(mum, mum) < 1e-6);
+    check('the calculation is symmetric',
+      Math.abs(geo.greatCircleKm(mum, vir) - geo.greatCircleKm(vir, mum)) < 1e-6);
+
+    check('the projection puts the prime meridian at the middle', (() => {
+      const p = geo.project(0, 0, 1000, 500);
+      return Math.abs(p.x - 500) < 1e-6 && Math.abs(p.y - 250) < 1e-6;
+    })());
+    check('and the poles at the edges', (() => {
+      const n = geo.project(90, -180, 1000, 500), s2 = geo.project(-90, 180, 1000, 500);
+      return n.x === 0 && n.y === 0 && s2.x === 1000 && s2.y === 500;
+    })());
+    check('every region projects inside the frame',
+      geo.REGIONS.every(r => { const p = geo.project(r.lat, r.lon, 640, 320);
+        return p.x >= 0 && p.x <= 640 && p.y >= 0 && p.y <= 320 }));
+
+    // Sites come from the design, so the map cannot drift from the canvas.
+    const N = [
+      { id: 'a', type: 'app', label: 'API', region: 'ap-south-1', siteRole: 'primary' },
+      { id: 'b', type: 'sql', label: 'DB', region: 'ap-south-1', siteRole: 'primary' },
+      { id: 'c', type: 'sql', label: 'Replica', region: 'us-east-1', siteRole: 'replica' },
+      { id: 'd', type: 'app', label: 'Unplaced' },
+    ];
+    const E = [{ id: 'e1', from: 'b', to: 'c' }];
+    const sites = geo.sitesFor(N);
+    check('a site appears for each region in use', sites.length === 2);
+    check('an unplaced component creates no site', !sites.some(s => s.nodes.some(n => n.id === 'd')));
+    check('a site counts its services and AZs', (() => {
+      const m = sites.find(s => s.region.id === 'ap-south-1');
+      return m.services === 2 && m.azs === geo.regionById('ap-south-1').azs;
+    })());
+    const links = geo.siteLinks(sites, E, N);
+    check('a cross-region edge becomes a link with a distance and an RTT',
+      links.length === 1 && links[0].km > 12000 && links[0].rttMs > 150);
+    check('an edge within one region is not a cross-region link',
+      geo.siteLinks(sites, [{ id: 'x', from: 'a', to: 'b' }], N).length === 0);
+
+    check('a long synchronous hop is called out',
+      geo.geoFindings(sites, links).some(f => /round trip/i.test(f.title)));
+    check('two primaries are called out as accidental multi-leader', (() => {
+      const two = [...N.slice(0, 2), { id: 'e', type: 'sql', label: 'X', region: 'us-east-1', siteRole: 'primary' }];
+      return geo.geoFindings(geo.sitesFor(two), []).some(f => /primary/i.test(f.title));
+    })());
+    check('one primary is not', !geo.geoFindings(sites, []).some(f => /marked primary/i.test(f.title)));
+    check('geographic findings reach the advisor',
+      review(N, E, 1000).some(x => /round trip/i.test(x.title)));
+    check('a design with no regions produces no geographic noise',
+      geo.geoFindings(geo.sitesFor([{ id: 'z', type: 'app' }]), []).length === 0);
+  }
+
   // ── flow filter ────────────────────────────────────────────────────────────
   {
     const fl = await import(pathToFileURL(path.join(root, 'src/flow.js')).href);
@@ -1384,11 +1452,11 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all ten tabs are tabs', tabBtns.length === 10);
+    check('all eleven tabs are tabs', tabBtns.length === 11);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',
-      tabBtns.every((b) => /[A-Za-z]{4,}/.test(b.textContent)));
+      tabBtns.every((b) => /[A-Za-z]{3,}/.test(b.textContent)));
     check('the content area is a tabpanel', !!doc.querySelector('.side-body[role="tabpanel"]'));
     check('numeric tab state is shown as a badge', doc.querySelectorAll('.tab-badge').length >= 2);
   }
@@ -1952,7 +2020,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 501;
+const EXPECTED_MIN = 520;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

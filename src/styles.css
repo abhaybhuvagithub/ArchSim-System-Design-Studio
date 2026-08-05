@@ -1026,3 +1026,26 @@ select.btn { appearance: auto; }
   padding: 1px 8px 2px; max-width: 46ch;
 }
 .flowbar-note { font-size: 10px; opacity: .5; text-align: center; padding: 0 8px 2px; }
+
+/* ---- System map ---- */
+.map-filters { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+.map-filters button { font: inherit; font-size: 11px; padding: 3px 10px; border-radius: 980px;
+  border: 1px solid var(--border); background: transparent; color: inherit; cursor: pointer; }
+.map-filters button.on { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
+.map-svg { width: 100%; height: auto; background: rgba(127,127,127,.05); border-radius: 10px; margin-bottom: 6px; }
+.map-svg .grat { stroke: currentColor; opacity: .10; stroke-width: .5; }
+.map-svg .eq { stroke: currentColor; opacity: .18; stroke-width: .7; }
+.map-link line { stroke-width: 1.4; stroke-dasharray: 3 3; }
+.map-link.near line { stroke: #34c759; } .map-link.mid line { stroke: #f59e0b; } .map-link.far line { stroke: #e34234; }
+.map-link text { font-size: 7px; fill: currentColor; opacity: .65; text-anchor: middle; }
+.map-site circle { fill: var(--accent); opacity: .85; }
+.map-site.r-replica circle { fill: #34c759; } .map-site.r-backup circle { fill: #8b93a7; }
+.map-site.r-dr circle { fill: #f59e0b; } .map-site.r-edge circle { fill: #06b6d4; }
+.map-site.faint { opacity: .22; }
+.map-site .map-tag { font-size: 6.5px; font-weight: 700; fill: #fff; text-anchor: middle; }
+.map-site .map-name { font-size: 8px; fill: currentColor; text-anchor: middle; font-weight: 600; }
+.map-site .map-meta { font-size: 7px; fill: currentColor; opacity: .6; text-anchor: middle; }
+.map-note { font-size: 10.5px; line-height: 1.5; margin-bottom: 10px; }
+.map-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.map-table td { padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.map-table td.k { font-weight: 600; }
