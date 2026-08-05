@@ -30,6 +30,11 @@ body {
 .toolbar {
   display: flex; align-items: center; gap: 10px; padding: 8px 14px;
   background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  /* Static, this scrolled away the moment a maximised panel made the page
+     taller than the window — which is exactly when you still need the
+     template picker and Simulate. */
+  position: sticky; top: 0; z-index: 40;
+  background: var(--bg); border-bottom: 1px solid var(--border);
 }
 .logo { font-weight: 600; font-size: 16px; letter-spacing: -.4px; margin-right: 6px; }
 .logo span { color: var(--accent); }
@@ -1000,8 +1005,9 @@ select.btn { appearance: auto; }
 
 /* ---- Flow filter ---- */
 .flowbar {
-  position: absolute; left: 50%; transform: translateX(-50%); bottom: 52px; z-index: 6;
-  display: flex; align-items: center; gap: 4px; padding: 4px;
+  /* Clears the canvas hint strip at bottom: 10px, which is about 30px tall. */
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 58px; z-index: 6;
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 5px 6px;
   background: var(--panel); border: 1px solid var(--border); border-radius: 980px;
   box-shadow: 0 6px 20px rgba(0,0,0,.12); max-width: calc(100% - 32px);
 }
@@ -1011,7 +1017,9 @@ select.btn { appearance: auto; }
 }
 .flowbar button:hover { background: rgba(127,127,127,.14); }
 .flowbar button.on { background: var(--accent); color: #fff; font-weight: 600; }
-.flowbar-note {
-  font-size: 10.5px; opacity: .6; padding: 0 10px 0 4px; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
+.flowbar-row { display: flex; align-items: center; gap: 4px; justify-content: center; }
+.flowbar-hint {
+  font-size: 10.5px; line-height: 1.45; opacity: .62; text-align: center;
+  padding: 1px 8px 2px; max-width: 46ch;
 }
+.flowbar-note { font-size: 10px; opacity: .5; text-align: center; padding: 0 8px 2px; }

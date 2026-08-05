@@ -1752,6 +1752,7 @@ try {
 
   // ── flow filter in the UI ──────────────────────────────────────────────────
   {
+    const fl2 = await import(pathToFileURL(path.join(root, 'src/flow.js')).href);
     const bar = doc.querySelector('.flowbar');
     check('the flow filter is on the canvas', !!bar);
     check('it offers all four views',
@@ -1760,16 +1761,40 @@ try {
       bar.getAttribute('role') === 'group' && !!bar.getAttribute('aria-label'));
     check('the active view is announced, not just coloured',
       [...bar.querySelectorAll('button')].filter(b => b.getAttribute('aria-pressed') === 'true').length === 1);
+    // The hint has to be on screen, not only in a title attribute — a tooltip
+    // is invisible on touch and to anyone who does not hover.
+    check('the active view explains itself on screen', (() => {
+      const h = doc.querySelector('.flowbar-hint');
+      return !!h && h.textContent.trim().length > 15;
+    })());
+    check('every view has its own hint, not one shared line', (() => {
+      const seen = new Set(fl2.FLOW_MODES.map(m => m.hint));
+      return seen.size === fl2.FLOW_MODES.length;
+    })());
     const writeBtn = [...bar.querySelectorAll('button')].find(b => b.textContent.trim() === 'Write');
     click(writeBtn); await wait(200);
     check('choosing a view marks it pressed', writeBtn.getAttribute('aria-pressed') === 'true');
+    check('the hint changes with the view',
+      doc.querySelector('.flowbar-hint')?.textContent.includes('write') || doc.querySelector('.flowbar-hint')?.textContent.includes('consistency'));
     check('and says how much of the diagram it is showing',
       /\d+ of \d+ connections/.test(doc.querySelector('.flowbar-note')?.textContent || ''));
     check('it says outright when links have no declared mix, rather than guessing',
-      /no declared read\/write mix/.test(doc.querySelector('.flowbar-note')?.textContent || ''));
+      /no declared mix/.test(doc.querySelector('.flowbar-note')?.textContent || ''));
     click([...bar.querySelectorAll('button')].find(b => b.textContent.trim() === 'All')); await wait(150);
     check('returning to All clears the note', !doc.querySelector('.flowbar-note'));
     check('no crash while switching views', errs.length === 0);
+  }
+
+  // ── the header stays put ───────────────────────────────────────────────────
+  {
+    const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const m = css.match(/\.toolbar\s*\{([^}]*)\}/);
+    check('the toolbar is pinned rather than scrolling away',
+      !!m && /position:\s*sticky/.test(m[1]) && /top:\s*0/.test(m[1]));
+    check('and sits above the panels it would otherwise scroll behind',
+      !!m && Number((m[1].match(/z-index:\s*(\d+)/) || [])[1]) >= 10);
+    check('a pinned toolbar has a background, or content shows through it',
+      !!m && /background:/.test(m[1]));
   }
 
   // ── toolbar menus ──────────────────────────────────────────────────────────
@@ -1923,7 +1948,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 495;
+const EXPECTED_MIN = 500;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
