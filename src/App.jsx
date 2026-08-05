@@ -30,6 +30,7 @@ import { matchConcepts, pickProbe, respond as interviewRespond } from './intervi
 import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
 import { REGIONS, SITE_ROLES, project, sitesFor, siteLinks, regionById } from './geo.js'
 import { AUTH, SESSION, ENTITLEMENT, revocationRisk } from './identity.js'
+import { LADDER, ladderFor, signalsFor, nextBand } from './levels.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -2433,6 +2434,8 @@ function Interview({ template }) {
             <p>{rep.band.gist}</p>
           </div>
 
+          <LevelExpectations band={rep.band.band} />
+
           <h4>By stage</h4>
           <table className="iv-scores">
             <tbody>
@@ -2693,6 +2696,63 @@ function IdentityFields({ n, set }) {
         </>
       )}
     </>
+  )
+}
+
+// The band the interview produced, what it means across companies, and what
+// the next one asks for. No compensation figures — that data belongs to the
+// sites that collect it, and it would be stale in a static file within weeks.
+function LevelExpectations({ band }) {
+  const l = ladderFor(band), sig = signalsFor(band)
+  const up = nextBand(band), upSig = up && signalsFor(up)
+  if (!l && !sig) return (
+    <div className="lvl">
+      <h4>What is expected at each level</h4>
+      <p className="muted">Below the mid-level bar for this design. The stage scores above say where.</p>
+      <LevelTable />
+    </div>
+  )
+  return (
+    <div className="lvl">
+      <h4>What is expected at each level</h4>
+      {l && (
+        <div className="lvl-now">
+          <b>{l.band}</b> — {l.titles}
+          <p>{l.scope}</p>
+          <p className="lvl-india">{l.india}</p>
+        </div>
+      )}
+      {sig && (
+        <>
+          <div className="lvl-h">This band shows</div>
+          <ul className="iv-list">{sig.does.map((x, i) => <li key={i}>{x}</li>)}</ul>
+          {sig.missing.length > 0 && (<>
+            <div className="lvl-h">What usually holds it back</div>
+            <ul className="iv-list">{sig.missing.map((x, i) => <li key={i}>{x}</li>)}</ul>
+          </>)}
+          <div className={`ddia-verdict ${up ? 'good' : 'good'}`}>
+            <b>{up ? `To reach ${up}: ` : 'At this band: '}</b>{sig.next}
+          </div>
+        </>
+      )}
+      {upSig && (
+        <details className="lvl-next">
+          <summary>What {up} looks for</summary>
+          <ul className="iv-list">{upSig.does.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        </details>
+      )}
+      <LevelTable />
+    </div>
+  )
+}
+
+function LevelTable() {
+  return (
+    <table className="lvl-table"><tbody>
+      {LADDER.map(l => (
+        <tr key={l.band}><td className="k">{l.band}</td><td>{l.titles}</td></tr>
+      ))}
+    </tbody></table>
   )
 }
 
