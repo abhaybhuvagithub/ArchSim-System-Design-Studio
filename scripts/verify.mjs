@@ -463,7 +463,9 @@ try {
     check('Claude is the default provider', (await import(pathToFileURL(path.join(root, 'src/interview-llm.js')).href)).PROVIDERS.anthropic.model.includes('claude'));
     check('BharatGPT is offered', !!llm.PROVIDERS.bharatgpt);
     check('BharatGPT asks for a base URL rather than guessing one',
-      llm.PROVIDERS.bharatgpt.needsBaseUrl === true && /no public API endpoint/i.test(llm.PROVIDERS.bharatgpt.note));
+      llm.PROVIDERS.bharatgpt.needsBaseUrl === true &&
+      !llm.PROVIDERS.bharatgpt.base &&
+      /corover|tenant|serving/i.test(llm.PROVIDERS.bharatgpt.note || ''));
     check('a missing base URL fails loudly instead of hitting a wrong host', await (async () => {
       let called = false;
       try { await llm.ask({ provider: 'bharatgpt', key: 'k', system: 's', messages: [{ role: 'user', content: 'hi' }], fetchImpl: () => { called = true } }) }
@@ -546,6 +548,68 @@ try {
       Object.keys(llm.PROVIDERS).every(k => (llm.MODEL_CHOICES[k] || []).length > 0));
     check('the model is remembered per tab like the key and base URL',
       /session/i.test(llm.getModel.toString()) && /session/i.test(llm.setModel.toString()));
+
+    // Providers: a published base URL is used, an unpublished one is asked for.
+    const P = llm.PROVIDERS;
+    check('all ten providers are offered', Object.keys(P).length === 10);
+    for (const id of ['anthropic', 'openai', 'google', 'deepseek', 'meta', 'sarvam', 'krutrim', 'bharatgpt', 'ai4bharat', 'bharatgen'])
+      check(`provider "${id}" is present and complete`,
+        !!P[id] && !!P[id].label && !!P[id].model && (P[id].models || []).length > 0 &&
+        typeof P[id].url === 'function' && typeof P[id].headers === 'function' &&
+        typeof P[id].body === 'function' && typeof P[id].text === 'function');
+
+    // The distinction that matters: guessing an endpoint would fail silently.
+    const hosted = ['anthropic', 'openai', 'google', 'deepseek', 'sarvam', 'krutrim'];
+    const selfHosted = ['meta', 'bharatgpt', 'ai4bharat', 'bharatgen'];
+    check('providers with a published endpoint have one built in',
+      hosted.every(id => !!P[id].base && P[id].needsBaseUrl === false));
+    check('providers without a published endpoint ask for one instead of guessing',
+      selfHosted.every(id => !P[id].base && P[id].needsBaseUrl === true));
+    check('every provider that asks for a base URL explains why',
+      selfHosted.every(id => typeof P[id].note === 'string' && P[id].note.length > 40));
+    check('none of the self-hosted providers smuggles in a guessed host',
+      selfHosted.every(id => !/https?:\/\//.test(P[id].url('') || '')));
+
+    // Each hosted provider must build the endpoint its docs actually document.
+    const urlFor = async id => { let seen = '';
+      await llm.ask({ provider: id, key: 'k', system: 's', messages: [{ role: 'user', content: 'hi' }],
+        fetchImpl: async u => { seen = u; return { ok: true, json: async () => ({ choices: [{ message: { content: 'x' } }], content: [] }) } } });
+      return seen; };
+    check('OpenAI goes to api.openai.com', (await urlFor('openai')) === 'https://api.openai.com/v1/chat/completions');
+    check('Gemini goes to its OpenAI-compatible path',
+      (await urlFor('google')) === 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions');
+    check('DeepSeek goes to api.deepseek.com', (await urlFor('deepseek')) === 'https://api.deepseek.com/v1/chat/completions');
+    check('Sarvam goes to api.sarvam.ai', (await urlFor('sarvam')) === 'https://api.sarvam.ai/v1/chat/completions');
+    check('Krutrim goes to cloud.olakrutrim.com', (await urlFor('krutrim')) === 'https://cloud.olakrutrim.com/v1/chat/completions');
+    check('Anthropic keeps its own message endpoint', (await urlFor('anthropic')) === 'https://api.anthropic.com/v1/messages');
+
+    // Anthropic is not OpenAI-shaped and must not be flattened into it.
+    check('Anthropic sends system as a top-level field, not as a message', await (async () => {
+      let body = '';
+      await llm.ask({ provider: 'anthropic', key: 'k', system: 'SYS', messages: [{ role: 'user', content: 'hi' }],
+        fetchImpl: async (u, o) => { body = o.body; return { ok: true, json: async () => ({ content: [] }) } } });
+      const j = JSON.parse(body);
+      return j.system === 'SYS' && !j.messages.some(m => m.role === 'system');
+    })());
+    check('OpenAI-shaped providers send system as the first message', await (async () => {
+      let body = '';
+      await llm.ask({ provider: 'deepseek', key: 'k', system: 'SYS', messages: [{ role: 'user', content: 'hi' }],
+        fetchImpl: async (u, o) => { body = o.body; return { ok: true, json: async () => ({ choices: [] }) } } });
+      const j = JSON.parse(body);
+      return j.messages[0].role === 'system' && j.messages[0].content === 'SYS';
+    })());
+    check('Anthropic keeps its browser opt-in header',
+      P.anthropic.headers('k')['anthropic-dangerous-direct-browser-access'] === 'true');
+    check('OpenAI-shaped providers authenticate with a bearer token',
+      hosted.filter(id => id !== 'anthropic').every(id => P[id].headers('k').authorization === 'Bearer k'));
+
+    // A cross-origin block reads as a mystery unless it is named.
+    check('an unreachable provider names the likely cause', await (async () => {
+      try { await llm.ask({ provider: 'deepseek', key: 'k', system: 's', messages: [{ role: 'user', content: 'hi' }],
+        fetchImpl: async () => { throw new TypeError('Failed to fetch') } }) }
+      catch (e) { return /browser requests|Could not reach/i.test(e.message) }
+      return false;
+    })());
 
     // The key. This is the part that must not be sloppy.
     check('the key is held in session storage, not local storage',
@@ -1578,7 +1642,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 395;
+const EXPECTED_MIN = 420;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
