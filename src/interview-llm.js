@@ -12,17 +12,33 @@ export const BASE_STORE = 'archsim.interview.base'
 export const MODEL_STORE = 'archsim.interview.model'
 // Offered as a starting point, not a whitelist — the field accepts anything,
 // because model names change faster than this file will.
-export const MODEL_CHOICES = {
-  anthropic: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5-20251001'],
-  openai: ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
-  bharatgpt: ['BharatGPT-3B-Indic'],
-}
+// Most of these speak the OpenAI wire format, so one adapter covers them. A
+// base URL is hard-coded only where the provider publishes one; where it does
+// not, it is asked for. Guessing would produce a provider that fails against a
+// host that may not exist, which is worse than not offering it.
+const oai = (label, base, models, extra = {}) => ({
+  label,
+  base,                        // null → the user supplies it
+  needsBaseUrl: !base,
+  model: models[0],
+  models,
+  url: b => String(b || base || '').replace(/\/+$/, '') + '/chat/completions',
+  headers: key => ({ 'content-type': 'application/json', authorization: 'Bearer ' + key }),
+  body: (model, system, messages) => JSON.stringify({ model, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages] }),
+  text: j => (j?.choices?.[0]?.message?.content || '').trim(),
+  ...extra,
+})
 
 export const PROVIDERS = {
+  // Anthropic is not OpenAI-shaped: system is a top-level field, and calling it
+  // from a browser needs an explicit opt-in header.
   anthropic: {
-    label: 'Anthropic',
-    url: () => 'https://api.anthropic.com/v1/messages',
+    label: 'Anthropic — Claude',
+    base: 'https://api.anthropic.com/v1',
+    needsBaseUrl: false,
     model: 'claude-sonnet-5',
+    models: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5-20251001'],
+    url: () => 'https://api.anthropic.com/v1/messages',
     headers: key => ({
       'content-type': 'application/json',
       'x-api-key': key,
@@ -32,30 +48,44 @@ export const PROVIDERS = {
     body: (model, system, messages) => JSON.stringify({ model, max_tokens: 700, system, messages }),
     text: j => (j?.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim(),
   },
-  bharatgpt: {
-    label: 'BharatGPT (CoRover)',
-    needsBaseUrl: true,
-    model: 'BharatGPT-3B-Indic',
-    // CoRover does not publish a public REST endpoint — access is granted per
-    // tenant through builder.corover.ai. The open BharatGPT-3B-Indic weights
-    // are on Hugging Face and can be served behind any OpenAI-compatible
-    // endpoint. Either way the base URL is yours, so it is asked for rather
-    // than invented: a hard-coded guess would fail silently.
-    note: 'BharatGPT has no public API endpoint. Paste the OpenAI-compatible base URL for your CoRover tenant, or for wherever you are serving the open BharatGPT-3B-Indic weights.',
-    url: base => String(base || '').replace(/\/+$/, '') + '/chat/completions',
-    headers: key => ({ 'content-type': 'application/json', authorization: 'Bearer ' + key }),
-    body: (model, system, messages) => JSON.stringify({ model, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages] }),
-    text: j => (j?.choices?.[0]?.message?.content || '').trim(),
-  },
-  openai: {
-    label: 'OpenAI',
-    url: () => 'https://api.openai.com/v1/chat/completions',
-    model: 'gpt-4o',
-    headers: key => ({ 'content-type': 'application/json', authorization: 'Bearer ' + key }),
-    body: (model, system, messages) => JSON.stringify({ model, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages] }),
-    text: j => (j?.choices?.[0]?.message?.content || '').trim(),
-  },
+
+  openai: oai('OpenAI — GPT', 'https://api.openai.com/v1',
+    ['gpt-4o', 'gpt-4o-mini', 'o3-mini']),
+
+  google: oai('Google — Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai',
+    ['gemini-2.5-pro', 'gemini-2.5-flash'],
+    { note: 'Uses Gemini\u2019s OpenAI-compatible endpoint with a Google AI Studio key. That endpoint is still beta and covers only part of the OpenAI surface.' }),
+
+  deepseek: oai('DeepSeek', 'https://api.deepseek.com/v1',
+    ['deepseek-chat', 'deepseek-reasoner']),
+
+  meta: oai('Meta — Llama (self-hosted)', null,
+    ['llama-3.3-70b-instruct'],
+    { note: 'Meta publishes Llama as open weights rather than running a public API. Point this at whoever serves it for you \u2014 Bedrock, Groq, Together, Fireworks, vLLM or Ollama \u2014 using their OpenAI-compatible base URL.' }),
+
+  sarvam: oai('Sarvam AI', 'https://api.sarvam.ai/v1',
+    ['sarvam-m', 'sarvam-30b', 'sarvam-105b'],
+    { note: 'Indic-first models from Bengaluru. The endpoint also accepts its own api-subscription-key header; the OpenAI-compatible bearer form is used here.' }),
+
+  krutrim: oai('Krutrim (Ola)', 'https://cloud.olakrutrim.com/v1',
+    ['krutrim-1']),
+
+  bharatgpt: oai('BharatGPT (CoRover)', null,
+    ['BharatGPT-3B-Indic'],
+    { note: 'CoRover grants access per tenant through builder.corover.ai rather than publishing a public endpoint. Paste your tenant URL, or the address of wherever you are serving the open BharatGPT-3B-Indic weights.' }),
+
+  ai4bharat: oai('AI4Bharat (IIT Madras)', null,
+    ['ai4bharat/Airavata'],
+    { note: 'A research group rather than a hosted service \u2014 the models are published openly on Hugging Face and AIKosh. Serve one behind an OpenAI-compatible endpoint and point this at it.' }),
+
+  bharatgen: oai('BharatGen', null,
+    ['bharatgen/Param-1'],
+    { note: 'A sovereign-AI initiative publishing multimodal Indic foundation models rather than a public inference API. Paste the base URL of wherever you are serving one.' }),
 }
+
+// Kept as a separate export because the UI reads it directly.
+export const MODEL_CHOICES = Object.fromEntries(
+  Object.entries(PROVIDERS).map(([k, p]) => [k, p.models]))
 
 export const getKey = () => { try { return sessionStorage.getItem(KEY_STORE) || '' } catch { return '' } }
 export const setKey = k => { try { k ? sessionStorage.setItem(KEY_STORE, k) : sessionStorage.removeItem(KEY_STORE) } catch { /* blocked */ } }
@@ -86,7 +116,14 @@ export async function ask({ provider = 'anthropic', key, baseUrl, model, system,
   const url = p.url(baseUrl)
   const msgs = normaliseMessages(messages)
   if (!msgs.length) throw new Error('Nothing to send yet.')
-  const res = await f(url, { method: 'POST', headers: p.headers(key), body: p.body(model || p.model, system, msgs) })
+  let res
+  try {
+    res = await f(url, { method: 'POST', headers: p.headers(key), body: p.body(model || p.model, system, msgs) })
+  } catch (e) {
+    // A cross-origin block surfaces as a bare TypeError with no status, which
+    // reads as a mystery unless it is named.
+    throw new Error('Could not reach ' + url + '. If the provider does not allow browser requests this will always fail from a web page, and the request has to go through a server you control.')
+  }
   if (!res.ok) {
     const status = res.status
     let detail = ''
