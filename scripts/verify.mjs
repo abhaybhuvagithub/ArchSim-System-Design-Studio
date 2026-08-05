@@ -646,8 +646,9 @@ try {
   // ── sticky tab bars ────────────────────────────────────────────────────────
   {
     const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+    const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');   // comments would be parsed as declarations
     const decl = (sel, prop) => {
-      const m = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}'));
+      const m = bare.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}'));
       if (!m) return null;
       const d = m[1].match(new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([^;]+)'));
       return d ? d[1].trim() : null;
@@ -656,11 +657,16 @@ try {
     // top padding is a band the sub bar does not cover unless it is told to,
     // and content scrolling through that band shows between the two bars.
     check('the sticky gap is defined once rather than repeated as a literal',
-      /--sticky-gap:\s*\d+px/.test(css));
+      /--sticky-gap:\s*\d+px/.test(bare));
     check('the scroll container uses the shared gap for its top padding',
       decl('.side-body', 'padding-top') === 'var(--sticky-gap)');
     check('the sub tab bar is pulled up by exactly that gap',
       decl('.side .tabs.sub', 'margin-top') === 'calc(-1 * var(--sticky-gap))');
+    // The one the first attempt missed: a sticky inset resolves against the
+    // scrollport's padding box, so margin alone leaves the band uncovered when
+    // the bar is actually stuck.
+    check('and its sticky inset clears the same gap, not just its margin',
+      decl('.side .tabs.sub', 'top') === 'calc(-1 * var(--sticky-gap))');
     check('and pads itself back out by the same amount, so it covers the band',
       decl('.side .tabs.sub', 'padding-top') === 'var(--sticky-gap)');
     check('the sub bar cannot scroll under the main one', (() => {
@@ -668,7 +674,7 @@ try {
       return main && Number(main) >= 2;
     })());
     check('no stray hard-coded padding-top remains on the scroll container',
-      !/\.side-body\s*\{[^}]*padding-top:\s*\d+px/.test(css));
+      !/\.side-body\s*\{[^}]*padding-top:\s*\d+px/.test(bare));
   }
 
   // ── the production shell ───────────────────────────────────────────────────
@@ -1735,7 +1741,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 455;
+const EXPECTED_MIN = 456;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

@@ -761,6 +761,13 @@ select.btn { appearance: auto; }
 :root { --sticky-gap: 12px; }
 .side-body { flex: 1; overflow-y: auto; padding-top: var(--sticky-gap); min-height: 0; }
 .side .tabs.sub {
+  /* A sticky inset resolves against the scrollport's PADDING box, so top: 0
+     still pins the bar below that padding and leaves the band uncovered. The
+     negative inset pins it to the border edge instead; the negative margin
+     does the same for the unstuck position; the padding puts the buttons back
+     where they were in both states. All three are needed — the first version
+     of this fix had only the last two and the gap survived. */
+  top: calc(-1 * var(--sticky-gap));
   margin-top: calc(-1 * var(--sticky-gap));
   padding-top: var(--sticky-gap);
 }
