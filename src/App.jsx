@@ -928,25 +928,25 @@ export default function App() {
             </div>
           )}
           {nodes.length === 0 && <div className="hint">Blank canvas — drag components in from the left, wire them from a node's ● port, or pick a template ↑</div>}
+        <div className="flowbar" role="group" aria-label="Filter the diagram by traffic type">
+            <div className="flowbar-row">
+              {FLOW_MODES.map(m => (
+                <button key={m.id} className={flow === m.id ? 'on' : ''} title={m.hint}
+                  aria-pressed={flow === m.id} onClick={() => setFlow(m.id)}>{m.label}</button>
+              ))}
+            </div>
+            <div className="flowbar-hint">{FLOW_MODES.find(m => m.id === flow)?.hint}</div>
+            {flow !== 'all' && (
+              <div className="flowbar-note">
+                {flowInfo.shownEdges} of {flowInfo.totalEdges} connections
+                {flowInfo.unclassified > 0 && ` · ${flowInfo.unclassified} with no declared mix show in both`}
+              </div>
+            )}
+          </div>
           {nodes.length > 0 && <div className="hint">Drag ● port to connect · click a connection to label it · scroll to zoom · drag canvas to pan · Del removes selection</div>}
           <CanvasDescription nodes={nodes} edges={edges} rps={rps} template={template} />
         </main>
 
-        <div className="flowbar" role="group" aria-label="Filter the diagram by traffic type">
-          <div className="flowbar-row">
-            {FLOW_MODES.map(m => (
-              <button key={m.id} className={flow === m.id ? 'on' : ''} title={m.hint}
-                aria-pressed={flow === m.id} onClick={() => setFlow(m.id)}>{m.label}</button>
-            ))}
-          </div>
-          <div className="flowbar-hint">{FLOW_MODES.find(m => m.id === flow)?.hint}</div>
-          {flow !== 'all' && (
-            <div className="flowbar-note">
-              {flowInfo.shownEdges} of {flowInfo.totalEdges} connections
-              {flowInfo.unclassified > 0 && ` · ${flowInfo.unclassified} with no declared mix show in both`}
-            </div>
-          )}
-        </div>
         {!compact && !floatPanel.right && <div className="splitter" onPointerDown={e => startResize('right', e)} onDoubleClick={() => resetPanel('right')} title="Drag to resize · double-click to reset" />}
 
         <aside id="analysis" aria-label="Analysis" className={`side ${floatPanel.right ? 'floating' : ''} ${maxed === 'right' ? 'maxed' : ''} ${compact ? 'drawer right' : ''} ${compact && drawer === 'right' ? 'open' : ''}`}
