@@ -54,6 +54,19 @@ process.on('unhandledRejection', (e) => errs.push(e));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const click = (el) => el && el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
 const byText = (sel, txt) => [...doc.querySelectorAll(sel)].find((e) => e.textContent.includes(txt));
+// Toolbar controls now live in menus, so reaching one means opening it first.
+const openMenu = async (label) => {
+  const btn = [...doc.querySelectorAll('.toolbar .menu > button')].find((b) => b.textContent.trim().startsWith(label));
+  if (btn && btn.getAttribute('aria-expanded') !== 'true') { click(btn); await new Promise((r) => setTimeout(r, 120)) }
+  return btn;
+};
+const menuItem = (txt) => [...doc.querySelectorAll('.menu-pop [role^="menuitem"]')].find((e) => e.textContent.includes(txt));
+// The outside-click handler listens for pointerdown, so a plain click event
+// does not dismiss anything — dispatch what the app actually listens for.
+const closeMenus = async () => {
+  doc.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 120));
+};
 // React tracks the previous value on the DOM node, so assigning `.value`
 // directly is ignored. Go through the native setter so onChange actually fires.
 const typeInto = (el, text) => {
@@ -1236,12 +1249,14 @@ try {
     check('the text equivalent is hidden from sighted users',
       !!desc && desc.className.includes('sr-only'));
 
-    const a11yBtn = byText('.toolbar button', 'A11y');
+    await openMenu('View');
+    const a11yBtn = menuItem('Screen-reader mode');
     check('there is an accessibility mode toggle', !!a11yBtn);
-    check('the toggle reports its state', a11yBtn.getAttribute('aria-pressed') === 'false');
+    check('the toggle reports its state', a11yBtn.getAttribute('aria-checked') === 'false');
     click(a11yBtn); await wait(150);
     check('turning it on is reflected on the document', doc.documentElement.className.includes('a11y'));
-    click(byText('.toolbar button', 'A11y')); await wait(150);
+    await openMenu('View');
+    click(menuItem('Screen-reader mode')); await wait(150);
     check('it can be turned off again', !doc.documentElement.className.includes('a11y'));
   }
 
@@ -1347,10 +1362,11 @@ try {
   }
 
   // ── ①②③ step badges default to on ──────────────────────────────────────────
-  const stepsBtn = [...doc.querySelectorAll('.toolbar button')]
-    .find((b) => /Steps|①/.test(b.textContent));
+  await openMenu('View');
+  const stepsBtn = menuItem('Step numbers');
   check('the steps toggle exists', !!stepsBtn);
-  check('step badges are on by default', !!stepsBtn && stepsBtn.className.includes('active'));
+  check('step badges are on by default', !!stepsBtn && stepsBtn.getAttribute('aria-checked') === 'true');
+  await closeMenus();
 
   // load the WhatsApp template through the picker
   const sel = [...doc.querySelectorAll('select')].find((s) =>
@@ -1657,6 +1673,71 @@ try {
     await wait(200);
   }
 
+  // ── toolbar menus ──────────────────────────────────────────────────────────
+  {
+    await closeMenus();
+    const triggers = [...doc.querySelectorAll('.toolbar .menu > button')];
+    check('the toolbar has View, Design and Settings menus',
+      ['View', 'Design', 'Settings'].every(l => triggers.some(b => b.textContent.trim().startsWith(l))));
+    check('the guide button says Guide, not Tour', (() => {
+      const b = doc.querySelector('[data-tour="help"]');
+      return !!b && /Guide/.test(b.textContent) && !/Tour/.test(b.textContent);
+    })());
+    check('every menu trigger declares itself as one',
+      triggers.length >= 3 && triggers.every(b => b.getAttribute('aria-haspopup') === 'menu' && b.hasAttribute('aria-expanded')));
+    check('menus start closed', triggers.every(b => b.getAttribute('aria-expanded') === 'false'));
+
+    const view = await openMenu('View');
+    check('opening a menu flips its expanded state', view.getAttribute('aria-expanded') === 'true');
+    check('the popup is a labelled menu', (() => {
+      const pop = doc.querySelector('.menu-pop[role="menu"]');
+      return !!pop && !!pop.getAttribute('aria-label');
+    })());
+    check('every item in an open menu is a menu item',
+      [...doc.querySelectorAll('.menu-pop > *')].filter(e => !e.classList.contains('menu-label') && !e.classList.contains('menu-sep'))
+        .every(e => /^menuitem/.test(e.getAttribute('role') || '')));
+    check('toggles report checked state rather than looking like plain buttons',
+      ['Step numbers', 'Screen-reader mode'].every(t => menuItem(t)?.hasAttribute('aria-checked')));
+    check('opening a menu moves focus into it',
+      doc.activeElement && doc.activeElement.getAttribute('role')?.startsWith('menuitem'));
+
+    // Escape must close it and give focus back, or keyboard users are stranded.
+    doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await wait(120);
+    check('Escape closes the menu', view.getAttribute('aria-expanded') === 'false');
+    check('and returns focus to the trigger', doc.activeElement === view);
+
+    // Nothing may be lost: every action that used to be a toolbar button must
+    // still be reachable from some menu.
+    const actions = ['Arrange', 'Fit', 'Step numbers', 'Theme', 'Screen-reader mode',
+                     'PDF', 'Word', 'Diagram', 'Design (.json)', 'Import design JSON', 'Clear the canvas'];
+    const found = [];
+    for (const label of ['View', 'Design']) {
+      await openMenu(label);
+      for (const a of actions) if (menuItem(a)) found.push(a);
+      doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await wait(80);
+    }
+    const lost = actions.filter(a => !found.includes(a));
+    check('no toolbar action was lost in the move to menus' + (lost.length ? ' — missing: ' + lost.join(', ') : ''),
+      lost.length === 0);
+
+    await openMenu('Settings');
+    check('cloud and currency both moved into Settings',
+      !!menuItem('Generic') && !!menuItem('INR'));
+    check('the current cloud and currency are shown as checked',
+      [...doc.querySelectorAll('.menu-pop [aria-checked="true"]')].length >= 2);
+    doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await wait(80);
+
+    await closeMenus();
+    check('clicking outside dismisses an open menu',
+      [...doc.querySelectorAll('.toolbar .menu > button')].every(b => b.getAttribute('aria-expanded') === 'false'));
+    check('the toolbar is no longer a wall of buttons',
+      doc.querySelectorAll('.toolbar > button, .toolbar > select, .toolbar > label').length <= 8);
+    check('no crash while driving the menus', errs.length === 0);
+  }
+
   // ── the tour against the real DOM ──────────────────────────────────────────
   {
     const t = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
@@ -1741,7 +1822,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 456;
+const EXPECTED_MIN = 474;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
