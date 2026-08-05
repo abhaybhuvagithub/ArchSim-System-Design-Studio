@@ -28,6 +28,7 @@ import { buildInterview, report as interviewReport, STAGES } from './interview.j
 import * as LLM from './interview-llm.js'
 import { matchConcepts, pickProbe, respond as interviewRespond } from './interview.js'
 import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
+import { REGIONS, SITE_ROLES, project, sitesFor, siteLinks, regionById } from './geo.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -980,6 +981,7 @@ export default function App() {
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
+              ['map', 'Map', null, 'Where this design is deployed, and what distance costs'],
               ['interview', 'Interview', null, 'Mock system design interview on the loaded design'],
               ['about', 'About', null, 'What this simulator is and how it differs'],
             ].map(([key, label, badge, hint]) => (
@@ -1020,6 +1022,8 @@ export default function App() {
             <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} cloud={cloudInfo}
               plan={rightSizePlan(nodes, sim, cloudInfo.mult)}
               onRightSize={rightSize} onScaleAll={scaleEverything} onSetReplicas={setReplicas} />
+          ) : tab === 'map' ? (
+            <SystemMap nodes={nodes} edges={edges} setNodes={setNodes} />
           ) : tab === 'interview' ? (
             <Interview template={template} />
           ) : tab === 'learn' ? (
@@ -1762,6 +1766,21 @@ function Inspector({ n, sim, setNodes, cloud, cloudMult = 1 }) {
         <label>Label</label>
         <input value={n.label} onChange={e => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, label: e.target.value } : x))} />
       </div>
+      <div className="field">
+        <label>Region</label>
+        <select value={n.region || ''} onChange={e => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, region: e.target.value || undefined } : x))}>
+          <option value="">Not placed</option>
+          {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name} · {r.id}</option>)}
+        </select>
+      </div>
+      {n.region && (
+        <div className="field">
+          <label>Site role</label>
+          <select value={n.siteRole || 'primary'} onChange={e => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, siteRole: e.target.value } : x))}>
+            {Object.keys(SITE_ROLES).map(k => <option key={k} value={k}>{SITE_ROLES[k].label}</option>)}
+          </select>
+        </div>
+      )}
       <ConsistencyFields n={n} setNodes={setNodes} />
       <ServiceFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
       <StreamFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
@@ -2538,6 +2557,88 @@ function MenuFile({ children, onFile }) {
 
 const MenuLabel = ({ children }) => <div className="menu-label">{children}</div>
 const MenuSep = () => <div className="menu-sep" role="separator" />
+
+function SystemMap({ nodes, edges, setNodes }) {
+  const [role, setRole] = useState('all')
+  const sites = useMemo(() => sitesFor(nodes), [nodes])
+  const links = useMemo(() => siteLinks(sites, edges, nodes), [sites, edges, nodes])
+  const W = 640, H = 320
+  const shown = role === 'all' ? sites : sites.filter(s => s.role === role)
+  const shownIds = new Set(shown.map(s => s.region.id))
+
+  return (
+    <section className="map">
+      <h3>System map</h3>
+      {sites.length === 0 ? (
+        <p className="muted">
+          Nothing is placed yet. Select a component on the canvas and give it a region — the map is
+          built from the design, so it can never drift from what you have drawn.
+        </p>
+      ) : (
+        <>
+          <div className="map-filters" role="group" aria-label="Filter sites by role">
+            {[['all', 'All'], ...Object.keys(SITE_ROLES).map(k => [k, SITE_ROLES[k].label])].map(([k, l]) => (
+              <button key={k} className={role === k ? 'on' : ''} aria-pressed={role === k}
+                onClick={() => setRole(k)}>{l}</button>
+            ))}
+          </div>
+
+          <svg className="map-svg" viewBox={`0 0 ${W} ${H}`} role="img"
+            aria-label={`${shown.length} sites across ${new Set(shown.map(s => s.region.cloud)).size} clouds`}>
+            {[-60, -30, 0, 30, 60].map(la => {
+              const y = project(la, 0, W, H).y
+              return <line key={la} x1="0" x2={W} y1={y} y2={y} className={la === 0 ? 'eq' : 'grat'} />
+            })}
+            {[-120, -60, 0, 60, 120].map(lo => {
+              const x = project(0, lo, W, H).x
+              return <line key={lo} y1="0" y2={H} x1={x} x2={x} className="grat" />
+            })}
+            {links.filter(l => shownIds.has(l.from) || shownIds.has(l.to)).map(l => {
+              const a = project(regionById(l.from).lat, regionById(l.from).lon, W, H)
+              const b = project(regionById(l.to).lat, regionById(l.to).lon, W, H)
+              return (
+                <g key={l.from + l.to} className={`map-link ${l.rttMs >= 200 ? 'far' : l.rttMs >= 80 ? 'mid' : 'near'}`}>
+                  <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+                  <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 3}>{l.rttMs}ms</text>
+                </g>
+              )
+            })}
+            {sites.map(s => {
+              const p = project(s.region.lat, s.region.lon, W, H)
+              const on = shownIds.has(s.region.id)
+              return (
+                <g key={s.region.id} className={`map-site r-${s.role} ${on ? '' : 'faint'}`}>
+                  <circle cx={p.x} cy={p.y} r={7 + Math.min(6, s.services)} />
+                  <text className="map-tag" x={p.x} y={p.y + 3}>{SITE_ROLES[s.role].short}</text>
+                  <text className="map-name" x={p.x} y={p.y + 26}>{s.region.name}</text>
+                  <text className="map-meta" x={p.x} y={p.y + 37}>{s.azs} AZs · {s.services} svc</text>
+                </g>
+              )
+            })}
+          </svg>
+          <div className="muted map-note">
+            Positions are real latitude and longitude on an equirectangular projection. There is no
+            basemap because none is needed to read distance — the numbers on the links are the floor
+            imposed by the speed of light in fibre, not an estimate of your traffic.
+          </div>
+
+          <h4>Sites</h4>
+          <table className="map-table"><tbody>
+            {shown.map(s => (
+              <tr key={s.region.id}>
+                <td className="k">{s.region.name}</td>
+                <td>{SITE_ROLES[s.role].label}</td>
+                <td>{s.azs} AZs</td>
+                <td>{s.services} svc</td>
+              </tr>
+            ))}
+          </tbody></table>
+          <div className="ddia-blurb">{SITE_ROLES[role === 'all' ? 'primary' : role].blurb}</div>
+        </>
+      )}
+    </section>
+  )
+}
 
 // ── Read aloud ───────────────────────────────────────────────────────────────
 // Wraps any panel section and reads its prose, highlighting each block as it
