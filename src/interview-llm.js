@@ -67,9 +67,10 @@ export const PROVIDERS = {
     ['kimi-k2.5', 'moonshot-v1-32k', 'moonshot-v1-128k'],
     { note: 'Moonshot\u2019s OpenAI-compatible endpoint. The .ai host is the international one; api.moonshot.cn serves mainland China.' }),
 
-  meta: oai('Meta — Llama (self-hosted)', null,
+
+  custom: oai('Self-hosted / other (OpenAI-compatible)', null,
     ['llama-3.3-70b-instruct'],
-    { note: 'Meta publishes Llama as open weights rather than running a public API. Point this at whoever serves it for you \u2014 Bedrock, Groq, Together, Fireworks, vLLM or Ollama \u2014 using their OpenAI-compatible base URL.' }),
+    { note: 'For anything you run or subscribe to yourself \u2014 Llama on Bedrock, Groq, Together or vLLM, a CoRover BharatGPT tenant, or AI4Bharat and BharatGen weights you are serving. Paste the base URL and any model name it accepts.' }),
 
   sarvam: oai('Sarvam AI', 'https://api.sarvam.ai/v1',
     ['sarvam-m', 'sarvam-30b', 'sarvam-105b'],
@@ -78,17 +79,8 @@ export const PROVIDERS = {
   krutrim: oai('Krutrim (Ola)', 'https://cloud.olakrutrim.com/v1',
     ['krutrim-1']),
 
-  bharatgpt: oai('BharatGPT (CoRover)', null,
-    ['BharatGPT-3B-Indic'],
-    { note: 'CoRover grants access per tenant through builder.corover.ai rather than publishing a public endpoint. Paste your tenant URL, or the address of wherever you are serving the open BharatGPT-3B-Indic weights.' }),
 
-  ai4bharat: oai('AI4Bharat (IIT Madras)', null,
-    ['ai4bharat/Airavata'],
-    { note: 'A research group rather than a hosted service \u2014 the models are published openly on Hugging Face and AIKosh. Serve one behind an OpenAI-compatible endpoint and point this at it.' }),
 
-  bharatgen: oai('BharatGen', null,
-    ['bharatgen/Param-1'],
-    { note: 'A sovereign-AI initiative publishing multimodal Indic foundation models rather than a public inference API. Paste the base URL of wherever you are serving one.' }),
 }
 
 // Kept as a separate export because the UI reads it directly.
