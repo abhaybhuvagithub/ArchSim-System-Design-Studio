@@ -29,6 +29,7 @@ import * as LLM from './interview-llm.js'
 import { matchConcepts, pickProbe, respond as interviewRespond } from './interview.js'
 import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
 import { REGIONS, SITE_ROLES, project, sitesFor, siteLinks, regionById } from './geo.js'
+import { AUTH, SESSION, ENTITLEMENT, revocationRisk } from './identity.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1783,6 +1784,7 @@ function Inspector({ n, sim, setNodes, cloud, cloudMult = 1 }) {
       )}
       <ConsistencyFields n={n} setNodes={setNodes} />
       <ServiceFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
+      <IdentityFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
       <StreamFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
       {!spec.source && (
         <div className="field">
@@ -2637,6 +2639,60 @@ function SystemMap({ nodes, edges, setNodes }) {
         </>
       )}
     </section>
+  )
+}
+
+// Identity and entitlement. Edges answer "who is this", services answer
+// "what have they paid for" — the two questions get asked in different places.
+function IdentityFields({ n, set }) {
+  const edge = ['gateway', 'lb', 'waf', 'web'].includes(n.type)
+  const svc = ['app', 'micro', 'web', 'worker'].includes(n.type)
+  if (!edge && !svc) return null
+  const rev = revocationRisk(n)
+  return (
+    <>
+      {edge && (
+        <>
+          <div className="field">
+            <label>Authentication</label>
+            <select value={n.auth || ''} onChange={e => set({ auth: e.target.value || undefined })}>
+              <option value="">Not stated</option>
+              {Object.keys(AUTH).map(k => <option key={k} value={k}>{AUTH[k].label}</option>)}
+            </select>
+          </div>
+          {n.auth && <div className="ddia-blurb">{AUTH[n.auth].blurb}</div>}
+        </>
+      )}
+
+      <div className="field">
+        <label>Session</label>
+        <select value={n.session || ''} onChange={e => set({ session: e.target.value || undefined })}>
+          <option value="">Not stated</option>
+          {Object.keys(SESSION).map(k => <option key={k} value={k}>{SESSION[k].label}</option>)}
+        </select>
+      </div>
+      {n.session && <div className="ddia-blurb">{SESSION[n.session].blurb}</div>}
+      {n.session === 'stateless' && (
+        <div className="field">
+          <label>Token life (min)</label>
+          <input type="number" min="1" max="10080" value={n.tokenMinutes ?? 60}
+            onChange={e => set({ tokenMinutes: Math.max(1, +e.target.value || 1) })} />
+        </div>
+      )}
+      {rev && <div className="ddia-verdict bad">{rev.why}</div>}
+
+      {svc && (
+        <>
+          <div className="field">
+            <label>Entitlement</label>
+            <select value={n.entitlement || 'none'} onChange={e => set({ entitlement: e.target.value })}>
+              {Object.keys(ENTITLEMENT).map(k => <option key={k} value={k}>{ENTITLEMENT[k].label}</option>)}
+            </select>
+          </div>
+          <div className="ddia-blurb">{ENTITLEMENT[n.entitlement || 'none'].blurb}</div>
+        </>
+      )}
+    </>
   )
 }
 

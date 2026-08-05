@@ -8,6 +8,7 @@ import { nodeCost, money } from './pricing.js'
 import { ddiaFindings } from './ddia.js'
 import { physicalFindings, replicaScalingFindings, readFractionOf } from './ddia2.js'
 import { sitesFor, siteLinks, geoFindings } from './geo.js'
+import { identityFindings } from './identity.js'
 
 const NODE_W = 118, NODE_H = 46
 let seq = 0
@@ -717,7 +718,7 @@ export function review(nodes, edges, rps) {
   }
   const geoSites = sitesFor(nodes)
   const geo = geoFindings(geoSites, siteLinks(geoSites, edges, nodes)).map(f => ({ ...f, nodeId: undefined, source: 'geo' }))
-  for (const f of [...ddiaFindings(nodes, edges, rps), ...physicalFindings(nodes, edges), ...replicaScalingFindings(nodes, edges, mixOf), ...geo]) {
+  for (const f of [...ddiaFindings(nodes, edges, rps), ...physicalFindings(nodes, edges), ...replicaScalingFindings(nodes, edges, mixOf), ...geo, ...identityFindings(nodes, edges)]) {
     push({
       id: 'ddia:' + f.title,
       icon: f.severity === 'bad' ? '🛑' : f.severity === 'warn' ? '⚠️' : '💡',

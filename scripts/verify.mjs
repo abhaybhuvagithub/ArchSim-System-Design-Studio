@@ -755,6 +755,61 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── identity, MFA and entitlement ──────────────────────────────────────────
+  {
+    const id = await import(pathToFileURL(path.join(root, 'src/identity.js')).href);
+    const { review } = await import(pathToFileURL(path.join(root, 'src/advisor.js')).href);
+    const fires = (ns, es, re) => review(ns, es, 1000).some(x => re.test(x.title + ' ' + (x.detail || '')));
+    const C = { id: 'c', type: 'client', label: 'Users' };
+    const gw = extra => [C, { id: 'gw', type: 'gateway', label: 'Admin Console', ...extra }];
+    const pub = extra => [C, { id: 'gw', type: 'gateway', label: 'Public API', ...extra }];
+    const E = [{ id: '1', from: 'c', to: 'gw' }];
+
+    check('only passkeys are marked as resisting phishing',
+      Object.entries(id.AUTH).filter(([, a]) => a.mfa && a.phishable === false).map(([k]) => k).join() === 'webauthn');
+    check('password alone is not counted as a second factor', id.AUTH.password.mfa === false);
+    check('a stateless token is the one session model that cannot be withdrawn',
+      id.SESSION.stateless.revocable === false && id.SESSION.server.revocable && id.SESSION.hybrid.revocable);
+    check('only a per-request lookup is marked as hot path',
+      Object.entries(id.ENTITLEMENT).filter(([, e]) => e.hotPath).map(([k]) => k).join() === 'perRequest');
+
+    check('an entry point with no stated auth is flagged', fires(pub({}), E, /no stated authentication/i));
+    check('stating it clears the finding', !fires(pub({ auth: 'sso' }), E, /no stated authentication/i));
+    check('a privileged path on password alone is flagged',
+      fires(gw({ auth: 'password' }), E, /without a second factor/i));
+    check('the same auth on a public path is not',
+      !fires(pub({ auth: 'password' }), E, /without a second factor/i));
+    check('a phishable factor on a privileged path is called out',
+      fires(gw({ auth: 'totp' }), E, /phishable/i));
+    check('a passkey on the same path is not',
+      !fires(gw({ auth: 'webauthn' }), E, /phishable/i));
+
+    // Revocation: a token you cannot withdraw is only as safe as its lifetime.
+    check('a long-lived stateless token is flagged',
+      fires(gw({ auth: 'webauthn', session: 'stateless', tokenMinutes: 480 }), E, /cannot withdraw/i));
+    check('a short one is not',
+      !fires(gw({ auth: 'webauthn', session: 'stateless', tokenMinutes: 10 }), E, /cannot withdraw/i));
+    check('a revocable session is never flagged for revocation',
+      !fires(gw({ auth: 'webauthn', session: 'hybrid' }), E, /cannot withdraw/i));
+    check('the risk names the actual window', id.revocationRisk({ session: 'stateless', tokenMinutes: 90 })?.minutes === 90);
+    check('a server-side session carries no revocation risk', id.revocationRisk({ session: 'server' }) === null);
+
+    // Entitlement on the hot path — the subscription question.
+    const svc = e => [{ id: 's', type: 'micro', label: 'Licensing Svc', ...e }, { id: 'db', type: 'sql', label: 'Seat DB' }];
+    const sE = [{ id: 'x', from: 's', to: 'db' }];
+    check('checking entitlement per request is flagged',
+      fires(svc({ entitlement: 'perRequest' }), sE, /entitlement on every request/i));
+    check('the finding names the store it would hammer',
+      review(svc({ entitlement: 'perRequest' }), sE, 1000).some(x => /Seat DB/.test(x.detail || '')));
+    check('caching it clears the finding', !fires(svc({ entitlement: 'cached' }), sE, /every request/i));
+    check('entitlements in a long-lived token are flagged as stale billing',
+      fires(svc({ entitlement: 'claims', session: 'stateless', tokenMinutes: 240 }), sE, /long-lived token/i));
+    check('entitlements in a short token are not',
+      !fires(svc({ entitlement: 'claims', session: 'stateless', tokenMinutes: 15 }), sE, /long-lived token/i));
+    check('a design that states nothing about identity stays quiet',
+      review([{ id: 'a', type: 'app', label: 'Svc' }], [], 1000).every(x => x.source !== 'identity'));
+  }
+
   // ── regions, availability zones and the map ────────────────────────────────
   {
     const geo = await import(pathToFileURL(path.join(root, 'src/geo.js')).href);
@@ -2020,7 +2075,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 520;
+const EXPECTED_MIN = 540;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
