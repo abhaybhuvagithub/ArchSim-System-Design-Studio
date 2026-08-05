@@ -938,3 +938,19 @@ select.btn { appearance: auto; }
 .iv-engine { font-size: 12px; line-height: 1.6; padding: 9px 11px; border-radius: 10px; margin-bottom: 10px;
   background: rgba(127,127,127,.08); border-left: 3px solid rgba(127,127,127,.35); }
 .iv-engine.live { background: rgba(52,199,89,.10); border-color: #34c759; }
+
+/* ---- Crash fallback ---- */
+.crash { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px;
+  background: var(--bg, #f5f5f7); color: var(--fg, #1d1d1f); overflow: auto; }
+.crash-box { max-width: 560px; }
+.crash-box h1 { font-size: 20px; margin: 0 0 10px; }
+.crash-box p { font-size: 13.5px; line-height: 1.65; opacity: .8; margin: 0 0 14px; }
+.crash-msg { font-size: 12px; line-height: 1.5; padding: 10px 12px; border-radius: 9px;
+  background: rgba(227,66,52,.10); border-left: 3px solid #e34234; white-space: pre-wrap;
+  word-break: break-word; margin: 0 0 14px; }
+.crash-btns { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; margin-bottom: 14px; }
+.crash-btns button, .crash-btns a { font: inherit; font-size: 13px; padding: 8px 15px; border-radius: 9px;
+  border: 1px solid rgba(127,127,127,.35); background: transparent; color: inherit;
+  cursor: pointer; text-decoration: none; }
+.crash-primary { background: #0a84ff !important; border-color: transparent !important; color: #fff !important; font-weight: 600; }
+.crash-hint { font-size: 12px !important; opacity: .6 !important; }

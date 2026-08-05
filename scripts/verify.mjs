@@ -643,6 +643,71 @@ try {
       /not write the design/i.test(llm.systemPrompt('X', 'Y')));
   }
 
+  // ── the production shell ───────────────────────────────────────────────────
+  {
+    const html = fs.readFileSync(path.join(root, 'dist/index.html'), 'utf8');
+    const need = t => html.includes(t);
+    check('the page has a title and a description', /<title>[^<]{10,}<\/title>/.test(html) && need('name="description"'));
+    check('a shared link previews with a title, description and image',
+      need('property="og:title"') && need('property="og:description"') && need('property="og:image"') && need('property="og:url"'));
+    check('the social image is declared with its real dimensions',
+      need('content="1200"') && need('content="630"'));
+    check('the social image has alt text', need('property="og:image:alt"'));
+    check('Twitter gets a large card', need('name="twitter:card"') && need('summary_large_image'));
+    check('there is a favicon and an apple touch icon',
+      need('rel="icon"') && need('rel="apple-touch-icon"'));
+    check('there is a canonical URL', need('rel="canonical"'));
+    check('a visitor without JavaScript is told why the page is empty',
+      /<noscript>[\s\S]*JavaScript[\s\S]*<\/noscript>/.test(html));
+    check('the document declares a language', /<html[^>]*lang="[a-z-]+"/i.test(html));
+
+    for (const f of ['og.png', 'favicon.png', 'apple-touch-icon.png', 'robots.txt', 'sitemap.xml'])
+      check(`${f} is actually built into dist`, fs.existsSync(path.join(root, 'dist', f)));
+    check('the social image is a real PNG of the right size', (() => {
+      const b = fs.readFileSync(path.join(root, 'dist/og.png'));
+      if (b.slice(1, 4).toString() !== 'PNG') return false;
+      return b.readUInt32BE(16) === 1200 && b.readUInt32BE(20) === 630;   // IHDR
+    })());
+    check('every asset the page references exists in dist', (() => {
+      const refs = [...html.matchAll(/(?:href|src|content)="(\/ArchSim-System-Design-Studio\/[^"]+)"/g)].map(m => m[1]);
+      const missing = refs.filter(r => !fs.existsSync(path.join(root, 'dist', r.replace('/ArchSim-System-Design-Studio/', ''))));
+      return refs.length > 0 && missing.length === 0;
+    })());
+    check('nothing in the built page points at localhost or a placeholder',
+      !/localhost|example\.com|TODO|FIXME|lorem ipsum/i.test(html));
+  }
+
+  // ── the crash fallback ─────────────────────────────────────────────────────
+  {
+    const src = fs.readFileSync(path.join(root, 'src/ErrorBoundary.jsx'), 'utf8');
+    check('an error boundary exists at all',
+      /getDerivedStateFromError/.test(src) && /componentDidCatch/.test(src));
+    check('the app is actually wrapped in it',
+      /<ErrorBoundary>[\s\S]*<App\s*\/>[\s\S]*<\/ErrorBoundary>/.test(fs.readFileSync(path.join(root, 'src/main.jsx'), 'utf8')));
+    check('the fallback offers a way out of a crash that repeats every load',
+      /clearSavedState/.test(src) && /localStorage/.test(src));
+    check('the fallback shows the error rather than hiding it', /state\.error/.test(src));
+    check('the crash screen is announced to a screen reader', /role="alert"/.test(src));
+
+    // The recovery logic itself, exercised rather than string-matched.
+    const crash = await import(pathToFileURL(path.join(root, 'src/crash.js')).href);
+    const fake = (() => {
+      const m = new Map([['archsim.theme', 'dark'], ['archsim.tour.v1', '1'], ['someone-else', 'keep me']]);
+      return { get length() { return m.size }, key: i => [...m.keys()][i],
+               removeItem: k => m.delete(k), has: k => m.has(k), size: () => m.size };
+    })();
+    check('clearing saved state removes this app\'s keys', crash.clearSavedState(fake) === 2);
+    check('and leaves other keys on the origin alone', fake.has('someone-else') && fake.size() === 1);
+    check('a blocked storage does not throw', (() => {
+      const blocked = { get length() { throw new Error('denied') }, key() { throw new Error('denied') }, removeItem() {} };
+      try { return crash.clearSavedState(blocked) === 0 } catch { return false }
+    })());
+    check('a very long error message is truncated rather than filling the screen',
+      crash.describe(new Error('x'.repeat(900))).length <= 401);
+    check('a thrown non-Error still produces a readable message',
+      crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
+  }
+
   // ── the guided tour: data and geometry ─────────────────────────────────────
   {
     const t = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
@@ -1642,7 +1707,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 420;
+const EXPECTED_MIN = 443;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
