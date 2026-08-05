@@ -1005,8 +1005,11 @@ select.btn { appearance: auto; }
 
 /* ---- Flow filter ---- */
 .flowbar {
-  /* Clears the canvas hint strip at bottom: 10px, which is about 30px tall. */
-  position: absolute; left: 50%; transform: translateX(-50%); bottom: 58px; z-index: 6;
+  /* Must live inside .canvas-wrap. Outside it there is no positioned ancestor,
+     so this offset resolved against the viewport while the hint strip resolved
+     against the canvas — two different reference frames, and they overlapped by
+     six pixels no matter what number went here. */
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 52px; z-index: 6;
   display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 5px 6px;
   background: var(--panel); border: 1px solid var(--border); border-radius: 980px;
   box-shadow: 0 6px 20px rgba(0,0,0,.12); max-width: calc(100% - 32px);

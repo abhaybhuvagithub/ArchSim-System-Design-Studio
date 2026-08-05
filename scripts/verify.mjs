@@ -1755,6 +1755,10 @@ try {
     const fl2 = await import(pathToFileURL(path.join(root, 'src/flow.js')).href);
     const bar = doc.querySelector('.flowbar');
     check('the flow filter is on the canvas', !!bar);
+    // It has to share a containing block with the hint strip, or its bottom
+    // offset resolves against the viewport and the two overlap.
+    check('it sits inside the canvas, so its offset shares the hint strip\'s frame',
+      !!bar.closest('.canvas-wrap'));
     check('it offers all four views',
       [...bar.querySelectorAll('button')].map(b => b.textContent.trim()).join(',') === 'All,Read,Write,Async');
     check('it is a labelled group for assistive tech',
@@ -1948,7 +1952,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 500;
+const EXPECTED_MIN = 501;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
