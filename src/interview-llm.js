@@ -9,6 +9,15 @@
 
 export const KEY_STORE = 'archsim.interview.key'
 export const BASE_STORE = 'archsim.interview.base'
+export const MODEL_STORE = 'archsim.interview.model'
+// Offered as a starting point, not a whitelist — the field accepts anything,
+// because model names change faster than this file will.
+export const MODEL_CHOICES = {
+  anthropic: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5-20251001'],
+  openai: ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
+  bharatgpt: ['BharatGPT-3B-Indic'],
+}
+
 export const PROVIDERS = {
   anthropic: {
     label: 'Anthropic',
@@ -68,19 +77,29 @@ export function systemPrompt(design, stage) {
 }
 
 // Never logs the key, and never puts it in a URL.
-export async function ask({ provider = 'anthropic', key, baseUrl, system, messages, fetchImpl }) {
+export async function ask({ provider = 'anthropic', key, baseUrl, model, system, messages, fetchImpl }) {
   const p = PROVIDERS[provider]
   if (!p) throw new Error('Unknown provider')
   if (!key) throw new Error('No API key')
   if (p.needsBaseUrl && !baseUrl) throw new Error('This provider needs a base URL — see the note under the provider picker.')
   const f = fetchImpl || fetch
   const url = p.url(baseUrl)
-  const res = await f(url, { method: 'POST', headers: p.headers(key), body: p.body(p.model, system, messages) })
+  const msgs = normaliseMessages(messages)
+  if (!msgs.length) throw new Error('Nothing to send yet.')
+  const res = await f(url, { method: 'POST', headers: p.headers(key), body: p.body(model || p.model, system, msgs) })
   if (!res.ok) {
     const status = res.status
-    throw new Error(status === 401 ? 'The provider rejected that key.'
+    let detail = ''
+    try {
+      const body = await res.text()
+      const j = (() => { try { return JSON.parse(body) } catch { return null } })()
+      detail = j?.error?.message || j?.message || body.slice(0, 300)
+    } catch { /* body already consumed or unreadable */ }
+    const head = status === 401 ? 'The provider rejected that key.'
       : status === 429 ? 'Rate limited by the provider.'
-      : `The provider returned ${status}.`)
+      : status === 404 ? 'No such endpoint or model at that address.'
+      : `The provider returned ${status}.`
+    throw new Error(redact(detail ? head + ' ' + detail : head))
   }
   return p.text(await res.json())
 }
@@ -91,3 +110,26 @@ export const redact = s => String(s || '').replace(/\b(sk-[A-Za-z0-9_-]{8,}|sk-a
 
 export const getBase = () => { try { return sessionStorage.getItem(BASE_STORE) || '' } catch { return '' } }
 export const setBase = v => { try { v ? sessionStorage.setItem(BASE_STORE, v) : sessionStorage.removeItem(BASE_STORE) } catch { /* blocked */ } }
+
+
+// The 400. A transcript starts with the interviewer's opening question, which
+// maps to an assistant message — and the Messages API requires the first
+// message to come from the user, with roles alternating after that. Sending
+// the transcript verbatim is rejected outright.
+export function normaliseMessages(messages) {
+  const out = []
+  for (const m of messages || []) {
+    const role = m.role === 'user' || m.role === 'assistant' ? m.role : 'user'
+    const content = String(m.content ?? '').trim()
+    if (!content) continue
+    if (!out.length && role === 'assistant') continue           // cannot open on the assistant
+    const last = out[out.length - 1]
+    if (last && last.role === role) last.content += '\n\n' + content   // no two in a row
+    else out.push({ role, content })
+  }
+  while (out.length && out[out.length - 1].role === 'assistant') out.pop()  // must end on the user
+  return out
+}
+
+export const getModel = () => { try { return sessionStorage.getItem(MODEL_STORE) || '' } catch { return '' } }
+export const setModel = v => { try { v ? sessionStorage.setItem(MODEL_STORE, v) : sessionStorage.removeItem(MODEL_STORE) } catch { /* blocked */ } }

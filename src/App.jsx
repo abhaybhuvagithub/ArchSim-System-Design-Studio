@@ -2193,6 +2193,7 @@ function Interview({ template }) {
   const [draft, setDraft] = useState('')
   const [listening, setListening] = useState(false)
   const [baseUrl, setBaseUrl] = useState(() => LLM.getBase())
+  const [model, setModelState] = useState(() => LLM.getModel())
   const [keyInput, setKeyInput] = useState('')
   const [provider, setProvider] = useState('anthropic')
   const [keySet, setKeySet] = useState(() => LLM.hasKey())
@@ -2254,7 +2255,7 @@ function Interview({ template }) {
       setBusy(true)
       try {
         const reply = await LLM.ask({
-          provider, key: LLM.getKey(), baseUrl: LLM.getBase(),
+          provider, key: LLM.getKey(), baseUrl: LLM.getBase(), model: LLM.getModel() || undefined,
           system: LLM.systemPrompt(iv.design, stage.title),
           messages: next.filter(t => t.role !== 'system').map(t => ({ role: t.role === 'candidate' ? 'user' : 'assistant', content: t.text })),
         })
@@ -2309,12 +2310,24 @@ function Interview({ template }) {
             </div>
 
             <div className="field">
-              <label>Model</label>
+              <label>Provider</label>
               <select value={provider} onChange={e => { setProvider(e.target.value); setErr(null) }}>
                 {Object.keys(LLM.PROVIDERS).map(k => <option key={k} value={k}>{LLM.PROVIDERS[k].label}</option>)}
               </select>
             </div>
             {LLM.PROVIDERS[provider].note && <div className="ddia-blurb">{LLM.PROVIDERS[provider].note}</div>}
+
+            <div className="field">
+              <label>Model</label>
+              <input list={`models-${provider}`} value={model} placeholder={LLM.PROVIDERS[provider].model}
+                onChange={e => { setModelState(e.target.value); LLM.setModel(e.target.value) }} />
+              <datalist id={`models-${provider}`}>
+                {(LLM.MODEL_CHOICES[provider] || []).map(m => <option key={m} value={m} />)}
+              </datalist>
+            </div>
+            <div className="ddia-blurb">
+              Pick one of the suggestions or type any model name the provider accepts. Left blank it uses {LLM.PROVIDERS[provider].model}.
+            </div>
 
             {LLM.PROVIDERS[provider].needsBaseUrl && (
               <div className="field">

@@ -466,13 +466,13 @@ try {
       llm.PROVIDERS.bharatgpt.needsBaseUrl === true && /no public API endpoint/i.test(llm.PROVIDERS.bharatgpt.note));
     check('a missing base URL fails loudly instead of hitting a wrong host', await (async () => {
       let called = false;
-      try { await llm.ask({ provider: 'bharatgpt', key: 'k', system: 's', messages: [], fetchImpl: () => { called = true } }) }
+      try { await llm.ask({ provider: 'bharatgpt', key: 'k', system: 's', messages: [{ role: 'user', content: 'hi' }], fetchImpl: () => { called = true } }) }
       catch (e) { return !called && /base URL/i.test(e.message) }
       return false;
     })());
     check('a supplied base URL is used verbatim, with one slash', await (async () => {
       let seen = '';
-      await llm.ask({ provider: 'bharatgpt', key: 'k', baseUrl: 'https://tenant.example.com/v1/', system: 's', messages: [],
+      await llm.ask({ provider: 'bharatgpt', key: 'k', baseUrl: 'https://tenant.example.com/v1/', system: 's', messages: [{ role: 'user', content: 'hi' }],
         fetchImpl: async u => { seen = u; return { ok: true, json: async () => ({ choices: [{ message: { content: 'hi' } }] }) } } });
       return seen === 'https://tenant.example.com/v1/chat/completions';
     })());
@@ -480,6 +480,72 @@ try {
       Object.values(llm.PROVIDERS).every(p => p.model && p.headers && p.body && p.text && p.url));
     check('the base URL is stored per tab, like the key',
       /session/i.test(llm.getBase.toString()) && /session/i.test(llm.setBase.toString()));
+
+    // The 400 a real key hit: a transcript opens with the interviewer, which
+    // maps to an assistant message, and the Messages API requires the first to
+    // be from the user.
+    const tape = [{ role: 'assistant', content: 'Q1' }, { role: 'user', content: 'A1' },
+                  { role: 'assistant', content: 'probe' }, { role: 'assistant', content: 'more' },
+                  { role: 'user', content: 'A2' }];
+    check('a conversation never opens on the assistant', llm.normaliseMessages(tape)[0].role === 'user');
+    check('consecutive same-role messages are merged', (() => {
+      const n = llm.normaliseMessages(tape);
+      return n.length === 3 && n[1].role === 'assistant' && n[1].content.includes('probe') && n[1].content.includes('more');
+    })());
+    check('roles strictly alternate after normalising', (() => {
+      const n = llm.normaliseMessages(tape);
+      return n.every((m, i) => i === 0 || m.role !== n[i - 1].role);
+    })());
+    check('a trailing assistant turn is dropped so the model is asked to reply',
+      llm.normaliseMessages([{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b' }]).at(-1).role === 'user');
+    check('empty messages are discarded rather than sent',
+      llm.normaliseMessages([{ role: 'user', content: '  ' }, { role: 'user', content: 'real' }]).length === 1);
+    check('an all-assistant transcript sends nothing rather than a bad request', await (async () => {
+      let called = false;
+      try { await llm.ask({ key: 'k', system: 's', messages: [{ role: 'assistant', content: 'x' }], fetchImpl: () => { called = true } }) }
+      catch { return !called }
+      return false;
+    })());
+    check('what actually goes on the wire opens on the user', await (async () => {
+      let body = '';
+      await llm.ask({ key: 'k', system: 's', messages: tape, fetchImpl: async (u, o) => { body = o.body; return { ok: true, json: async () => ({ content: [] }) } } });
+      return JSON.parse(body).messages[0].role === 'user';
+    })());
+
+    // The provider's own explanation must reach the user — "returned 400" on
+    // its own is what made this take a round trip to diagnose.
+    check('a provider error message is surfaced, not swallowed', await (async () => {
+      try {
+        await llm.ask({ key: 'k', system: 's', messages: tape, fetchImpl: async () => ({ ok: false, status: 400,
+          text: async () => JSON.stringify({ error: { message: 'first message must use the "user" role' } }) }) });
+      } catch (e) { return /first message must use/.test(e.message) }
+      return false;
+    })());
+    check('an error body is still redacted of anything key-shaped', await (async () => {
+      try {
+        await llm.ask({ key: 'k', system: 's', messages: tape, fetchImpl: async () => ({ ok: false, status: 400,
+          text: async () => JSON.stringify({ error: { message: 'bad key sk-ant-abcd1234efgh' } }) }) });
+      } catch (e) { return !/sk-ant-abcd1234/.test(e.message) && /redacted/.test(e.message) }
+      return false;
+    })());
+
+    // Model choice.
+    check('a chosen model is what gets sent', await (async () => {
+      let body = '';
+      await llm.ask({ key: 'k', model: 'claude-opus-5', system: 's', messages: tape,
+        fetchImpl: async (u, o) => { body = o.body; return { ok: true, json: async () => ({ content: [] }) } } });
+      return JSON.parse(body).model === 'claude-opus-5';
+    })());
+    check('no chosen model falls back to the provider default', await (async () => {
+      let body = '';
+      await llm.ask({ key: 'k', system: 's', messages: tape,
+        fetchImpl: async (u, o) => { body = o.body; return { ok: true, json: async () => ({ content: [] }) } } });
+      return JSON.parse(body).model === llm.PROVIDERS.anthropic.model;
+    })());
+    check('every provider offers at least one model suggestion',
+      Object.keys(llm.PROVIDERS).every(k => (llm.MODEL_CHOICES[k] || []).length > 0));
+    check('the model is remembered per tab like the key and base URL',
+      /session/i.test(llm.getModel.toString()) && /session/i.test(llm.setModel.toString()));
 
     // The key. This is the part that must not be sloppy.
     check('the key is held in session storage, not local storage',
@@ -489,7 +555,7 @@ try {
     check('the warning states the key is never sent to this site', /never sent to this site/i.test(llm.KEY_WARNING));
     check('no key means no request is attempted', await (async () => {
       let called = false;
-      try { await llm.ask({ key: '', system: 's', messages: [], fetchImpl: () => { called = true } }) } catch { /* expected */ }
+      try { await llm.ask({ key: '', system: 's', messages: [{ role: 'user', content: 'hi' }], fetchImpl: () => { called = true } }) } catch { /* expected */ }
       return !called;
     })());
     check('the key travels in a header, never in the URL', await (async () => {
@@ -505,7 +571,7 @@ try {
       return !body.includes('secret123');
     })());
     check('a rejected key gives a clear message, not a stack trace', await (async () => {
-      try { await llm.ask({ key: 'x', system: 's', messages: [], fetchImpl: async () => ({ ok: false, status: 401 }) }) }
+      try { await llm.ask({ key: 'x', system: 's', messages: [{ role: 'user', content: 'hi' }], fetchImpl: async () => ({ ok: false, status: 401, text: async () => '' }) }) }
       catch (e) { return /rejected that key/i.test(e.message) }
       return false;
     })());
@@ -1512,7 +1578,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 382;
+const EXPECTED_MIN = 395;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
