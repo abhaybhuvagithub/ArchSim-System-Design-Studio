@@ -933,15 +933,18 @@ export default function App() {
         </main>
 
         <div className="flowbar" role="group" aria-label="Filter the diagram by traffic type">
-          {FLOW_MODES.map(m => (
-            <button key={m.id} className={flow === m.id ? 'on' : ''} title={m.hint}
-              aria-pressed={flow === m.id} onClick={() => setFlow(m.id)}>{m.label}</button>
-          ))}
+          <div className="flowbar-row">
+            {FLOW_MODES.map(m => (
+              <button key={m.id} className={flow === m.id ? 'on' : ''} title={m.hint}
+                aria-pressed={flow === m.id} onClick={() => setFlow(m.id)}>{m.label}</button>
+            ))}
+          </div>
+          <div className="flowbar-hint">{FLOW_MODES.find(m => m.id === flow)?.hint}</div>
           {flow !== 'all' && (
-            <span className="flowbar-note">
+            <div className="flowbar-note">
               {flowInfo.shownEdges} of {flowInfo.totalEdges} connections
-              {flowInfo.unclassified > 0 && ` · ${flowInfo.unclassified} have no declared read/write mix, so they show in both`}
-            </span>
+              {flowInfo.unclassified > 0 && ` · ${flowInfo.unclassified} with no declared mix show in both`}
+            </div>
           )}
         </div>
         {!compact && !floatPanel.right && <div className="splitter" onPointerDown={e => startResize('right', e)} onDoubleClick={() => resetPanel('right')} title="Drag to resize · double-click to reset" />}
