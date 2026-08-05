@@ -754,7 +754,16 @@ select.btn { appearance: auto; }
   padding: 0 0 8px; background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
-.side-body { flex: 1; overflow-y: auto; padding-top: 12px; min-height: 0; }
+/* --sticky-gap must match .side-body's padding-top. The sub tab bar sticks to
+   the top of this scroll container, so anything that scrolls through that band
+   of padding appears in the gap between the two bars. The bar is pulled up by
+   the same amount and pads itself back out, so it covers the band completely. */
+:root { --sticky-gap: 12px; }
+.side-body { flex: 1; overflow-y: auto; padding-top: var(--sticky-gap); min-height: 0; }
+.side .tabs.sub {
+  margin-top: calc(-1 * var(--sticky-gap));
+  padding-top: var(--sticky-gap);
+}
 .tab-badge {
   margin-left: 5px; font-size: 9.5px; font-weight: 700; padding: 1px 5px;
   border-radius: 980px; background: var(--border); color: var(--muted);

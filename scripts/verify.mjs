@@ -643,6 +643,34 @@ try {
       /not write the design/i.test(llm.systemPrompt('X', 'Y')));
   }
 
+  // ── sticky tab bars ────────────────────────────────────────────────────────
+  {
+    const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+    const decl = (sel, prop) => {
+      const m = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}'));
+      if (!m) return null;
+      const d = m[1].match(new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([^;]+)'));
+      return d ? d[1].trim() : null;
+    };
+    // Both bars stick at top: 0 in different containers. The scroll container's
+    // top padding is a band the sub bar does not cover unless it is told to,
+    // and content scrolling through that band shows between the two bars.
+    check('the sticky gap is defined once rather than repeated as a literal',
+      /--sticky-gap:\s*\d+px/.test(css));
+    check('the scroll container uses the shared gap for its top padding',
+      decl('.side-body', 'padding-top') === 'var(--sticky-gap)');
+    check('the sub tab bar is pulled up by exactly that gap',
+      decl('.side .tabs.sub', 'margin-top') === 'calc(-1 * var(--sticky-gap))');
+    check('and pads itself back out by the same amount, so it covers the band',
+      decl('.side .tabs.sub', 'padding-top') === 'var(--sticky-gap)');
+    check('the sub bar cannot scroll under the main one', (() => {
+      const main = decl('.side .tabs', 'z-index');
+      return main && Number(main) >= 2;
+    })());
+    check('no stray hard-coded padding-top remains on the scroll container',
+      !/\.side-body\s*\{[^}]*padding-top:\s*\d+px/.test(css));
+  }
+
   // ── the production shell ───────────────────────────────────────────────────
   {
     const html = fs.readFileSync(path.join(root, 'dist/index.html'), 'utf8');
@@ -1707,7 +1735,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 443;
+const EXPECTED_MIN = 455;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
