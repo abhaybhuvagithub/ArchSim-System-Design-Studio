@@ -564,15 +564,15 @@ try {
 
     // Providers: a published base URL is used, an unpublished one is asked for.
     const P = llm.PROVIDERS;
-    check('all ten providers are offered', Object.keys(P).length === 10);
-    for (const id of ['anthropic', 'openai', 'google', 'deepseek', 'meta', 'sarvam', 'krutrim', 'bharatgpt', 'ai4bharat', 'bharatgen'])
+    check('all twelve providers are offered', Object.keys(P).length === 12);
+    for (const id of ['anthropic', 'openai', 'google', 'deepseek', 'qwen', 'kimi', 'meta', 'sarvam', 'krutrim', 'bharatgpt', 'ai4bharat', 'bharatgen'])
       check(`provider "${id}" is present and complete`,
         !!P[id] && !!P[id].label && !!P[id].model && (P[id].models || []).length > 0 &&
         typeof P[id].url === 'function' && typeof P[id].headers === 'function' &&
         typeof P[id].body === 'function' && typeof P[id].text === 'function');
 
     // The distinction that matters: guessing an endpoint would fail silently.
-    const hosted = ['anthropic', 'openai', 'google', 'deepseek', 'sarvam', 'krutrim'];
+    const hosted = ['anthropic', 'openai', 'google', 'deepseek', 'qwen', 'kimi', 'sarvam', 'krutrim'];
     const selfHosted = ['meta', 'bharatgpt', 'ai4bharat', 'bharatgen'];
     check('providers with a published endpoint have one built in',
       hosted.every(id => !!P[id].base && P[id].needsBaseUrl === false));
@@ -595,6 +595,14 @@ try {
     check('Sarvam goes to api.sarvam.ai', (await urlFor('sarvam')) === 'https://api.sarvam.ai/v1/chat/completions');
     check('Krutrim goes to cloud.olakrutrim.com', (await urlFor('krutrim')) === 'https://cloud.olakrutrim.com/v1/chat/completions');
     check('Anthropic keeps its own message endpoint', (await urlFor('anthropic')) === 'https://api.anthropic.com/v1/messages');
+    check('Qwen goes to Model Studio\'s compatible-mode path',
+      (await urlFor('qwen')) === 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions');
+    check('Kimi goes to api.moonshot.ai',
+      (await urlFor('kimi')) === 'https://api.moonshot.ai/v1/chat/completions');
+    // Both serve different hosts in mainland China, which is exactly the sort
+    // of thing that silently fails for half the users if it goes unmentioned.
+    check('both say their host is the international one',
+      /international/i.test(P.qwen.note) && /international/i.test(P.kimi.note));
 
     // Anthropic is not OpenAI-shaped and must not be flattened into it.
     check('Anthropic sends system as a top-level field, not as a message', await (async () => {
@@ -2110,7 +2118,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 550;
+const EXPECTED_MIN = 555;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
