@@ -59,13 +59,13 @@ export const THEMES = {
 }
 
 
-// Two palettes, each with a dark and a light. Apple's system colours, and the
-// violet Glow set taken from the Periodic Table of C# 14.
+// Two palettes, each with a dark and a light. Primary is the system-native
+// set; Glow is the editorial one.
 export const PALETTES = [
-  { id: 'apple',  label: 'Apple',  dark: 'dark',        light: 'light' },
+  { id: 'primary', label: 'Primary', dark: 'dark',      light: 'light' },
   { id: 'glow', label: 'Glow', dark: 'glow-dark', light: 'glow' },
 ]
-export const paletteOf = t => (String(t).startsWith('glow') ? 'glow' : 'apple')
+export const paletteOf = t => (String(t).startsWith('glow') ? 'glow' : 'primary')
 export const isDark = t => t === 'dark' || t === 'glow-dark'
 export const themeFor = (palette, dark) => {
   const p = PALETTES.find(x => x.id === palette) || PALETTES[0]

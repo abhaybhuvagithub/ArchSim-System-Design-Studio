@@ -743,7 +743,7 @@ export default function App() {
           {PALETTES.map(p2 => (
             <MenuItem key={p2.id} onSelect={() => setTheme(t => themeFor(p2.id, isDark(t)))}
               checked={paletteOf(theme) === p2.id}
-              hint={p2.id === 'apple' ? 'System blue on greys' : 'Green on near-white, with editorial type and pill controls'}>
+              hint={p2.id === 'primary' ? 'System blue on greys, rounded controls' : 'Green on near-white, editorial type, pill controls'}>
               {p2.label}
             </MenuItem>
           ))}

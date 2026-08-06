@@ -826,6 +826,10 @@ try {
       return bad.length === 0;
     })());
     check('Apple is among the clouds, and named', real.some(c => c.id === 'apple' && c.name === 'Apple'));
+    // The palette rename must not touch the cloud provider of the same name.
+    const th2 = await import(pathToFileURL(path.join(root, 'src/theme.js')).href);
+    check('renaming the palette left the Apple cloud alone',
+      real.some(c => c.id === 'apple') && !th2.PALETTES.some(p2 => p2.id === 'apple'));
     check('no mapping row has a blank cell',
       Object.values(cl.CLOUD_MAP).every(row => row.every(v => typeof v === 'string' && v.trim())));
   }
@@ -834,6 +838,11 @@ try {
   {
     const th = await import(pathToFileURL(path.join(root, 'src/theme.js')).href);
     const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+    check('the palettes are Primary and Glow',
+      th.PALETTES.map(p2 => p2.id).join() === 'primary,glow' &&
+      th.PALETTES.map(p2 => p2.label).join() === 'Primary,Glow');
+    check('nothing still resolves to the old palette id',
+      !th.THEME_ORDER.some(t2 => th.paletteOf(t2) === 'apple'));
     check('two palettes, each with a dark and a light',
       th.PALETTES.length === 2 && th.THEME_ORDER.length === 4);
     // The point of the change: swapping palette must not also flip dark/light,
@@ -872,7 +881,7 @@ try {
       /\.btn, \.tabs button \{[^}]*var\(--r-btn\)[^}]*var\(--btn-pad\)/.test(bare));
     check('small labels take their case and tracking from the theme',
       /var\(--label-tt\)/.test(bare) && /var\(--label-ls\)/.test(bare));
-    check('the Apple palette keeps its own type and square-ish labels', (() => {
+    check('the Primary palette keeps its own type and sentence-case labels', (() => {
       const root = (bare.match(/:root, \[data-theme="dark"\]\s*\{([^}]*)\}/) || [])[1] || '';
       return /--label-tt:\s*none/.test(root) && /-apple-system/.test(root);
     })());
@@ -2276,7 +2285,7 @@ try {
 
     // Nothing may be lost: every action that used to be a toolbar button must
     // still be reachable from some menu.
-    const actions = ['Arrange', 'Fit', 'Step numbers', 'mode', 'Glow', 'Apple', 'Screen-reader mode',
+    const actions = ['Arrange', 'Fit', 'Step numbers', 'mode', 'Glow', 'Primary', 'Screen-reader mode',
                      'PDF', 'Word', 'Diagram', 'Design (.json)', 'Import design JSON', 'Clear the canvas'];
     const found = [];
     for (const label of ['View', 'Design']) {
@@ -2391,7 +2400,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 609;
+const EXPECTED_MIN = 612;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
