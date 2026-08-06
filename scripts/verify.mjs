@@ -1980,6 +1980,11 @@ try {
     await wait(250);
     check('placing a design draws sites on the map', doc.querySelectorAll('.map-site').length >= 1);
     check('the basemap is drawn, not just a grid', doc.querySelectorAll('.map-land').length >= 50);
+    // The note claimed there was no basemap long after one was added.
+    check('the map note does not contradict what is on screen',
+      !/no basemap/i.test(doc.querySelector('.map-note')?.textContent || ''));
+    check('and credits the source of the outlines',
+      /Natural Earth/i.test(doc.querySelector('.map-note')?.textContent || ''));
     check('a site marker reports instances', /inst|×/.test(doc.querySelector('.map-table td.n')?.textContent || ''));
 
     const roleSel = doc.querySelector('.map-table select');
@@ -2210,7 +2215,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 570;
+const EXPECTED_MIN = 572;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

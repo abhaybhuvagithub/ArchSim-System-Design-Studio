@@ -2643,9 +2643,9 @@ function SystemMap({ nodes, edges, setNodes }) {
           </svg>
           <button className="iv-clearkey" onClick={() => setNodes(ns => ns.map(n => { const { region, siteRole, ...rest } = n; return rest }))}>Clear all placements</button>
           <div className="muted map-note">
-            Positions are real latitude and longitude on an equirectangular projection. There is no
-            basemap because none is needed to read distance — the numbers on the links are the floor
-            imposed by the speed of light in fibre, not an estimate of your traffic.
+            Land outlines from Natural Earth, public domain. Positions are real latitude and
+            longitude on an equirectangular projection, so the numbers on the links are the floor
+            imposed by the speed of light in fibre — not an estimate of your traffic.
           </div>
 
           <h4>Sites</h4>
