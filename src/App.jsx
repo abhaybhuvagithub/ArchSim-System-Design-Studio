@@ -31,6 +31,7 @@ import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
 import { REGIONS, SITE_ROLES, project, sitesFor, siteLinks, regionById } from './geo.js'
 import { AUTH, SESSION, ENTITLEMENT, revocationRisk } from './identity.js'
 import { LADDER, ladderFor, signalsFor, nextBand } from './levels.js'
+import { LAND, WORLD_W, WORLD_H } from './world.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -2567,7 +2568,7 @@ function SystemMap({ nodes, edges, setNodes }) {
   const [role, setRole] = useState('all')
   const sites = useMemo(() => sitesFor(nodes), [nodes])
   const links = useMemo(() => siteLinks(sites, edges, nodes), [sites, edges, nodes])
-  const W = 640, H = 320
+  const W = WORLD_W, H = WORLD_H
   const shown = role === 'all' ? sites : sites.filter(s => s.role === role)
   const shownIds = new Set(shown.map(s => s.region.id))
 
@@ -2608,6 +2609,7 @@ function SystemMap({ nodes, edges, setNodes }) {
 
           <svg className="map-svg" viewBox={`0 0 ${W} ${H}`} role="img"
             aria-label={`${shown.length} sites across ${new Set(shown.map(s => s.region.cloud)).size} clouds`}>
+            {LAND.map((d, i) => <path key={i} d={d} className="map-land" />)}
             {[-60, -30, 0, 30, 60].map(la => {
               const y = project(la, 0, W, H).y
               return <line key={la} x1="0" x2={W} y1={y} y2={y} className={la === 0 ? 'eq' : 'grat'} />
@@ -2634,7 +2636,7 @@ function SystemMap({ nodes, edges, setNodes }) {
                   <circle cx={p.x} cy={p.y} r={7 + Math.min(6, s.services)} />
                   <text className="map-tag" x={p.x} y={p.y + 3}>{SITE_ROLES[s.role].short}</text>
                   <text className="map-name" x={p.x} y={p.y + 26}>{s.region.name}</text>
-                  <text className="map-meta" x={p.x} y={p.y + 37}>{s.azs} AZs · {s.services} svc</text>
+                  <text className="map-meta" x={p.x} y={p.y + 37}>{s.azs} AZs · {s.services} svc · {s.replicas}×</text>
                 </g>
               )
             })}
@@ -2650,13 +2652,36 @@ function SystemMap({ nodes, edges, setNodes }) {
           <table className="map-table"><tbody>
             {shown.map(s => (
               <tr key={s.region.id}>
-                <td className="k">{s.region.name}</td>
-                <td>{SITE_ROLES[s.role].label}</td>
-                <td>{s.azs} AZs</td>
-                <td>{s.services} svc</td>
+                <td className="k">{s.region.name}<small>{s.region.id}</small></td>
+                <td>
+                  <select value={s.role} aria-label={`Role for ${s.region.name}`}
+                    onChange={e => setNodes(ns => ns.map(n => n.region === s.region.id ? { ...n, siteRole: e.target.value } : n))}>
+                    {Object.keys(SITE_ROLES).map(k => <option key={k} value={k}>{SITE_ROLES[k].label}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select value={s.region.id} aria-label={`Move ${s.region.name} elsewhere`}
+                    onChange={e => setNodes(ns => ns.map(n => n.region === s.region.id ? { ...n, region: e.target.value } : n))}>
+                    {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </td>
+                <td className="n">{s.azs} AZ · {s.services} svc · {s.replicas} inst</td>
+                <td>
+                  <button className="map-x" aria-label={`Remove ${s.region.name}`}
+                    onClick={() => setNodes(ns => ns.map(n => n.region === s.region.id ? (({ region, siteRole, ...r }) => r)(n) : n))}>✕</button>
+                </td>
               </tr>
             ))}
           </tbody></table>
+
+          <div className="field">
+            <label>Place unplaced components in</label>
+            <select value="" onChange={e => { const r = e.target.value; if (!r) return
+              setNodes(ns => ns.map(n => (n.region || n.type === 'client') ? n : { ...n, region: r, siteRole: 'primary' })) }}>
+              <option value="">Choose a region…</option>
+              {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name} · {r.id}</option>)}
+            </select>
+          </div>
           <div className="ddia-blurb">{SITE_ROLES[role === 'all' ? 'primary' : role].blurb}</div>
         </>
       )}

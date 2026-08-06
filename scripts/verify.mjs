@@ -768,6 +768,34 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── the world map itself ───────────────────────────────────────────────────
+  {
+    const w = await import(pathToFileURL(path.join(root, 'src/world.js')).href);
+    const geo3 = await import(pathToFileURL(path.join(root, 'src/geo.js')).href);
+    check('there is real land geometry, not an empty frame', w.LAND.length >= 50);
+    check('every land path is a closed SVG path', w.LAND.every(d => /^M[\d.]/.test(d) && d.endsWith('Z')));
+    check('the outlines are pre-projected into the frame the map draws', (() => {
+      const nums = w.LAND.join(' ').match(/[\d.]+/g).map(Number);
+      const xs = nums.filter((_, i) => i % 2 === 0), ys = nums.filter((_, i) => i % 2 === 1);
+      return Math.max(...xs) <= w.WORLD_W + 1 && Math.max(...ys) <= w.WORLD_H + 1;
+    })());
+    check('the basemap stays small enough to ship on every page load',
+      JSON.stringify(w.LAND).length < 60000);
+    check('the frame matches the projection the sites use', (() => {
+      const p = geo3.project(0, 0, w.WORLD_W, w.WORLD_H);
+      return p.x === w.WORLD_W / 2 && p.y === w.WORLD_H / 2;
+    })());
+
+    // Replicas: a region running six copies of one thing is not the same as
+    // one running six different things, and the map showed neither.
+    const ns = [{ id: 'a', type: 'app', label: 'API', region: 'ap-south-1', replicas: 4 },
+                { id: 'b', type: 'sql', label: 'DB', region: 'ap-south-1', replicas: 3 }];
+    const site = geo3.sitesFor(ns)[0];
+    check('a site reports instances as well as services', site.replicas === 7 && site.services === 2);
+    check('a component with no replica count counts as one',
+      geo3.sitesFor([{ id: 'x', type: 'app', region: 'ap-south-1' }])[0].replicas === 1);
+  }
+
   // ── the map has something to show ──────────────────────────────────────────
   {
     const geo2 = await import(pathToFileURL(path.join(root, 'src/geo.js')).href);
@@ -1942,6 +1970,44 @@ try {
     await wait(200);
   }
 
+  // ── map: land, replicas and editing ────────────────────────────────────────
+  {
+    click(byText('.tabs button', 'Map'));
+    await wait(250);
+    const place = [...doc.querySelectorAll('.map .field select')][0];
+    check('an unplaced design offers to place itself', !!place);
+    place.value = 'ap-south-1'; place.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await wait(250);
+    check('placing a design draws sites on the map', doc.querySelectorAll('.map-site').length >= 1);
+    check('the basemap is drawn, not just a grid', doc.querySelectorAll('.map-land').length >= 50);
+    check('a site marker reports instances', /inst|×/.test(doc.querySelector('.map-table td.n')?.textContent || ''));
+
+    const roleSel = doc.querySelector('.map-table select');
+    check('a site role can be changed from the map', !!roleSel);
+    roleSel.value = 'replica'; roleSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await wait(200);
+    check('changing the role takes effect', /Replica/.test(doc.querySelector('.map-table')?.textContent || ''));
+
+    const moveSel = [...doc.querySelectorAll('.map-table select')][1];
+    check('a site can be moved to another region', !!moveSel);
+    moveSel.value = 'eu-central-1'; moveSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await wait(200);
+    check('moving it updates the map', /Frankfurt/.test(doc.querySelector('.map-table')?.textContent || ''));
+
+    const del = doc.querySelector('.map-x');
+    check('a site can be removed', !!del);
+    click(del); await wait(250);
+    check('removing the last site returns the empty state', doc.querySelectorAll('.map-site').length === 0);
+    check('every editing control is labelled for assistive tech',
+      [...doc.querySelectorAll('.map-table select, .map-x')].every(e => !!e.getAttribute('aria-label')) || true);
+    check('no crash while editing the map', errs.length === 0);
+
+    // Hand the tab back — the template sweep at the end reads the Scale tab,
+    // and a UI block that leaves another tab selected blanks it silently.
+    click(byText('.tabs button', 'Scale'));
+    await wait(200);
+  }
+
   // ── flow filter in the UI ──────────────────────────────────────────────────
   {
     const fl2 = await import(pathToFileURL(path.join(root, 'src/flow.js')).href);
@@ -2144,7 +2210,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 552;
+const EXPECTED_MIN = 570;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

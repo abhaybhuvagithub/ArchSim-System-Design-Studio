@@ -69,6 +69,10 @@ export function sitesFor(nodes) {
     ...s,
     role: ['primary', 'replica', 'dr', 'backup', 'edge'].find(r => s.roles.has(r)) || 'primary',
     services: s.nodes.length,
+    // Instances, not services — a region running six copies of one thing is a
+    // different proposition from one running six different things, and the map
+    // showed neither.
+    replicas: s.nodes.reduce((a2, n) => a2 + (n.replicas || 1), 0),
     azs: s.region.azs,
   }))
 }
