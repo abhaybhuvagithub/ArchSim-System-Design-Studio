@@ -2575,10 +2575,28 @@ function SystemMap({ nodes, edges, setNodes }) {
     <section className="map">
       <h3>System map</h3>
       {sites.length === 0 ? (
-        <p className="muted">
-          Nothing is placed yet. Select a component on the canvas and give it a region — the map is
-          built from the design, so it can never drift from what you have drawn.
-        </p>
+        <>
+          <p className="muted">
+            Nothing is placed yet. Most designs are drawn without saying where they run, so the map
+            starts empty — put everything in one region to begin, then move the parts that belong
+            elsewhere.
+          </p>
+          <div className="field">
+            <label>Place everything in</label>
+            <select value="" onChange={e => {
+              const r = e.target.value
+              if (!r) return
+              setNodes(ns => ns.map(n => n.type === 'client' ? n : { ...n, region: r, siteRole: n.siteRole || 'primary' }))
+            }}>
+              <option value="">Choose a region…</option>
+              {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name} · {r.id}</option>)}
+            </select>
+          </div>
+          <div className="ddia-blurb">
+            Clients are left unplaced on purpose — your users are everywhere, and pinning them to a
+            region would make the distances meaningless.
+          </div>
+        </>
       ) : (
         <>
           <div className="map-filters" role="group" aria-label="Filter sites by role">
@@ -2621,6 +2639,7 @@ function SystemMap({ nodes, edges, setNodes }) {
               )
             })}
           </svg>
+          <button className="iv-clearkey" onClick={() => setNodes(ns => ns.map(n => { const { region, siteRole, ...rest } = n; return rest }))}>Clear all placements</button>
           <div className="muted map-note">
             Positions are real latitude and longitude on an equirectangular projection. There is no
             basemap because none is needed to read distance — the numbers on the links are the floor

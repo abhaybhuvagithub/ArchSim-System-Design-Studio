@@ -3,7 +3,7 @@
 // group drives the optgroup in the template picker.
 const T = (name, tagline, rps, nodes, edges, checklist, group = 'Product designs') => ({
   name, tagline, rps, group,
-  nodes: nodes.map(([id, type, label, x, y, replicas = 1, weight]) => ({ id, type, label, x, y, replicas, ...(weight !== undefined ? { weight } : {}) })),
+  nodes: nodes.map(([id, type, label, x, y, replicas = 1, weight, region, siteRole]) => ({ id, type, label, x, y, replicas, ...(weight !== undefined ? { weight } : {}), ...(region ? { region } : {}), ...(siteRole ? { siteRole } : {}) })),
   edges: edges.map(([from, to, label = '']) => ({ id: `${from}->${to}`, from, to, label })),
   checklist,
 })
