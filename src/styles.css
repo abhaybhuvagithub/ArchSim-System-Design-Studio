@@ -6,12 +6,12 @@
   --warn: #ff9f0a; --bad: #ff453a;
   --canvas: radial-gradient(circle at 30% 20%, #1a1a1c 0%, #000000 72%);
   --sel: #ffffff; --shadow: rgba(0,0,0,.6); --chip-bg: rgba(29,29,31,.92);
-  --r-card: 18px; --r-pill: 980px; --r-btn: 9px;
+  --r-card: 18px; --r-pill: 980px; --r-btn: 999px;
   --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-display: var(--font-body);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --label-tt: none; --label-ls: 0; --label-font: var(--font-body); --label-weight: 600;
-  --btn-pad: 5px 12px; --btn-weight: 500;
+  --btn-pad: 6px 14px; --btn-weight: 500;
 }
 
 [data-theme="light"] {
