@@ -792,19 +792,24 @@ try {
     })());
     // Each of the four themes must set the core colours itself; one that
     // inherits them silently renders in another theme's palette.
-    // The palettes differed on paper and not on screen: 980px against 999px is
-    // a distinction only a stylesheet can see. A theme has to be recognisable
-    // without reading the CSS.
-    check('the two palettes differ visibly in control shape, not by a few pixels', (() => {
-      const px = id => {
-        const b = (raw.match(new RegExp('\\[data-theme="' + id + '"\\]\\s*\\{([^}]*)\\}')) || [])[1] || raw;
-        const m = b.match(/--r-btn:\s*([\d.]+)px/);
-        return m ? Number(m[1]) : null;
-      };
+    // Control shape is deliberately shared: both palettes use a 999px pill with
+    // the same padding, by request. They are told apart by type and colour, so
+    // that is what gets checked — asserting a shape difference here would be
+    // encoding a preference nobody asked for, which is what the removed version
+    // of this check did.
+    check('the palettes are still distinguishable, by type and case', (() => {
       const rootM = (raw.match(/:root, \[data-theme="dark"\]\s*\{([^}]*)\}/) || [])[1] || '';
-      const apple = Number((rootM.match(/--r-btn:\s*([\d.]+)px/) || [])[1]);
-      const glow = px('glow');
-      return Number.isFinite(apple) && Number.isFinite(glow) && Math.abs(apple - glow) > 100;
+      const glowM = (raw.match(/\[data-theme="glow"\]\s*\{([^}]*)\}/) || [])[1] || '';
+      const fam = b => (b.match(/--font-body:\s*([^;]+)/) || [])[1] || '';
+      const tt = b => (b.match(/--label-tt:\s*([^;]+)/) || [])[1] || '';
+      return fam(rootM) !== fam(glowM) && tt(rootM) !== tt(glowM);
+    })());
+    check('both palettes use the same control shape, as asked', (() => {
+      const rootM = (raw.match(/:root, \[data-theme="dark"\]\s*\{([^}]*)\}/) || [])[1] || '';
+      const glowM = (raw.match(/\[data-theme="glow"\]\s*\{([^}]*)\}/) || [])[1] || '';
+      const get = (b, k) => ((b.match(new RegExp(k + ':\\s*([^;]+)')) || [])[1] || '').trim();
+      return get(rootM, '--r-btn') === get(glowM, '--r-btn') &&
+             get(rootM, '--btn-pad') === get(glowM, '--btn-pad');
     })());
 
     check('every theme sets the core colours itself', (() => {
