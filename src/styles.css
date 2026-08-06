@@ -1062,3 +1062,9 @@ select.btn { appearance: auto; }
 .lvl-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 12px; }
 .lvl-table td { padding: 4px 6px; border-top: 1px solid var(--border); vertical-align: top; }
 .lvl-table td.k { font-weight: 600; white-space: nowrap; }
+.map-land { fill: currentColor; opacity: .13; stroke: none; }
+.map-table td.k small { display: block; font-weight: 400; opacity: .5; font-size: 10px; }
+.map-table td.n { white-space: nowrap; font-size: 11px; opacity: .75; }
+.map-table select { font-size: 11px; padding: 2px 4px; max-width: 110px; }
+.map-x { border: 0; background: transparent; color: var(--bad); cursor: pointer; font-size: 12px; padding: 2px 5px; border-radius: 6px; }
+.map-x:hover { background: rgba(227,66,52,.12); }
