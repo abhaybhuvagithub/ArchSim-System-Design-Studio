@@ -790,6 +790,39 @@ try {
       th.PALETTES.every(p2 => [true, false].every(d => !!th.THEMES[th.themeFor(p2.id, d)])));
     check('both palettes offer a genuinely dark and a genuinely light surface',
       th.PALETTES.every(p2 => th.THEMES[p2.dark].canvasBg !== th.THEMES[p2.light].canvasBg));
+    // A theme has to change the components, not only their colours — the first
+    // two attempts at this swapped a palette and left the tool looking the same.
+    const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const block = id => (bare.match(new RegExp('\\[data-theme="' + id + '"\\]\\s*\\{([^}]*)\\}')) || [])[1] || '';
+    for (const id of ['neural', 'neural-dark'])
+      check(`the ${id} theme sets its own typography, not just colour`, (() => {
+        const b = block(id);
+        return /--font-body:\s*"IBM Plex Sans"/.test(b) && /--font-display:\s*"Space Grotesk"/.test(b) && /--font-mono:\s*"IBM Plex Mono"/.test(b);
+      })());
+    check('and its own control shape and label treatment', (() => {
+      const b = block('neural');
+      return /--r-btn:/.test(b) && /--btn-pad:/.test(b) && /--label-tt:\s*uppercase/.test(b);
+    })());
+    check('the page body follows the theme font rather than a fixed stack',
+      /body\s*\{[^}]*font-family:\s*var\(--font-body\)/.test(bare));
+    check('headings follow the display font', /h1, h2, h3[^{]*\{[^}]*var\(--font-display\)/.test(bare));
+    check('buttons and tabs take their shape from the theme',
+      /\.btn, \.tabs button \{[^}]*var\(--r-btn\)[^}]*var\(--btn-pad\)/.test(bare));
+    check('small labels take their case and tracking from the theme',
+      /var\(--label-tt\)/.test(bare) && /var\(--label-ls\)/.test(bare));
+    check('the Apple palette keeps its own type and square-ish labels', (() => {
+      const root = (bare.match(/:root, \[data-theme="dark"\]\s*\{([^}]*)\}/) || [])[1] || '';
+      return /--label-tt:\s*none/.test(root) && /-apple-system/.test(root);
+    })());
+    check('the fonts the theme needs are actually loaded', (() => {
+      const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+      return ['IBM+Plex+Sans', 'IBM+Plex+Mono', 'Space+Grotesk'].every(f => html.includes(f)) && html.includes('display=swap');
+    })());
+    check('and are preconnected so they do not block first paint', (() => {
+      const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+      return html.includes('rel="preconnect"') && html.includes('fonts.gstatic.com');
+    })());
+
     check('an unknown palette falls back rather than yielding nothing',
       !!th.THEMES[th.themeFor('nonsense', true)]);
     check('every theme in the order has a label and a palette',
@@ -2263,7 +2296,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 582;
+const EXPECTED_MIN = 592;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
