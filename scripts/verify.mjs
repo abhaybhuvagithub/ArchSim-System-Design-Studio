@@ -768,6 +768,36 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── no stylesheet may lean on a variable that does not exist ───────────────
+  {
+    const raw = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const defined = new Set();
+    for (const m of raw.matchAll(/\{([^}]*)\}/g))
+      for (const d of m[1].matchAll(/(--[a-z0-9-]+)\s*:/g)) defined.add(d[1]);
+    const used = new Set([...raw.matchAll(/var\((--[a-z0-9-]+)/g)].map(m => m[1]));
+    const undef = [...used].filter(v => !defined.has(v));
+    // --fg never existed, so the guided tour's text fell back to near-black and
+    // was unreadable on the dark panel. --line never existed either, so thirty
+    // borders were frozen at one colour regardless of theme. A fallback makes
+    // this invisible: the page looks fine, just permanently wrong in one mode.
+    check('no rule reads a custom property nothing defines' +
+      (undef.length ? ' — ' + undef.join(', ') : ''), undef.length === 0);
+    check('the tour tooltip takes its colours from the theme', (() => {
+      const b = (raw.match(/\.tour-tip\s*\{([^}]*)\}/) || [])[1] || '';
+      return /color:\s*var\(--text\)/.test(b) && /background:\s*var\(--panel/.test(b);
+    })());
+    check('the crash screen does too', (() => {
+      const b = (raw.match(/\.crash\s*\{([^}]*)\}/) || [])[1] || '';
+      return /color:\s*var\(--text\)/.test(b);
+    })());
+    // Each of the four themes must set the core colours itself; one that
+    // inherits them silently renders in another theme's palette.
+    check('every theme sets the core colours itself', (() => {
+      const core = ['--bg', '--panel', '--border', '--text', '--muted', '--accent'];
+      return core.every(k => (raw.match(new RegExp(k + '\\s*:', 'g')) || []).length >= 4);
+    })());
+  }
+
   // ── the cloud map lines up ─────────────────────────────────────────────────
   {
     const cl = await import(pathToFileURL(path.join(root, 'src/clouds.js')).href);
@@ -2346,7 +2376,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 604;
+const EXPECTED_MIN = 608;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
