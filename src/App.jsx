@@ -2583,6 +2583,7 @@ function SystemMap({ nodes, edges, setNodes }) {
   const [role, setRole] = useState('all')
   const sites = useMemo(() => sitesFor(nodes), [nodes])
   const links = useMemo(() => siteLinks(sites, edges, nodes), [sites, edges, nodes])
+  const unplaced = useMemo(() => nodes.filter(n => !n.region && n.type !== 'client'), [nodes])
   const W = WORLD_W, H = WORLD_H
   const shown = role === 'all' ? sites : sites.filter(s => s.role === role)
   const shownIds = new Set(shown.map(s => s.region.id))
@@ -2689,14 +2690,37 @@ function SystemMap({ nodes, edges, setNodes }) {
             ))}
           </tbody></table>
 
-          <div className="field">
-            <label>Place unplaced components in</label>
-            <select value="" onChange={e => { const r = e.target.value; if (!r) return
-              setNodes(ns => ns.map(n => (n.region || n.type === 'client') ? n : { ...n, region: r, siteRole: 'primary' })) }}>
-              <option value="">Choose a region…</option>
-              {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name} · {r.id}</option>)}
-            </select>
-          </div>
+          {unplaced.length > 0 ? (
+            <>
+              <div className="field">
+                <label>Place {unplaced.length} unplaced</label>
+                <select value="" onChange={e => { const r = e.target.value; if (!r) return
+                  setNodes(ns => ns.map(n => (n.region || n.type === 'client') ? n : { ...n, region: r, siteRole: 'primary' })) }}>
+                  <option value="">Choose a region…</option>
+                  {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name} · {r.id}</option>)}
+                </select>
+              </div>
+              <div className="ddia-blurb">
+                Not on the map yet: {unplaced.map(n => n.label).join(', ')}. Clients stay unplaced —
+                your users are everywhere, and pinning them to a region would make every distance here
+                a fiction.
+              </div>
+            </>
+          ) : (
+            <div className="ddia-blurb">
+              Every component is placed. Move one with the region control in its row, or select it on
+              the canvas and change its region there.
+            </div>
+          )}
+
+          <h4>How to read this</h4>
+          <ol className="map-steps">
+            <li><b>Place your components.</b> Everything starts unplaced, because most designs are drawn without saying where they run.</li>
+            <li><b>Split them across regions.</b> Move the parts that belong elsewhere — a replica, a DR site, an edge cache — using the region control in each row.</li>
+            <li><b>Read the number on each link.</b> That is the round-trip floor imposed by the speed of light in fibre. It cannot be tuned away, only designed around.</li>
+            <li><b>Fix anything over 80ms on a synchronous path.</b> Make the hop asynchronous, or put a replica on the near side and accept the staleness. At that distance there is no third option.</li>
+          </ol>
+          <h4>{SITE_ROLES[role === 'all' ? 'primary' : role].label} sites</h4>
           <div className="ddia-blurb">{SITE_ROLES[role === 'all' ? 'primary' : role].blurb}</div>
         </>
       )}

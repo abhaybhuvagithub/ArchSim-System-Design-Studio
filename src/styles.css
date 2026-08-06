@@ -1130,3 +1130,5 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 [data-theme^="glow"] .lesson, [data-theme^="glow"] .tip, [data-theme^="glow"] .sug,
 [data-theme^="glow"] .iv-band, [data-theme^="glow"] .ddia-verdict { border-radius: 14px; }
 [data-theme^="glow"] body { -webkit-font-smoothing: antialiased; }
+.map-steps { margin: 4px 0 12px 18px; padding: 0; }
+.map-steps li { font-size: 12.5px; line-height: 1.6; margin-bottom: 7px; }

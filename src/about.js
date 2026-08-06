@@ -21,6 +21,7 @@ export const ABOUT = [
       '**ArchSim is a system design studio that runs your architecture instead of just drawing it.**',
       `You place components on a canvas, wire them up, set a traffic level — and every box becomes a thing with capacity, latency and an availability figure. Push traffic through and you get p50, p95 and p99, per-tier utilization, dropped requests, modelled availability and a monthly bill that moves as you edit.`,
       `Today it ships ${components} components across ${PALETTE_GROUPS.length} groups, ${templates} pre-wired designs in ${groups} categories, ${faults} named chaos faults, and cloud mappings for ${clouds} providers.`,
+      'It also models the things a diagram cannot show: whether a read can be stale, whether two writes can conflict, what a storage engine costs you in tail latency, how far apart your regions really are, and who is allowed to open what.',
     ],
   },
   {
@@ -60,6 +61,16 @@ export const ABOUT = [
       'Curated and built by **Abhaykumar Bhuva** — [linkedin.com/in/abhaybhuva](https://www.linkedin.com/in/abhaybhuva/)',
       'Built with **Anthropic Claude** — [anthropic.com/claude](https://www.anthropic.com/claude)',
       'Runs entirely in your browser. No account, no backend, nothing leaves the page — your designs are yours.',
+    ],
+  },
+  {
+    title: 'Beyond capacity',
+    lines: [
+      '**Correctness, not just throughput.** Every datastore carries a replication mode, a quorum, an isolation level and a partitioning strategy — and those feed the simulation rather than sitting in a tooltip. Choosing linearizable costs you throughput and latency on the canvas, because that is what it costs in production.',
+      '**Reads and writes are separate.** Each connection carries a read/write mix, and stores have separate ceilings for each. It is the only way to show the most under-appreciated fact about single-leader replication: followers raise the read ceiling and do nothing at all for writes.',
+      '**Distance is modelled.** Place components in real cloud regions and every cross-region link is labelled with its round-trip floor — the speed of light in fibre, before any service does work. Mumbai to Virginia is about 180ms and no amount of caching changes that.',
+      '**Identity and entitlement.** Entry points carry an authentication method, sessions carry a revocation story, and services say where entitlement comes from. The advisor flags a licence lookup on the hot path, a privileged route behind a single factor, and tokens you have no way to withdraw.',
+      '**A mock interview.** Five stages on the design you have loaded, scored per stage against what the breakdown says a good answer contains, with the specific things you did not say and what the next level up expects. It can be driven by a rubric that works offline, or by Claude with your own API key.',
     ],
   },
 ]
