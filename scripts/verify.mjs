@@ -768,6 +768,23 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── the cloud map lines up ─────────────────────────────────────────────────
+  {
+    const cl = await import(pathToFileURL(path.join(root, 'src/clouds.js')).href);
+    const real = cl.CLOUDS.filter(c => c.id !== 'generic');
+    // Apple's column rendered with no header because the table headers were a
+    // hand-written list of four and the rows carried five.
+    check('every cloud in the picker has a name to put in the header',
+      real.every(c => !!c.name && c.name.length > 1));
+    check('every mapping row has exactly one entry per cloud' , (() => {
+      const bad = Object.entries(cl.CLOUD_MAP).filter(([, row]) => row.length !== real.length);
+      return bad.length === 0;
+    })());
+    check('Apple is among the clouds, and named', real.some(c => c.id === 'apple' && c.name === 'Apple'));
+    check('no mapping row has a blank cell',
+      Object.values(cl.CLOUD_MAP).every(row => row.every(v => typeof v === 'string' && v.trim())));
+  }
+
   // ── themes ─────────────────────────────────────────────────────────────────
   {
     const th = await import(pathToFileURL(path.join(root, 'src/theme.js')).href);
@@ -2006,6 +2023,26 @@ try {
     check('the comparison tables render', doc.querySelectorAll('.cmp table').length === 3);
     check('the write-skew row is present', /write skew/i.test(txt));
 
+    // The cloud service map: Apple's column rendered with no header because the
+    // headers were a hand-written list of four and the rows carried five.
+    click(byText('.tabs.sub button', 'Clouds'));
+    await wait(250);
+    // Target it specifically — .cmp table also matches the DDIA comparison
+    // tables, and a looser selector reads one of those and passes regardless.
+    const cloudTable = [...doc.querySelectorAll('.cmp table')]
+      .find(t2 => /AWS/.test(t2.querySelector('thead')?.textContent || ''));
+    check('the cloud service map is on screen', !!cloudTable);
+    check('it labels every column it renders', (() => {
+      if (!cloudTable) return false;
+      const heads = cloudTable.querySelectorAll('thead th').length - 1;
+      const cells = (cloudTable.querySelector('tbody tr')?.children.length || 0) - 1;
+      return heads > 0 && heads === cells;
+    })());
+    check('Apple appears as a column header',
+      /Apple/.test(cloudTable?.querySelector('thead')?.textContent || ''));
+    click(byText('.tabs.sub button', 'Consistency'));
+    await wait(200);
+
     // Inspector controls: select a datastore on the canvas and drive them.
     // The inspector renders behind the Capacity tab, and every other tab
     // clears the selection on the way out.
@@ -2309,7 +2346,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 594;
+const EXPECTED_MIN = 604;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

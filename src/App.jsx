@@ -1455,6 +1455,8 @@ function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSe
   )
 }
 
+const REAL_CLOUDS = CLOUDS.filter(c => c.id !== 'generic')
+
 function Learn({ done }) {
   const [sub, setSub] = useState('steps')
   const [answers, setAnswers] = useState({})
@@ -1566,7 +1568,10 @@ function Learn({ done }) {
               <div key={g.label} className="cmp">
                 <div className="cmp-t">{g.label}</div>
                 <table>
-                  <thead><tr><th /><th>AWS</th><th>GCP</th><th>Azure</th><th>OCI</th></tr></thead>
+                  {/* Headers come from CLOUDS, not a hand-written list. The
+                      hard-coded four left Apple's column with no label the day
+                      a fifth cloud was added. */}
+                  <thead><tr><th />{REAL_CLOUDS.map(c => <th key={c.id}>{c.name}</th>)}</tr></thead>
                   <tbody>
                     {types.map(t => (
                       <tr key={t}>
