@@ -777,14 +777,14 @@ try {
     // The point of the change: swapping palette must not also flip dark/light,
     // and switching mode must not throw away the chosen palette.
     check('changing palette keeps the current mode', (() => {
-      const fromDark = th.themeFor('neural', th.isDark('dark'));
-      const fromLight = th.themeFor('neural', th.isDark('light'));
+      const fromDark = th.themeFor('glow', th.isDark('dark'));
+      const fromLight = th.themeFor('glow', th.isDark('light'));
       return th.isDark(fromDark) && !th.isDark(fromLight) &&
-             th.paletteOf(fromDark) === 'neural' && th.paletteOf(fromLight) === 'neural';
+             th.paletteOf(fromDark) === 'glow' && th.paletteOf(fromLight) === 'glow';
     })());
     check('changing mode keeps the current palette', (() => {
-      const t2 = th.themeFor(th.paletteOf('neural-dark'), false);
-      return t2 === 'neural' && th.paletteOf(t2) === 'neural';
+      const t2 = th.themeFor(th.paletteOf('glow-dark'), false);
+      return t2 === 'glow' && th.paletteOf(t2) === 'glow';
     })());
     check('every palette and mode combination is a real theme',
       th.PALETTES.every(p2 => [true, false].every(d => !!th.THEMES[th.themeFor(p2.id, d)])));
@@ -794,13 +794,13 @@ try {
     // two attempts at this swapped a palette and left the tool looking the same.
     const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
     const block = id => (bare.match(new RegExp('\\[data-theme="' + id + '"\\]\\s*\\{([^}]*)\\}')) || [])[1] || '';
-    for (const id of ['neural', 'neural-dark'])
+    for (const id of ['glow', 'glow-dark'])
       check(`the ${id} theme sets its own typography, not just colour`, (() => {
         const b = block(id);
         return /--font-body:\s*"IBM Plex Sans"/.test(b) && /--font-display:\s*"Space Grotesk"/.test(b) && /--font-mono:\s*"IBM Plex Mono"/.test(b);
       })());
     check('and its own control shape and label treatment', (() => {
-      const b = block('neural');
+      const b = block('glow');
       return /--r-btn:/.test(b) && /--btn-pad:/.test(b) && /--label-tt:\s*uppercase/.test(b);
     })());
     check('the page body follows the theme font rather than a fixed stack',
@@ -823,14 +823,27 @@ try {
       return html.includes('rel="preconnect"') && html.includes('fonts.gstatic.com');
     })());
 
+    // Neural was removed. Anyone who chose it has it in localStorage, so the
+    // fallback is the difference between a recolour and a broken page.
+    check('a saved theme that no longer exists falls back to a real one', (() => {
+      const saved = global.localStorage;
+      try {
+        global.localStorage = { getItem: () => 'neural' };
+        const t2 = th.readTheme();
+        return th.THEME_ORDER.includes(t2) && !!th.THEMES[t2];
+      } finally { global.localStorage = saved }
+    })());
+    check('no trace of the removed palette remains',
+      !/neural/i.test(css) && !th.THEME_ORDER.some(t2 => /neural/i.test(t2)));
+
     check('an unknown palette falls back rather than yielding nothing',
       !!th.THEMES[th.themeFor('nonsense', true)]);
     check('every theme in the order has a label and a palette',
       th.THEME_ORDER.every(t2 => th.THEME_LABEL[t2] && th.THEMES[t2]));
     check('every theme has a CSS block to match',
       th.THEME_ORDER.every(t2 => t2 === 'dark' || css.includes(`[data-theme="${t2}"]`)));
-    check('the neural dark surface really is dark',
-      th.THEMES['neural-dark'].nodeText > th.THEMES['neural-dark'].nodeFill);
+    check('the glow dark surface really is dark',
+      th.THEMES['glow-dark'].nodeText > th.THEMES['glow-dark'].nodeFill);
     // The two copies exist because PNG export reads the JS one; if they drift,
     // an exported diagram stops matching the screen.
     check('no palette is missing a key another one has', (() => {
@@ -839,9 +852,9 @@ try {
     })());
     check('every colour in every palette is a real hex value',
       Object.values(th.THEMES).every(p2 => Object.values(p2).every(v => /^#[0-9a-f]{6}$/i.test(v))));
-    check('the neural theme uses its violet accent in both copies',
-      th.THEMES.neural.dot.toLowerCase() === '#a679ff' &&
-      /\[data-theme="neural"\][\s\S]*?--accent:\s*#a679ff/i.test(css));
+    check('the glow theme uses its violet accent in both copies',
+      th.THEMES.glow.dot.toLowerCase() === '#37c28e' &&
+      /\[data-theme="glow"\][\s\S]*?--accent:\s*#37c28e/i.test(css));
     check('an unknown saved theme falls back rather than breaking', (() => {
       const saved = global.localStorage;
       try { global.localStorage = { getItem: () => 'nonsense' }; return th.THEME_ORDER.includes(th.readTheme()) }
@@ -2181,7 +2194,7 @@ try {
 
     // Nothing may be lost: every action that used to be a toolbar button must
     // still be reachable from some menu.
-    const actions = ['Arrange', 'Fit', 'Step numbers', 'mode', 'Neural', 'Apple', 'Screen-reader mode',
+    const actions = ['Arrange', 'Fit', 'Step numbers', 'mode', 'Glow', 'Apple', 'Screen-reader mode',
                      'PDF', 'Word', 'Diagram', 'Design (.json)', 'Import design JSON', 'Clear the canvas'];
     const found = [];
     for (const label of ['View', 'Design']) {
@@ -2296,7 +2309,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 592;
+const EXPECTED_MIN = 594;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

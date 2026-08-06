@@ -21,10 +21,10 @@
   --canvas: radial-gradient(circle at 30% 20%, #ffffff 0%, #f0f0f2 75%);
   --sel: #1d1d1f; --shadow: rgba(0,0,0,.10); --chip-bg: rgba(255,255,255,.94);
 }
-/* Neural — from the author's Periodic Table of C# 14. Violet accent (#a679ff)
+/* Glow — from the author's Periodic Table of C# 14. Violet accent (#37c28e)
    on a cool near-white, with IBM Plex for text and Space Grotesk for headings.
-   Must stay in step with THEMES.neural in theme.js, which PNG export reads. */
-[data-theme="neural-dark"] {
+   Must stay in step with THEMES.glow in theme.js, which PNG export reads. */
+[data-theme="glow-dark"] {
   /* The identity is the type and the shapes, not only the palette. */
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
   --font-display: "Space Grotesk", system-ui, sans-serif;
@@ -32,14 +32,14 @@
   --label-tt: uppercase; --label-ls: .09em; --label-font: var(--font-mono); --label-weight: 500;
   --btn-pad: 6px 14px; --btn-weight: 500; --r-btn: 999px;
   --bg: #0a0d12; --panel: #11161f; --panel2: #161d28; --border: #2a3444;
-  --text: #e8edf4; --muted: #7d8a9c; --accent: #a679ff; --ok: #31c48d;
+  --text: #e8edf4; --muted: #7d8a9c; --accent: #37c28e; --ok: #31c48d;
   --warn: #f4b740; --bad: #f6685e;
   --canvas: radial-gradient(circle at 30% 20%, #141a26 0%, #0a0d12 72%);
   --sel: #e8edf4; --shadow: rgba(0,0,0,.55); --chip-bg: rgba(17,22,31,.92);
   --r-card: 16px;
 }
 
-[data-theme="neural"] {
+[data-theme="glow"] {
   /* The identity is the type and the shapes, not only the palette. */
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
   --font-display: "Space Grotesk", system-ui, sans-serif;
@@ -47,13 +47,13 @@
   --label-tt: uppercase; --label-ls: .09em; --label-font: var(--font-mono); --label-weight: 500;
   --btn-pad: 6px 14px; --btn-weight: 500; --r-btn: 999px;
   --bg: #f5f6f8; --panel: #ffffff; --panel2: #f0f1f5; --border: #d8dce4;
-  --text: #141820; --muted: #566273; --accent: #a679ff; --ok: #31c48d;
+  --text: #141820; --muted: #566273; --accent: #37c28e; --ok: #31c48d;
   --warn: #f4b740; --bad: #f6685e;
   --canvas: radial-gradient(circle at 30% 20%, #ffffff 0%, #eef0f5 75%);
   --sel: #141820; --shadow: rgba(20,24,32,.10); --chip-bg: rgba(255,255,255,.94);
   --r-card: 16px;
 }
-[data-theme="neural"] body, [data-theme="neural"] { font-feature-settings: 'ss01'; }
+[data-theme="glow"] body, [data-theme="glow"] { font-feature-settings: 'ss01'; }
 
 html, body, #root { height: 100%; }
 body {
@@ -1125,8 +1125,8 @@ h1, h2, h3, .logo, .tpl-header-name { font-family: var(--font-display); }
   font-weight: var(--label-weight);
 }
 code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font-mono); }
-[data-theme^="neural"] .panel, [data-theme^="neural"] .side, [data-theme^="neural"] .palette,
-[data-theme^="neural"] .menu-pop, [data-theme^="neural"] .tour-tip { border-radius: var(--r-card); }
-[data-theme^="neural"] .lesson, [data-theme^="neural"] .tip, [data-theme^="neural"] .sug,
-[data-theme^="neural"] .iv-band, [data-theme^="neural"] .ddia-verdict { border-radius: 14px; }
-[data-theme^="neural"] body { -webkit-font-smoothing: antialiased; }
+[data-theme^="glow"] .panel, [data-theme^="glow"] .side, [data-theme^="glow"] .palette,
+[data-theme^="glow"] .menu-pop, [data-theme^="glow"] .tour-tip { border-radius: var(--r-card); }
+[data-theme^="glow"] .lesson, [data-theme^="glow"] .tip, [data-theme^="glow"] .sug,
+[data-theme^="glow"] .iv-band, [data-theme^="glow"] .ddia-verdict { border-radius: 14px; }
+[data-theme^="glow"] body { -webkit-font-smoothing: antialiased; }
