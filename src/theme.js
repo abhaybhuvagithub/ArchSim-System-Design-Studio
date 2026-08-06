@@ -28,11 +28,27 @@ export const THEMES = {
     selStroke: '#1d1d1f', barTrack: '#e8e8ed', badgeText: '#ffffff',
     stepFill: '#e8f2ff', stepText: '#0066cc', stepStroke: '#0066cc',
   },
+  // Taken from the author's own Periodic Table of C# 14 — violet accent on a
+  // near-white editorial surface. Kept in step with the CSS block of the same
+  // name; PNG export reads this copy, so the two drifting apart shows up as a
+  // diagram that does not match the screen.
+  neural: {
+    canvasBg: '#f5f6f8',
+    nodeFill: '#ffffff', nodeFillHover: '#f3eeff', nodeStrokeHover: '#a679ff',
+    nodeText: '#141820', nodeSub: '#566273',
+    downFill: '#ffe7e5', downStroke: '#f6685e',
+    edge: '#d8dce4', edgeActive: '#a679ff', edgeHot: '#2dd4bf',
+    arrow: '#9aa4b2', arrowHot: '#2dd4bf',
+    dot: '#a679ff', dotDrop: '#f6685e',
+    glow: '#a679ff', hotText: '#7c4dff', wire: '#a679ff',
+    selStroke: '#141820', barTrack: '#e6e8ee', badgeText: '#ffffff',
+    stepFill: '#efe7ff', stepText: '#7c4dff', stepStroke: '#a679ff',
+  },
 }
 
 
-export const THEME_ORDER = ['dark', 'light']
-export const THEME_LABEL = { dark: '🌙 Dark', light: '☀️ Light' }
+export const THEME_ORDER = ['dark', 'light', 'neural']
+export const THEME_LABEL = { dark: '🌙 Dark', light: '☀️ Light', neural: '🟣 Neural' }
 
 export const readTheme = () => {
   try { const v = localStorage.getItem('archsim.theme'); if (THEME_ORDER.includes(v)) return v } catch {}

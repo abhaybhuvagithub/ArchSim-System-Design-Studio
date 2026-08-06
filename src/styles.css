@@ -16,6 +16,19 @@
   --canvas: radial-gradient(circle at 30% 20%, #ffffff 0%, #f0f0f2 75%);
   --sel: #1d1d1f; --shadow: rgba(0,0,0,.10); --chip-bg: rgba(255,255,255,.94);
 }
+/* Neural — from the author's Periodic Table of C# 14. Violet accent (#a679ff)
+   on a cool near-white, with IBM Plex for text and Space Grotesk for headings.
+   Must stay in step with THEMES.neural in theme.js, which PNG export reads. */
+[data-theme="neural"] {
+  --bg: #f5f6f8; --panel: #ffffff; --panel2: #f0f1f5; --border: #d8dce4;
+  --text: #141820; --muted: #566273; --accent: #a679ff; --ok: #31c48d;
+  --warn: #f4b740; --bad: #f6685e;
+  --canvas: radial-gradient(circle at 30% 20%, #ffffff 0%, #eef0f5 75%);
+  --sel: #141820; --shadow: rgba(20,24,32,.10); --chip-bg: rgba(255,255,255,.94);
+  --r-card: 16px;
+}
+[data-theme="neural"] body, [data-theme="neural"] { font-feature-settings: 'ss01'; }
+
 html, body, #root { height: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',

@@ -768,6 +768,33 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── themes ─────────────────────────────────────────────────────────────────
+  {
+    const th = await import(pathToFileURL(path.join(root, 'src/theme.js')).href);
+    const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+    check('there are three themes', th.THEME_ORDER.length === 3 && th.THEME_ORDER.includes('neural'));
+    check('every theme in the order has a label and a palette',
+      th.THEME_ORDER.every(t2 => th.THEME_LABEL[t2] && th.THEMES[t2]));
+    check('every theme has a CSS block to match',
+      th.THEME_ORDER.every(t2 => t2 === 'dark' || css.includes(`[data-theme="${t2}"]`)));
+    // The two copies exist because PNG export reads the JS one; if they drift,
+    // an exported diagram stops matching the screen.
+    check('no palette is missing a key another one has', (() => {
+      const keys = Object.keys(th.THEMES.dark);
+      return th.THEME_ORDER.every(t2 => keys.every(k => typeof th.THEMES[t2][k] === 'string'));
+    })());
+    check('every colour in every palette is a real hex value',
+      Object.values(th.THEMES).every(p2 => Object.values(p2).every(v => /^#[0-9a-f]{6}$/i.test(v))));
+    check('the neural theme uses its violet accent in both copies',
+      th.THEMES.neural.dot.toLowerCase() === '#a679ff' &&
+      /\[data-theme="neural"\][\s\S]*?--accent:\s*#a679ff/i.test(css));
+    check('an unknown saved theme falls back rather than breaking', (() => {
+      const saved = global.localStorage;
+      try { global.localStorage = { getItem: () => 'nonsense' }; return th.THEME_ORDER.includes(th.readTheme()) }
+      finally { global.localStorage = saved }
+    })());
+  }
+
   // ── the world map itself ───────────────────────────────────────────────────
   {
     const w = await import(pathToFileURL(path.join(root, 'src/world.js')).href);
@@ -2215,7 +2242,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 572;
+const EXPECTED_MIN = 578;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
