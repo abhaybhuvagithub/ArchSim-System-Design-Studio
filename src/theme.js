@@ -32,6 +32,18 @@ export const THEMES = {
   // near-white editorial surface. Kept in step with the CSS block of the same
   // name; PNG export reads this copy, so the two drifting apart shows up as a
   // diagram that does not match the screen.
+  'neural-dark': {
+    canvasBg: '#0a0d12',
+    nodeFill: '#11161f', nodeFillHover: '#1b2333', nodeStrokeHover: '#a679ff',
+    nodeText: '#e8edf4', nodeSub: '#7d8a9c',
+    downFill: '#3a1c1a', downStroke: '#f6685e',
+    edge: '#2a3444', edgeActive: '#a679ff', edgeHot: '#2dd4bf',
+    arrow: '#566273', arrowHot: '#2dd4bf',
+    dot: '#a679ff', dotDrop: '#f6685e',
+    glow: '#a679ff', hotText: '#c6a8ff', wire: '#a679ff',
+    selStroke: '#e8edf4', barTrack: '#0a0d12', badgeText: '#0a0d12',
+    stepFill: '#2a1f47', stepText: '#c6a8ff', stepStroke: '#a679ff',
+  },
   neural: {
     canvasBg: '#f5f6f8',
     nodeFill: '#ffffff', nodeFillHover: '#f3eeff', nodeStrokeHover: '#a679ff',
@@ -47,8 +59,24 @@ export const THEMES = {
 }
 
 
-export const THEME_ORDER = ['dark', 'light', 'neural']
-export const THEME_LABEL = { dark: '🌙 Dark', light: '☀️ Light', neural: '🟣 Neural' }
+// Two palettes, each with a dark and a light. Apple's system colours, and the
+// violet Neural set taken from the Periodic Table of C# 14.
+export const PALETTES = [
+  { id: 'apple',  label: 'Apple',  dark: 'dark',        light: 'light' },
+  { id: 'neural', label: 'Neural', dark: 'neural-dark', light: 'neural' },
+]
+export const paletteOf = t => (String(t).startsWith('neural') ? 'neural' : 'apple')
+export const isDark = t => t === 'dark' || t === 'neural-dark'
+export const themeFor = (palette, dark) => {
+  const p = PALETTES.find(x => x.id === palette) || PALETTES[0]
+  return dark ? p.dark : p.light
+}
+
+export const THEME_ORDER = ['dark', 'light', 'neural-dark', 'neural']
+export const THEME_LABEL = {
+  dark: '🌙 Dark', light: '☀️ Light',
+  'neural-dark': '🟣 Neural dark', neural: '🟣 Neural light',
+}
 
 export const readTheme = () => {
   try { const v = localStorage.getItem('archsim.theme'); if (THEME_ORDER.includes(v)) return v } catch {}

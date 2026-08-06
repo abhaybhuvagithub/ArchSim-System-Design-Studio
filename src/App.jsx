@@ -3,7 +3,7 @@ import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import { TEMPLATES } from './templates.js'
 import { simulate, capacityReport } from './sim.js'
 import { review, applyAll, addComponent, insertBefore } from './advisor.js'
-import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL } from './theme.js'
+import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL, PALETTES, paletteOf, isDark, themeFor } from './theme.js'
 import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS, TIPS } from './learn.js'
 import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency } from './pricing.js'
@@ -735,8 +735,18 @@ export default function App() {
           <MenuItem onSelect={() => setSteps(v => !v)} checked={steps}
             hint="Number the connections in request order">①②③ Step numbers</MenuItem>
           <MenuSep />
-          <MenuItem onSelect={() => setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length])}
-            hint={`Currently ${theme}`}>{THEME_LABEL[theme]} Theme</MenuItem>
+          <MenuItem onSelect={() => setTheme(t => themeFor(paletteOf(t), !isDark(t)))}
+            checked={isDark(theme)} hint="Switches this palette between dark and light">
+            {isDark(theme) ? '🌙 Dark mode' : '☀️ Light mode'}
+          </MenuItem>
+          <MenuLabel>Palette</MenuLabel>
+          {PALETTES.map(p2 => (
+            <MenuItem key={p2.id} onSelect={() => setTheme(t => themeFor(p2.id, isDark(t)))}
+              checked={paletteOf(theme) === p2.id}
+              hint={p2.id === 'apple' ? 'System blue on greys' : 'Violet on near-white, from the Periodic Table of C# 14'}>
+              {p2.label}
+            </MenuItem>
+          ))}
           <MenuItem onSelect={() => setA11y(v => !v)} checked={a11y}
             hint="Text equivalent of the diagram, stronger focus, no motion">♿ Screen-reader mode</MenuItem>
         </Menu>
