@@ -966,6 +966,35 @@ try {
       geo3.sitesFor([{ id: 'x', type: 'app', region: 'ap-south-1' }])[0].replicas === 1);
   }
 
+  // ── the map explains itself ────────────────────────────────────────────────
+  {
+    // The picker silently did nothing once everything was placed, and an
+    // unrelated role blurb sat directly beneath it, reading like its caption.
+    const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+    check('the map counts what is still unplaced rather than offering a dead control',
+      /unplaced\.length > 0/.test(src) && /Place \{unplaced\.length\} unplaced/.test(src));
+    check('and says so plainly when there is nothing left to place',
+      /Every component is placed/.test(src));
+    check('it names which components are still unplaced',
+      /unplaced\.map\(n => n\.label\)/.test(src));
+    check('clients are excluded from placement, and it says why',
+      /n\.type !== 'client'/.test(src) && /users are everywhere/.test(src));
+    check('the map has numbered steps for reading it', /className="map-steps"/.test(src));
+    check('the role blurb has its own heading, so it no longer reads as the picker\'s caption',
+      /\{SITE_ROLES\[role === 'all' \? 'primary' : role\]\.label\} sites/.test(src));
+  }
+
+  // ── About covers what the tool actually does now ───────────────────────────
+  {
+    const ab = await import(pathToFileURL(path.join(root, 'src/about.js')).href);
+    const text = JSON.stringify(ab.ABOUT).toLowerCase();
+    for (const topic of ['replication', 'read/write', 'round-trip', 'entitlement', 'interview'])
+      check(`About mentions ${topic}`, text.includes(topic.toLowerCase()));
+    check('About still says where the data goes', /nothing leaves the page/i.test(JSON.stringify(ab.ABOUT)));
+    check('every About section has a title and lines',
+      ab.ABOUT.every(s2 => s2.title && Array.isArray(s2.lines) && s2.lines.length > 0));
+  }
+
   // ── the map has something to show ──────────────────────────────────────────
   {
     const geo2 = await import(pathToFileURL(path.join(root, 'src/geo.js')).href);
@@ -2405,7 +2434,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 612;
+const EXPECTED_MIN = 625;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
