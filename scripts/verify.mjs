@@ -792,6 +792,21 @@ try {
     })());
     // Each of the four themes must set the core colours itself; one that
     // inherits them silently renders in another theme's palette.
+    // The palettes differed on paper and not on screen: 980px against 999px is
+    // a distinction only a stylesheet can see. A theme has to be recognisable
+    // without reading the CSS.
+    check('the two palettes differ visibly in control shape, not by a few pixels', (() => {
+      const px = id => {
+        const b = (raw.match(new RegExp('\\[data-theme="' + id + '"\\]\\s*\\{([^}]*)\\}')) || [])[1] || raw;
+        const m = b.match(/--r-btn:\s*([\d.]+)px/);
+        return m ? Number(m[1]) : null;
+      };
+      const rootM = (raw.match(/:root, \[data-theme="dark"\]\s*\{([^}]*)\}/) || [])[1] || '';
+      const apple = Number((rootM.match(/--r-btn:\s*([\d.]+)px/) || [])[1]);
+      const glow = px('glow');
+      return Number.isFinite(apple) && Number.isFinite(glow) && Math.abs(apple - glow) > 100;
+    })());
+
     check('every theme sets the core colours itself', (() => {
       const core = ['--bg', '--panel', '--border', '--text', '--muted', '--accent'];
       return core.every(k => (raw.match(new RegExp(k + '\\s*:', 'g')) || []).length >= 4);
@@ -2376,7 +2391,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 608;
+const EXPECTED_MIN = 609;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
