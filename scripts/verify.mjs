@@ -768,6 +768,27 @@ try {
       crash.describe('just a string') === 'just a string' && crash.describe(null).length > 0);
   }
 
+  // ── the map has something to show ──────────────────────────────────────────
+  {
+    const geo2 = await import(pathToFileURL(path.join(root, 'src/geo.js')).href);
+    const { TEMPLATES: TP2 } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+    // The feature shipped with no template assigning a region, so the tab was
+    // empty on all 57 designs — working as written and useless in practice.
+    // A template may now declare where its components run. Nothing uses it yet,
+    // so these guard the format rather than any particular design.
+    check('a template can declare a region, and any it names must exist',
+      TP2.every(t2 => t2.nodes.every(n => !n.region || !!geo2.regionById(n.region))));
+    check('any site role a template names is one the map understands',
+      TP2.every(t2 => t2.nodes.every(n => !n.siteRole || !!geo2.SITE_ROLES[n.siteRole])));
+    check('placing components produces sites and a cross-region link', (() => {
+      const ns = [{ id: 'a', type: 'app', label: 'API', region: 'ap-south-1', siteRole: 'primary' },
+                  { id: 'b', type: 'sql', label: 'DB', region: 'us-east-1', siteRole: 'replica' }];
+      const sites = geo2.sitesFor(ns);
+      const links = geo2.siteLinks(sites, [{ id: 'e', from: 'a', to: 'b' }], ns);
+      return sites.length === 2 && links.length === 1 && links[0].rttMs > 100;
+    })());
+  }
+
   // ── level expectations ─────────────────────────────────────────────────────
   {
     const lv = await import(pathToFileURL(path.join(root, 'src/levels.js')).href);
