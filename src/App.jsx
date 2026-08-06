@@ -743,7 +743,7 @@ export default function App() {
           {PALETTES.map(p2 => (
             <MenuItem key={p2.id} onSelect={() => setTheme(t => themeFor(p2.id, isDark(t)))}
               checked={paletteOf(theme) === p2.id}
-              hint={p2.id === 'apple' ? 'System blue on greys' : 'Violet on near-white, from the Periodic Table of C# 14'}>
+              hint={p2.id === 'apple' ? 'System blue on greys' : 'Green on near-white, with editorial type and pill controls'}>
               {p2.label}
             </MenuItem>
           ))}
@@ -2821,7 +2821,7 @@ function shortVoice(name) {
   return String(name)
     .replace(/^(Microsoft|Google|Apple)\s+/i, '')
     .replace(/\s*-\s*English.*$/i, '')
-    .replace(/\s*\((Natural|Neural|Premium|Enhanced|Online)\)/gi, ' ✦')
+    .replace(/\s*\((Natural|Glow|Premium|Enhanced|Online)\)/gi, ' ✦')
     .replace(/\s*Online\b/i, '')
     .replace(/English\s*\(?(United Kingdom|United States|India)\)?/i, m => m)
     .trim() || name
