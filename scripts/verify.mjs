@@ -772,11 +772,32 @@ try {
   {
     const th = await import(pathToFileURL(path.join(root, 'src/theme.js')).href);
     const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
-    check('there are three themes', th.THEME_ORDER.length === 3 && th.THEME_ORDER.includes('neural'));
+    check('two palettes, each with a dark and a light',
+      th.PALETTES.length === 2 && th.THEME_ORDER.length === 4);
+    // The point of the change: swapping palette must not also flip dark/light,
+    // and switching mode must not throw away the chosen palette.
+    check('changing palette keeps the current mode', (() => {
+      const fromDark = th.themeFor('neural', th.isDark('dark'));
+      const fromLight = th.themeFor('neural', th.isDark('light'));
+      return th.isDark(fromDark) && !th.isDark(fromLight) &&
+             th.paletteOf(fromDark) === 'neural' && th.paletteOf(fromLight) === 'neural';
+    })());
+    check('changing mode keeps the current palette', (() => {
+      const t2 = th.themeFor(th.paletteOf('neural-dark'), false);
+      return t2 === 'neural' && th.paletteOf(t2) === 'neural';
+    })());
+    check('every palette and mode combination is a real theme',
+      th.PALETTES.every(p2 => [true, false].every(d => !!th.THEMES[th.themeFor(p2.id, d)])));
+    check('both palettes offer a genuinely dark and a genuinely light surface',
+      th.PALETTES.every(p2 => th.THEMES[p2.dark].canvasBg !== th.THEMES[p2.light].canvasBg));
+    check('an unknown palette falls back rather than yielding nothing',
+      !!th.THEMES[th.themeFor('nonsense', true)]);
     check('every theme in the order has a label and a palette',
       th.THEME_ORDER.every(t2 => th.THEME_LABEL[t2] && th.THEMES[t2]));
     check('every theme has a CSS block to match',
       th.THEME_ORDER.every(t2 => t2 === 'dark' || css.includes(`[data-theme="${t2}"]`)));
+    check('the neural dark surface really is dark',
+      th.THEMES['neural-dark'].nodeText > th.THEMES['neural-dark'].nodeFill);
     // The two copies exist because PNG export reads the JS one; if they drift,
     // an exported diagram stops matching the screen.
     check('no palette is missing a key another one has', (() => {
@@ -2127,7 +2148,7 @@ try {
 
     // Nothing may be lost: every action that used to be a toolbar button must
     // still be reachable from some menu.
-    const actions = ['Arrange', 'Fit', 'Step numbers', 'Theme', 'Screen-reader mode',
+    const actions = ['Arrange', 'Fit', 'Step numbers', 'mode', 'Neural', 'Apple', 'Screen-reader mode',
                      'PDF', 'Word', 'Diagram', 'Design (.json)', 'Import design JSON', 'Clear the canvas'];
     const found = [];
     for (const label of ['View', 'Design']) {
@@ -2242,7 +2263,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 578;
+const EXPECTED_MIN = 582;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
