@@ -2663,6 +2663,27 @@ try {
     })());
   }
 
+  // ── the flow filter yields to a maximised panel ────────────────────────────
+  {
+    const maxBtns = [...doc.querySelectorAll('.panel-max')];
+    check('both panels have a maximise control', maxBtns.length === 2);
+    check('the flow filter is on screen normally', !!doc.querySelector('.flowbar'));
+
+    // Maximising leaves a sliver of canvas, and the filter would sit on top of
+    // the diagram it exists to help you read.
+    click(maxBtns[1]); await wait(220);
+    check('maximising the Analysis panel hides it', !doc.querySelector('.flowbar'));
+    click(maxBtns[1]); await wait(220);
+    check('restoring brings it back', !!doc.querySelector('.flowbar'));
+
+    click(maxBtns[0]); await wait(220);
+    check('maximising the Components panel hides it too', !doc.querySelector('.flowbar'));
+    click(maxBtns[0]); await wait(220);
+    check('and restoring that brings it back as well', !!doc.querySelector('.flowbar'));
+    check('the canvas hint strip is unaffected either way', !!doc.querySelector('.hint') || doc.querySelectorAll('svg g.node').length === 0);
+    check('no crash while maximising', errs.length === 0);
+  }
+
   // ── the picker actually opens and filters ──────────────────────────────────
   {
     const box = doc.querySelector('.tplpick-q');
@@ -2925,7 +2946,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 736;
+const EXPECTED_MIN = 743;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
