@@ -1395,7 +1395,15 @@ function Chaos({ faults, nodes, sel, onInject, onClear, onRecoverAll, sim, fx })
 function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSetReplicas }) {
   const [detail, setDetail] = useState(null)
   if (empty) return (
-    <>
+    <section>
+      <h3>Running cost</h3>
+      <div className="empty">Nothing to price yet. Add components and the estimate updates live — it reacts to both replica counts and the traffic actually flowing through each node.</div>
+    </section>
+  )
+  const max = cost.rows[0]?.total || 1
+  return (
+    <section>
+      <h3>Running cost</h3>
       <div className="price-basis">
         <b>Priced {new Date(PRICED_AT).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</b>
         {daysSincePriced() > 180 && <span className="price-stale"> · these rates are over six months old</span>}
@@ -1407,15 +1415,6 @@ function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSe
           ))}.
         </p>
       </div>
-    <section>
-      <h3>Running cost</h3>
-      <div className="empty">Nothing to price yet. Add components and the estimate updates live — it reacts to both replica counts and the traffic actually flowing through each node.</div>
-    </section>
-  )
-  const max = cost.rows[0]?.total || 1
-  return (
-    <section>
-      <h3>Running cost</h3>
       <div className="cost-big">{money(cost.total)}<span>/month</span></div>
       <div className="cost-sub">
         {money(cost.hourly)}/hour · {money(cost.perMillion)} per million requests
@@ -1493,7 +1492,6 @@ function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSe
         traffic slider or adding replicas moves this number immediately. Click a line item for its assumption.
       </div>
     </section>
-    </>
   )
 }
 
