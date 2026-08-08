@@ -1009,6 +1009,130 @@ try {
       Object.entries(cat.CATALOG).every(([k, c]) => c.avail < 1 || c.source));
   }
 
+  // ── discrete-event core ────────────────────────────────────────────────────
+  {
+    const d = await import(pathToFileURL(path.join(root, 'src/des.js')).href);
+
+    // Determinism first. A simulation you cannot re-run exactly is not evidence
+    // of anything, and "it only happens sometimes" is the least useful bug
+    // report there is.
+    check('the same seed gives the same sequence', (() => {
+      const a1 = d.rng(7), a2 = d.rng(7);
+      return [...Array(50)].every(() => a1() === a2());
+    })());
+    check('different seeds diverge', d.rng(1)() !== d.rng(2)());
+    check('random values stay in range',
+      [...Array(200)].map(() => d.rng(99)()).every(v => v >= 0 && v < 1));
+
+    // Ordering is the whole contract of an event queue.
+    check('events run in time order regardless of scheduling order', (() => {
+      const s2 = new d.Sim(), seen = [];
+      s2.on('x', p2 => seen.push(p2.n));
+      s2.schedule('x', 30, { n: 3 }); s2.schedule('x', 10, { n: 1 }); s2.schedule('x', 20, { n: 2 });
+      s2.run();
+      return seen.join() === '1,2,3';
+    })());
+    check('ties break on scheduling order, not heap order', (() => {
+      const s2 = new d.Sim(), seen = [];
+      s2.on('x', p2 => seen.push(p2.n));
+      for (const n of [1, 2, 3, 4]) s2.schedule('x', 5, { n });
+      s2.run();
+      return seen.join() === '1,2,3,4';
+    })());
+    check('the clock only ever moves forward', (() => {
+      const s2 = new d.Sim(); let last = -1, ok = true;
+      s2.on('x', (_, sim) => { if (sim.now < last) ok = false; last = sim.now });
+      for (const t2 of [50, 10, 30, 20, 40]) s2.schedule('x', t2);
+      s2.run();
+      return ok && s2.now === 50;
+    })());
+    check('a negative delay is refused rather than moving the clock back', (() => {
+      const s2 = new d.Sim();
+      try { s2.schedule('x', -5); return false } catch (e) { return /finite delay/.test(e.message) }
+    })());
+    check('a cancelled event never runs', (() => {
+      const s2 = new d.Sim(); let ran = 0;
+      s2.on('x', () => ran++);
+      const id = s2.schedule('x', 10); s2.schedule('x', 20);
+      s2.cancel(id); s2.run();
+      return ran === 1 && s2.stats.cancelled === 1;
+    })());
+    check('an until horizon stops the clock there', (() => {
+      const s2 = new d.Sim({ until: 25 }); let ran = 0;
+      s2.on('x', () => ran++);
+      for (const t2 of [10, 20, 30, 40]) s2.schedule('x', t2);
+      s2.run();
+      return ran === 2 && s2.now === 25;
+    })());
+    // A retry storm scheduling its own retries is exactly what this engine is
+    // for, so it has to terminate rather than hang the tab.
+    check('a runaway feedback loop stops instead of hanging', (() => {
+      const s2 = new d.Sim({ maxEvents: 500 });
+      s2.on('storm', (_, sim) => { sim.schedule('storm', 1); sim.schedule('storm', 1) });
+      s2.schedule('storm', 0);
+      s2.run();
+      return s2.exhausted === true && s2.stats.ran <= 500;
+    })());
+    check('stepping by hand drives the same clock, for a debugger to walk', (() => {
+      const s2 = new d.Sim();
+      s2.on('x', () => {});
+      s2.schedule('x', 10); s2.schedule('x', 20);
+      const e1 = s2.step(), e2 = s2.step(), e3 = s2.step();
+      return e1.at === 10 && e2.at === 20 && e3 === null;
+    })());
+    check('every event that ran is recorded in order', (() => {
+      const s2 = new d.Sim();
+      s2.on('x', () => {});
+      for (const t2 of [30, 10, 20]) s2.schedule('x', t2);
+      s2.run();
+      return s2.log.length === 3 && s2.log.map(l => l.at).join() === '10,20,30';
+    })());
+
+    // A trace is what a request-level view and a causal chain both read.
+    check('a trace records its path and total', (() => {
+      const tr = new d.Trace('r1');
+      tr.hop('api', 2).hop('redis', 1, 'MISS').hop('db', 25).finish('ok', 28);
+      return tr.path.join('>') === 'api>redis>db' && Math.abs(tr.totalMs - 28) < 1e-9 && tr.outcome === 'ok';
+    })());
+    check('it attributes the time to the slowest component first', (() => {
+      const tr = new d.Trace('r1');
+      tr.hop('api', 2).hop('redis', 1).hop('db', 25);
+      const at = tr.attribution;
+      return at[0].node === 'db' && at[0].share > 0.85 && at.at(-1).node === 'redis';
+    })());
+    check('repeated hops on one component are summed, not listed twice', (() => {
+      const tr = new d.Trace('r1');
+      tr.hop('db', 10).hop('api', 1).hop('db', 15);
+      const at = tr.attribution;
+      return at.length === 2 && at[0].node === 'db' && Math.abs(at[0].ms - 25) < 1e-9;
+    })());
+    check('an empty trace does not divide by zero', (() => {
+      const tr = new d.Trace('r0');
+      return tr.totalMs === 0 && tr.attribution.length === 0;
+    })());
+
+    // Percentiles by nearest rank: p99 of 100 samples is the 99th, not an
+    // interpolation of a value that never occurred.
+    const hundred = [...Array(100)].map((_, i) => i + 1);
+    check('p50, p90 and p99 land on real samples',
+      d.percentile(hundred, 50) === 50 && d.percentile(hundred, 90) === 90 && d.percentile(hundred, 99) === 99);
+    check('percentiles ignore the order they arrive in',
+      d.percentile([...hundred].reverse(), 99) === 99);
+    check('p100 is the maximum and p0 the minimum',
+      d.percentile(hundred, 100) === 100 && d.percentile(hundred, 0) === 1);
+    check('no samples means zero rather than NaN', d.percentile([], 99) === 0);
+    check('exponential arrivals average out near their mean', (() => {
+      const r = d.rng(3);
+      const xs = [...Array(20000)].map(() => d.expDelay(r, 10));
+      const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+      return Math.abs(mean - 10) < 0.5 && xs.every(x => x >= 0);
+    })());
+    check('the engine knows nothing about ArchSim', (() => {
+      const src = fs.readFileSync(path.join(root, 'src/des.js'), 'utf8');
+      return !/catalog|CATALOG|templates|nodes\b|edges\b/.test(src.replace(/\/\/[^\n]*/g, ''));
+    })());
+  }
+
   // ── pricing is sourced and dated ───────────────────────────────────────────
   {
     const pr = await import(pathToFileURL(path.join(root, 'src/pricing.js')).href);
@@ -2546,7 +2670,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 656;
+const EXPECTED_MIN = 676;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
