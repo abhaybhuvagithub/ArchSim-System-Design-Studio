@@ -814,7 +814,7 @@ try {
 
     check('every theme sets the core colours itself', (() => {
       const core = ['--bg', '--panel', '--border', '--text', '--muted', '--accent'];
-      return core.every(k => (raw.match(new RegExp(k + '\\s*:', 'g')) || []).length >= 6);
+      return core.every(k => (raw.match(new RegExp(k + '\\s*:', 'g')) || []).length >= 8);
     })());
   }
 
@@ -843,9 +843,21 @@ try {
   {
     const th = await import(pathToFileURL(path.join(root, 'src/theme.js')).href);
     const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
-    check('the palettes are Primary, Glow and Lilac',
-      th.PALETTES.map(p2 => p2.id).join() === 'primary,glow,lilac' &&
-      th.PALETTES.map(p2 => p2.label).join() === 'Primary,Glow,Lilac');
+    check('the palettes are Primary, Glow, Lilac and Kesar',
+      th.PALETTES.map(p2 => p2.id).join() === 'primary,glow,lilac,kesar' &&
+      th.PALETTES.map(p2 => p2.label).join() === 'Primary,Glow,Lilac,Kesar');
+    check('Kesar carries its saffron in both copies',
+      th.THEMES.kesar.dot.toLowerCase() === '#fc470d' &&
+      /\[data-theme="kesar"\][\s\S]*?--accent:\s*#FC470D/i.test(css));
+    check('the three editorial palettes share type and shape, differing only in colour', (() => {
+      const b = id => (css.replace(/\/\*[\s\S]*?\*\//g, '').match(new RegExp('\\[data-theme="' + id + '"\\]\\s*\\{([^}]*)\\}')) || [])[1] || '';
+      const get = (x, k) => ((x.match(new RegExp(k + ':\\s*([^;]+)')) || [])[1] || '').trim();
+      const g = b('glow'), l = b('lilac'), k = b('kesar');
+      return ['--font-body', '--label-tt', '--r-btn', '--btn-pad'].every(key =>
+        get(g, key) && get(g, key) === get(l, key) && get(l, key) === get(k, key));
+    })());
+    check('no two palettes share an accent',
+      new Set(th.PALETTES.map(p2 => th.THEMES[p2.light].dot.toLowerCase())).size === th.PALETTES.length);
     check('Lilac carries its own violet in both copies',
       th.THEMES.lilac.dot.toLowerCase() === '#a679ff' &&
       /\[data-theme="lilac"\][\s\S]*?--accent:\s*#a679ff/i.test(css));
@@ -859,8 +871,8 @@ try {
       th.THEMES.lilac.dot !== th.THEMES.glow.dot);
     check('nothing still resolves to the old palette id',
       !th.THEME_ORDER.some(t2 => th.paletteOf(t2) === 'apple'));
-    check('three palettes, each with a dark and a light',
-      th.PALETTES.length === 3 && th.THEME_ORDER.length === 6);
+    check('four palettes, each with a dark and a light',
+      th.PALETTES.length === 4 && th.THEME_ORDER.length === 8);
     // The point of the change: swapping palette must not also flip dark/light,
     // and switching mode must not throw away the chosen palette.
     check('changing palette keeps the current mode', (() => {
@@ -2913,7 +2925,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 733;
+const EXPECTED_MIN = 736;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
