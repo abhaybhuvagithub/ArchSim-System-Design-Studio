@@ -977,6 +977,38 @@ try {
       geo3.sitesFor([{ id: 'x', type: 'app', region: 'ap-south-1' }])[0].replicas === 1);
   }
 
+  // ── availability figures are sourced, not a placeholder ────────────────────
+  {
+    const cat = await import(pathToFileURL(path.join(root, 'src/catalog.js')).href);
+    check('the SLA figures carry the date they were checked', /^\d{4}-\d{2}-\d{2}$/.test(cat.SLA_AT));
+    check('and cite the provider SLA pages',
+      cat.SLA_SOURCES.length >= 3 && cat.SLA_SOURCES.every(x => /^https:\/\/aws\.amazon\.com\//.test(x.url)));
+    check('the services with a published SLA are documented individually',
+      Object.keys(cat.SLA_NOTES).length >= 12 &&
+      Object.values(cat.SLA_NOTES).every(v => /\d/.test(v)));
+    check('every documented service exists in the catalog',
+      Object.keys(cat.SLA_NOTES).every(k => !!cat.CATALOG[k]));
+    check('the documented figures match what the notes claim', (() => {
+      const pairs = [['gateway', 0.9995], ['sql', 0.9995], ['nosql', 0.9999], ['blob', 0.999], ['lb', 0.9999]];
+      return pairs.every(([k, v]) => Math.abs(cat.CATALOG[k].avail - v) < 1e-9);
+    })());
+    // 43 of 82 components once shared 0.999 — a placeholder, not research. The
+    // tool composes these into a system-wide availability figure, so a single
+    // repeated guess quietly propagates into every design's headline number.
+    check('availability is no longer one value copied across most of the catalog', (() => {
+      const counts = {};
+      for (const c of Object.values(cat.CATALOG)) counts[c.avail] = (counts[c.avail] || 0) + 1;
+      const total = Object.keys(cat.CATALOG).length;
+      return Math.max(...Object.values(counts)) / total < 0.55;
+    })());
+    check('the tiers are ordered sensibly against each other', (() => {
+      const C = cat.CATALOG;
+      return C.lb.avail > C.cdn.avail && C.nosql.avail > C.cache.avail && C.blob.avail <= C.lb.avail;
+    })());
+    check('no component claims to never fail except a traffic source',
+      Object.entries(cat.CATALOG).every(([k, c]) => c.avail < 1 || c.source));
+  }
+
   // ── pricing is sourced and dated ───────────────────────────────────────────
   {
     const pr = await import(pathToFileURL(path.join(root, 'src/pricing.js')).href);
@@ -2514,7 +2546,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 648;
+const EXPECTED_MIN = 656;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

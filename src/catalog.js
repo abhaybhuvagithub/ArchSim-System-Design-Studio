@@ -1,25 +1,39 @@
 // Component catalog: 23 building blocks.
 // cap = requests/sec one instance handles, lat = base latency ms, avail = single-instance availability.
+// Availability figures. Where a provider publishes an SLA for the service, that
+// number is used; where they do not, it is an estimate in the same family and
+// is not dressed up as anything more. Checked against the pages below on
+// SLA_AT — the same discipline as pricing, for the same reason: a figure with
+// no date behind it looks certain long after it stops being true.
+export const SLA_AT = '2026-08-08'
+export const SLA_SOURCES = [
+  { label: 'AWS service SLAs', url: 'https://aws.amazon.com/legal/service-level-agreements/' },
+  { label: 'API Gateway SLA', url: 'https://aws.amazon.com/api-gateway/sla/' },
+  { label: 'Amazon RDS SLA', url: 'https://aws.amazon.com/rds/sla/' },
+  { label: 'Amazon Route 53 SLA', url: 'https://aws.amazon.com/route53/sla/' },
+]
+export const SLA_NOTES = {"dns": "Route 53 publishes a 100% SLA; modelled at four nines because DNS resolvers and TTLs are the real limit", "cdn": "CloudFront: 99.9%", "lb": "ELB / ALB: 99.99%", "gateway": "API Gateway: 99.95%", "web": "EC2 in a region: 99.99%", "app": "EC2 in a region: 99.99%", "micro": "EKS control plane: 99.95%", "sql": "RDS Multi-AZ: 99.95%", "nosql": "DynamoDB single region: 99.99%", "cache": "ElastiCache single-AZ: 99.9%", "blob": "S3 Standard availability SLA: 99.9%. Durability is eleven nines and a different thing", "queue": "SQS: 99.9%", "kafka": "MSK: 99.9%", "search": "OpenSearch single-AZ: 99.9%", "worker": "Lambda / ECS: 99.95%"}
+
 export const CATALOG = {
   client:      { name: 'Client',         glyph: '👤', color: '#64748b', cap: Infinity, lat: 0,   avail: 1,      source: true,  desc: 'Traffic source (users, mobile apps, browsers).' },
   dns:         { name: 'DNS',            glyph: '🌐', color: '#0ea5e9', cap: 500000,   lat: 1,   avail: 0.9999, desc: 'Resolves names to IPs, geo-routing.' },
-  cdn:         { name: 'CDN',            glyph: '⚡', color: '#f59e0b', cap: 200000,   lat: 5,   avail: 0.9999, cacheHit: 0.9, desc: 'Edge cache for static content. 90% hit ratio.' },
-  lb:          { name: 'Load Balancer',  glyph: '⚖️', color: '#8b5cf6', cap: 100000,  lat: 1,   avail: 0.9995, desc: 'Distributes traffic (L4/L7, round-robin, least-conn).' },
-  gateway:     { name: 'API Gateway',    glyph: '🚪', color: '#8b5cf6', cap: 50000,   lat: 3,   avail: 0.999,  desc: 'Auth, routing, throttling, request shaping.' },
+  cdn:         { name: 'CDN',            glyph: '⚡', color: '#f59e0b', cap: 200000,   lat: 5,   avail: 0.999, cacheHit: 0.9, desc: 'Edge cache for static content. 90% hit ratio.' },
+  lb:          { name: 'Load Balancer',  glyph: '⚖️', color: '#8b5cf6', cap: 100000,  lat: 1,   avail: 0.9999, desc: 'Distributes traffic (L4/L7, round-robin, least-conn).' },
+  gateway:     { name: 'API Gateway',    glyph: '🚪', color: '#8b5cf6', cap: 50000,   lat: 3,   avail: 0.9995,  desc: 'Auth, routing, throttling, request shaping.' },
   ratelimiter: { name: 'Rate Limiter',   glyph: '🚦', color: '#ef4444', cap: 80000,   lat: 1,   avail: 0.999,  desc: 'Token bucket / sliding window request limiting.' },
-  web:         { name: 'Web Server',     glyph: '🖥️', color: '#3b82f6', cap: 5000,    lat: 10,  avail: 0.999,  desc: 'Serves HTTP, static assets, SSR.' },
-  app:         { name: 'App Server',     glyph: '⚙️', color: '#3b82f6', cap: 2000,    lat: 25,  avail: 0.999,  desc: 'Business logic tier (stateless service).' },
-  micro:       { name: 'Microservice',   glyph: '🧩', color: '#06b6d4', cap: 3000,    lat: 15,  avail: 0.999,  desc: 'Single-purpose stateless service.' },
+  web:         { name: 'Web Server',     glyph: '🖥️', color: '#3b82f6', cap: 5000,    lat: 10,  avail: 0.9999,  desc: 'Serves HTTP, static assets, SSR.' },
+  app:         { name: 'App Server',     glyph: '⚙️', color: '#3b82f6', cap: 2000,    lat: 25,  avail: 0.9999,  desc: 'Business logic tier (stateless service).' },
+  micro:       { name: 'Microservice',   glyph: '🧩', color: '#06b6d4', cap: 3000,    lat: 15,  avail: 0.9995,  desc: 'Single-purpose stateless service.' },
   ws:          { name: 'WebSocket Srv',  glyph: '🔌', color: '#06b6d4', cap: 50000,   lat: 5,   avail: 0.999,  desc: 'Persistent connections for realtime push.' },
   cache:       { name: 'Cache (Redis)',  glyph: '🧠', color: '#ef4444', cap: 100000,  lat: 1,   avail: 0.999,  cacheHit: 0.8, desc: 'In-memory KV store. 80% hit ratio.' },
-  sql:         { name: 'SQL Database',   glyph: '🗄️', color: '#10b981', cap: 5000,    lat: 10,  avail: 0.999,  desc: 'Relational store (Postgres/MySQL). ACID.' },
-  nosql:       { name: 'NoSQL DB',       glyph: '📦', color: '#10b981', cap: 20000,   lat: 5,   avail: 0.9995, desc: 'DynamoDB/Cassandra. Partitioned, eventually consistent.' },
+  sql:         { name: 'SQL Database',   glyph: '🗄️', color: '#10b981', cap: 5000,    lat: 10,  avail: 0.9995,  desc: 'Relational store (Postgres/MySQL). ACID.' },
+  nosql:       { name: 'NoSQL DB',       glyph: '📦', color: '#10b981', cap: 20000,   lat: 5,   avail: 0.9999, desc: 'DynamoDB/Cassandra. Partitioned, eventually consistent.' },
   search:      { name: 'Search Index',   glyph: '🔍', color: '#f97316', cap: 8000,    lat: 20,  avail: 0.999,  desc: 'Elasticsearch — inverted index, full-text & geo.' },
-  queue:       { name: 'Message Queue',  glyph: '📨', color: '#eab308', cap: 50000,   lat: 3,   avail: 0.9995, desc: 'SQS/RabbitMQ — buffering, async decoupling.' },
-  kafka:       { name: 'Event Stream',   glyph: '🌊', color: '#eab308', cap: 200000,  lat: 3,   avail: 0.9995, desc: 'Kafka — partitioned log, replayable events.' },
-  worker:      { name: 'Worker Pool',    glyph: '🛠️', color: '#3b82f6', cap: 1000,    lat: 50,  avail: 0.999,  desc: 'Async consumers for jobs (encode, fan-out, email).' },
+  queue:       { name: 'Message Queue',  glyph: '📨', color: '#eab308', cap: 50000,   lat: 3,   avail: 0.999, desc: 'SQS/RabbitMQ — buffering, async decoupling.' },
+  kafka:       { name: 'Event Stream',   glyph: '🌊', color: '#eab308', cap: 200000,  lat: 3,   avail: 0.999, desc: 'Kafka — partitioned log, replayable events.' },
+  worker:      { name: 'Worker Pool',    glyph: '🛠️', color: '#3b82f6', cap: 1000,    lat: 50,  avail: 0.9995,  desc: 'Async consumers for jobs (encode, fan-out, email).' },
   scheduler:   { name: 'Scheduler',      glyph: '⏰', color: '#a855f7', cap: 1000,    lat: 5,   avail: 0.999,  desc: 'Cron / delayed job orchestration.' },
-  blob:        { name: 'Object Storage', glyph: '🪣', color: '#10b981', cap: 30000,   lat: 30,  avail: 0.99999,desc: 'S3/GCS — blobs, videos, images. 11 nines durability.' },
+  blob:        { name: 'Object Storage', glyph: '🪣', color: '#10b981', cap: 30000,   lat: 30,  avail: 0.999,desc: 'S3/GCS — blobs, videos, images. 11 nines durability.' },
   zk:          { name: 'Coordination',   glyph: '🐘', color: '#a855f7', cap: 10000,   lat: 2,   avail: 0.9999, desc: 'ZooKeeper/etcd — leader election, config, locks.' },
   analytics:   { name: 'Analytics/OLAP', glyph: '📊', color: '#f97316', cap: 2000,    lat: 100, avail: 0.999,  desc: 'Warehouse / stream analytics (Flink, BigQuery).' },
   ml:          { name: 'ML Service',     glyph: '🤖', color: '#ec4899', cap: 500,     lat: 80,  avail: 0.999,  desc: 'Ranking / recommendation / embedding inference.' },
