@@ -1192,3 +1192,4 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 }
 .tplsearch-n { font-size: 10px; opacity: .55; margin-left: 6px; font-variant-numeric: tabular-nums; }
 .tplsearch-x { border: 0; background: none; color: inherit; opacity: .5; cursor: pointer; font-size: 11px; padding: 2px 4px; }
+.sug-manual { margin-top: 7px; font-size: 11px; opacity: .55; font-style: italic; }
