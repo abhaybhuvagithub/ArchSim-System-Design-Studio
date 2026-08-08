@@ -8,6 +8,35 @@
 // committed-use discounts. They are for comparing designs, not for a quote.
 import { CATALOG } from './catalog.js'
 
+// When these rates were last checked against the providers' own pricing pages,
+// and where. A static file cannot track live prices — the honest alternative is
+// to say when it was true and let the build complain when that gets old. The
+// check in scripts/verify.mjs fails once this is more than six months back.
+export const PRICED_AT = '2026-08-08'
+export const PRICE_BASIS = 'On-demand US East list prices. No reservations, savings plans or committed-use discounts, and no egress — all three move a real bill more than anything modelled here.'
+export const PRICE_SOURCES = [
+  { label: 'Amazon S3', url: 'https://aws.amazon.com/s3/pricing/' },
+  { label: 'Amazon Route 53', url: 'https://aws.amazon.com/route53/pricing/' },
+  { label: 'Elastic Load Balancing', url: 'https://aws.amazon.com/elasticloadbalancing/pricing/' },
+  { label: 'Amazon EC2', url: 'https://aws.amazon.com/ec2/pricing/on-demand/' },
+  { label: 'Amazon RDS', url: 'https://aws.amazon.com/rds/pricing/' },
+  { label: 'Amazon DynamoDB', url: 'https://aws.amazon.com/dynamodb/pricing/on-demand/' },
+  { label: 'Amazon ElastiCache', url: 'https://aws.amazon.com/elasticache/pricing/' },
+]
+
+// Rates verified against the pages above on PRICED_AT. Anything not listed here
+// is an estimate in the same family, not a checked figure — said plainly rather
+// than left for you to assume.
+export const VERIFIED = {
+  dns:  'Route 53: $0.50 per hosted zone per month, $0.40 per million queries',
+  lb:   'ALB: $0.0225 per hour plus $0.008 per LCU-hour, folded into one rate here',
+  app:  'EC2 m5.large on demand: $0.096 per hour',
+  blob: 'S3 Standard: $0.023 per GB-month, priced here at roughly 1 TB',
+}
+
+export const daysSincePriced = (now = new Date()) =>
+  Math.floor((now - new Date(PRICED_AT + 'T00:00:00Z')) / 86400000)
+
 export const HOURS = 730                       // hours in an average month
 export const SEC_PER_MONTH = HOURS * 3600      // 2,628,000
 export const REQ_M_PER_RPS = SEC_PER_MONTH / 1e6 // millions of requests/month per 1 rps
