@@ -32,6 +32,7 @@ import { REGIONS, SITE_ROLES, project, sitesFor, siteLinks, regionById } from '.
 import { AUTH, SESSION, ENTITLEMENT, revocationRisk } from './identity.js'
 import { LADDER, ladderFor, signalsFor, nextBand } from './levels.js'
 import { LAND, WORLD_W, WORLD_H } from './world.js'
+import { QUESTION_BANK, QUESTION_LEVELS, questionsAt } from './questions.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1506,7 +1507,7 @@ function Learn({ done }) {
   return (
     <section>
       <div className="tabs sub">
-        {[['steps', 'Steps'], ['consistency', 'Consistency'], ['tips', 'Tips'], ['clouds', 'Clouds'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
+        {[['steps', 'Steps'], ['consistency', 'Consistency'], ['questions', 'Questions'], ['tips', 'Tips'], ['clouds', 'Clouds'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
           <button key={k} className={sub === k ? 'on' : ''} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
@@ -1563,6 +1564,29 @@ function Learn({ done }) {
                 </tbody>
               </table>
               {c.note && <div className="cmp-note">{c.note}</div>}
+            </div>
+          ))}
+        </>
+      )}
+
+      {sub === 'questions' && (
+        <>
+          <h3>The thirty questions</h3>
+          <div className="muted" style={{ marginBottom: 10 }}>
+            The set that recurs in system design interviews. Every answer here is written for this
+            tool, and most name the design in the library you can build and push traffic through —
+            which is the part a list of answers cannot give you.
+          </div>
+          {QUESTION_LEVELS.map(lvl => (
+            <div key={lvl} className="tip-g">
+              <div className="tip-gh">{lvl}</div>
+              {questionsAt(lvl).map(x => (
+                <details key={x.q} className="qa">
+                  <summary>{x.q}</summary>
+                  <p>{x.a}</p>
+                  {x.build && <div className="qa-build">▸ {x.build}</div>}
+                </details>
+              ))}
             </div>
           ))}
         </>

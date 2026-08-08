@@ -2523,6 +2523,35 @@ try {
     await wait(200);
   }
 
+  // ── the question bank ──────────────────────────────────────────────────────
+  {
+    const qb = await import(pathToFileURL(path.join(root, 'src/questions.js')).href);
+    const { TEMPLATES: TP6 } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+    check('there are thirty questions', qb.QUESTION_BANK.length === 30);
+    check('spread across three levels', qb.QUESTION_LEVELS.length === 3 &&
+      qb.QUESTION_LEVELS.every(l => qb.questionsAt(l).length >= 8));
+    check('every question has a real answer, not a stub',
+      qb.QUESTION_BANK.every(x => x.q.length > 15 && x.a.length > 200));
+    check('every prompt reads as a question or an instruction',
+      qb.QUESTION_BANK.every(x => /\?$/.test(x.q) || /^(Explain|Describe|Walk|Compare)/.test(x.q)));
+    check('no two questions repeat', new Set(qb.QUESTION_BANK.map(x => x.q)).size === 30);
+    // The differentiator: most answers point at a design you can build and run.
+    check('most questions name something to build here',
+      qb.QUESTION_BANK.filter(x => x.build).length >= 25);
+    check('every template a question names actually exists', (() => {
+      const names = TP6.map(t2 => t2.name);
+      const cited = qb.QUESTION_BANK.map(x => x.build || '').join(' ');
+      return ['Rate Limiter', 'Notification System', 'Collab Docs', 'URL Shortener', 'Search Autocomplete',
+              'Payment System', 'Chat', 'Observability'].every(n => !cited.includes(n + ' template') || names.some(v => v.includes(n)));
+    })());
+    check('the answers are written here, not lifted',
+      qb.QUESTION_BANK.every(x => !/click to reveal|flashcard|roadmap\.sh/i.test(x.a)));
+    check('the bank is reachable from Learn', (() => {
+      const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      return /\['questions', 'Questions'\]/.test(src) && /QUESTION_LEVELS\.map/.test(src);
+    })());
+  }
+
   // ── the review only offers a fix it can actually apply ─────────────────────
   {
     const { review } = await import(pathToFileURL(path.join(root, 'src/advisor.js')).href);
@@ -2779,7 +2808,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 702;
+const EXPECTED_MIN = 711;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
