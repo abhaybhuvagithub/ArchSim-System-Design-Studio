@@ -945,6 +945,7 @@ export default function App() {
             <button onClick={() => fitView(nodes)} title="Fit the whole diagram" aria-label="Fit to view">⤢</button>
             <button onClick={() => setView({ x: 0, y: 0, k: 1 })} title="Reset to 100%" aria-label="Reset zoom">1:1</button>
           </div>
+        {!maxed && (
         <div className="flowbar" role="group" aria-label="Filter the diagram by traffic type">
             <div className="flowbar-row">
               {FLOW_MODES.map(m => (
@@ -960,6 +961,7 @@ export default function App() {
               </div>
             )}
           </div>
+        )}
           {nodes.length > 0 && <div className="hint">Drag ● port to connect · click a connection to label it · scroll to zoom · drag canvas to pan · Del removes selection</div>}
           <CanvasDescription nodes={nodes} edges={edges} rps={rps} template={template} />
         </main>
