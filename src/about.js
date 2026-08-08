@@ -70,6 +70,7 @@ export const ABOUT = [
       '**Reads and writes are separate.** Each connection carries a read/write mix, and stores have separate ceilings for each. It is the only way to show the most under-appreciated fact about single-leader replication: followers raise the read ceiling and do nothing at all for writes.',
       '**Distance is modelled.** Place components in real cloud regions and every cross-region link is labelled with its round-trip floor — the speed of light in fibre, before any service does work. Mumbai to Virginia is about 180ms and no amount of caching changes that.',
       '**Identity and entitlement.** Entry points carry an authentication method, sessions carry a revocation story, and services say where entitlement comes from. The advisor flags a licence lookup on the hot path, a privileged route behind a single factor, and tokens you have no way to withdraw.',
+      '**Where it runs.** Place components in real cloud regions and the map labels every cross-region link with its round-trip floor. Mumbai to Virginia is about 180ms before any service does work, which is a constraint you design around rather than tune away.',
       '**A mock interview.** Five stages on the design you have loaded, scored per stage against what the breakdown says a good answer contains, with the specific things you did not say and what the next level up expects. It can be driven by a rubric that works offline, or by Claude with your own API key.',
     ],
   },
