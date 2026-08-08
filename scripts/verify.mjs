@@ -1022,9 +1022,23 @@ try {
       const hay = `${t2.name} ${t2.group || ''} ${t2.tagline || ''}`.toLowerCase();
       return s2.split(/\s+/).every(w => hay.includes(w));
     };
-    check('the picker has a search box', /className="tplsearch"/.test(src) && /aria-label="Search templates"/.test(src));
-    check('it can be cleared', /Clear template search/.test(src));
-    check('and shows how many designs matched', /tplsearch-n/.test(src));
+    check('the picker is a combobox, so typing can open it',
+      /role="combobox"/.test(src) && /aria-expanded=\{open\}/.test(src) && /aria-autocomplete="list"/.test(src));
+    // A native select cannot be opened from script, so a search box beside one
+    // filters options nobody can see until they click. The search field is the
+    // trigger here.
+    check('typing opens the list', /onChange=\{e => \{ setQ\(e\.target\.value\); setOpen\(true\) \}\}/.test(src));
+    check('focusing it opens the list too', /onFocus=\{\(\) => setOpen\(true\)\}/.test(src));
+    check('the list is a labelled listbox of options',
+      /role="listbox"/.test(src) && /role="option"/.test(src) && /aria-selected/.test(src));
+    check('it says how many designs match and when none do',
+      /tplpick-n/.test(src) && /Nothing matches/.test(src));
+    check('it is keyboard-operable end to end',
+      /ArrowDown/.test(src) && /ArrowUp/.test(src) && /Escape/.test(src) && /Enter/.test(src));
+    check('the native control is hidden from assistive tech, not duplicated in it',
+      /className="tplpick-native"[\s\S]{0,120}aria-hidden="true"/.test(src) && /tabIndex=\{-1\}/.test(src));
+    check('both controls load through the same function',
+      (src.match(/onPick\(/g) || []).length >= 2);
     check('the matcher lives next to the picker rather than inline', /export function matchesTpl/.test(src));
 
     check('an empty query keeps every design', TP4.every(t2 => match(t2, '')));
@@ -2637,6 +2651,47 @@ try {
     })());
   }
 
+  // ── the picker actually opens and filters ──────────────────────────────────
+  {
+    const box = doc.querySelector('.tplpick-q');
+    check('the search field is in the toolbar', !!box);
+    check('the list is closed until asked for', !doc.querySelector('.tplpick-pop'));
+
+    // The complaint this fixes: typing filtered a native select that never
+    // opened, so nothing appeared to happen.
+    typeInto(box, 'whats');
+    await wait(220);
+    check('typing opens the list', !!doc.querySelector('.tplpick-pop'));
+    check('and it is filtered to the match', (() => {
+      const opts = [...doc.querySelectorAll('.tplpick-i')];
+      return opts.length > 0 && opts.length < 10 && opts.some(o => /WhatsApp/i.test(o.textContent));
+    })());
+    check('the count reflects the filter',
+      /\d+ of \d+/.test(doc.querySelector('.tplpick-n')?.textContent || ''));
+    check('the combobox reports itself as expanded', box.getAttribute('aria-expanded') === 'true');
+
+    typeInto(box, 'zzzznope');
+    await wait(200);
+    check('a query with no matches says so, rather than showing an empty box',
+      /Nothing matches/.test(doc.querySelector('.tplpick-pop')?.textContent || ''));
+
+    typeInto(box, 'india');
+    await wait(200);
+    check('the group is searchable from here too',
+      [...doc.querySelectorAll('.tplpick-i')].length >= 3);
+
+    // Choosing loads the design.
+    typeInto(box, 'Ticketmaster');
+    await wait(220);
+    const hit = [...doc.querySelectorAll('.tplpick-i')].find(o => /Ticketmaster/.test(o.textContent));
+    check('the match is selectable', !!hit);
+    hit.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+    await wait(320);
+    check('choosing one loads that design', /Ticketmaster/.test(doc.querySelector('.tpl-header-name')?.textContent || ''));
+    check('and the list closes behind it', !doc.querySelector('.tplpick-pop'));
+    check('no crash while searching', errs.length === 0);
+  }
+
   // ── the Cost tab renders for a loaded design ───────────────────────────────
   {
     click(byText('.tabs button', 'Cost'));
@@ -2858,7 +2913,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 721;
+const EXPECTED_MIN = 733;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
