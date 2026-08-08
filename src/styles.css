@@ -39,6 +39,21 @@
   --r-card: 16px;
 }
 
+[data-theme="lilac-dark"] {
+  /* The identity is the type and the shapes, not only the palette. */
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --label-tt: uppercase; --label-ls: .09em; --label-font: var(--font-mono); --label-weight: 500;
+  --btn-pad: 6px 14px; --btn-weight: 500; --r-btn: 999px;
+  --bg: #0a0d12; --panel: #11161f; --panel2: #161d28; --border: #2a3444;
+  --text: #e8edf4; --muted: #7d8a9c; --accent: #a679ff; --ok: #31c48d;
+  --warn: #f4b740; --bad: #f6685e;
+  --canvas: radial-gradient(circle at 30% 20%, #141a26 0%, #0a0d12 72%);
+  --sel: #e8edf4; --shadow: rgba(0,0,0,.55); --chip-bg: rgba(17,22,31,.92);
+  --r-card: 16px;
+}
+
 [data-theme="glow"] {
   /* The identity is the type and the shapes, not only the palette. */
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
@@ -48,6 +63,21 @@
   --btn-pad: 6px 14px; --btn-weight: 500; --r-btn: 999px;
   --bg: #f5f6f8; --panel: #ffffff; --panel2: #f0f1f5; --border: #d8dce4;
   --text: #141820; --muted: #566273; --accent: #37c28e; --ok: #31c48d;
+  --warn: #f4b740; --bad: #f6685e;
+  --canvas: radial-gradient(circle at 30% 20%, #ffffff 0%, #eef0f5 75%);
+  --sel: #141820; --shadow: rgba(20,24,32,.10); --chip-bg: rgba(255,255,255,.94);
+  --r-card: 16px;
+}
+
+[data-theme="lilac"] {
+  /* The identity is the type and the shapes, not only the palette. */
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --label-tt: uppercase; --label-ls: .09em; --label-font: var(--font-mono); --label-weight: 500;
+  --btn-pad: 6px 14px; --btn-weight: 500; --r-btn: 999px;
+  --bg: #f5f6f8; --panel: #ffffff; --panel2: #f0f1f5; --border: #d8dce4;
+  --text: #141820; --muted: #566273; --accent: #a679ff; --ok: #31c48d;
   --warn: #f4b740; --bad: #f6685e;
   --canvas: radial-gradient(circle at 30% 20%, #ffffff 0%, #eef0f5 75%);
   --sel: #141820; --shadow: rgba(20,24,32,.10); --chip-bg: rgba(255,255,255,.94);
@@ -1125,10 +1155,27 @@ h1, h2, h3, .logo, .tpl-header-name { font-family: var(--font-display); }
   font-weight: var(--label-weight);
 }
 code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font-mono); }
-[data-theme^="glow"] .panel, [data-theme^="glow"] .side, [data-theme^="glow"] .palette,
-[data-theme^="glow"] .menu-pop, [data-theme^="glow"] .tour-tip { border-radius: var(--r-card); }
-[data-theme^="glow"] .lesson, [data-theme^="glow"] .tip, [data-theme^="glow"] .sug,
-[data-theme^="glow"] .iv-band, [data-theme^="glow"] .ddia-verdict { border-radius: 14px; }
-[data-theme^="glow"] body { -webkit-font-smoothing: antialiased; }
+[data-theme^="glow"], [data-theme^="lilac"] .panel, [data-theme^="glow"], [data-theme^="lilac"] .side, [data-theme^="glow"], [data-theme^="lilac"] .palette,
+[data-theme^="glow"], [data-theme^="lilac"] .menu-pop, [data-theme^="glow"], [data-theme^="lilac"] .tour-tip { border-radius: var(--r-card); }
+[data-theme^="glow"], [data-theme^="lilac"] .lesson, [data-theme^="glow"], [data-theme^="lilac"] .tip, [data-theme^="glow"], [data-theme^="lilac"] .sug,
+[data-theme^="glow"], [data-theme^="lilac"] .iv-band, [data-theme^="glow"], [data-theme^="lilac"] .ddia-verdict { border-radius: 14px; }
+[data-theme^="glow"], [data-theme^="lilac"] body { -webkit-font-smoothing: antialiased; }
 .map-steps { margin: 4px 0 12px 18px; padding: 0; }
 .map-steps li { font-size: 12.5px; line-height: 1.6; margin-bottom: 7px; }
+
+/* ---- Floating zoom ---- */
+.zoombar {
+  position: absolute; right: 16px; bottom: 52px; z-index: 6;
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 4px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 6px 20px var(--shadow);
+}
+.zoombar button {
+  font: inherit; font-size: 13px; line-height: 1; width: 30px; height: 26px;
+  border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer;
+}
+.zoombar button:hover { background: var(--panel2); }
+.zoombar-pct {
+  font-size: 9.5px; text-align: center; opacity: .6; padding: 2px 0;
+  font-variant-numeric: tabular-nums;
+}

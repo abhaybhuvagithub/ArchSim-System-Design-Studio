@@ -814,7 +814,7 @@ try {
 
     check('every theme sets the core colours itself', (() => {
       const core = ['--bg', '--panel', '--border', '--text', '--muted', '--accent'];
-      return core.every(k => (raw.match(new RegExp(k + '\\s*:', 'g')) || []).length >= 4);
+      return core.every(k => (raw.match(new RegExp(k + '\\s*:', 'g')) || []).length >= 6);
     })());
   }
 
@@ -843,13 +843,24 @@ try {
   {
     const th = await import(pathToFileURL(path.join(root, 'src/theme.js')).href);
     const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
-    check('the palettes are Primary and Glow',
-      th.PALETTES.map(p2 => p2.id).join() === 'primary,glow' &&
-      th.PALETTES.map(p2 => p2.label).join() === 'Primary,Glow');
+    check('the palettes are Primary, Glow and Lilac',
+      th.PALETTES.map(p2 => p2.id).join() === 'primary,glow,lilac' &&
+      th.PALETTES.map(p2 => p2.label).join() === 'Primary,Glow,Lilac');
+    check('Lilac carries its own violet in both copies',
+      th.THEMES.lilac.dot.toLowerCase() === '#a679ff' &&
+      /\[data-theme="lilac"\][\s\S]*?--accent:\s*#a679ff/i.test(css));
+    check('Lilac shares the editorial type and shapes with Glow', (() => {
+      const b = id => (css.replace(/\/\*[\s\S]*?\*\//g, '').match(new RegExp('\\[data-theme="' + id + '"\\]\\s*\\{([^}]*)\\}')) || [])[1] || '';
+      const g = b('glow'), l = b('lilac');
+      const get = (x, k) => ((x.match(new RegExp(k + ':\\s*([^;]+)')) || [])[1] || '').trim();
+      return ['--font-body', '--label-tt', '--r-btn', '--btn-pad'].every(k => get(g, k) === get(l, k) && get(g, k));
+    })());
+    check('and differs from Glow only in colour',
+      th.THEMES.lilac.dot !== th.THEMES.glow.dot);
     check('nothing still resolves to the old palette id',
       !th.THEME_ORDER.some(t2 => th.paletteOf(t2) === 'apple'));
-    check('two palettes, each with a dark and a light',
-      th.PALETTES.length === 2 && th.THEME_ORDER.length === 4);
+    check('three palettes, each with a dark and a light',
+      th.PALETTES.length === 3 && th.THEME_ORDER.length === 6);
     // The point of the change: swapping palette must not also flip dark/light,
     // and switching mode must not throw away the chosen palette.
     check('changing palette keeps the current mode', (() => {
@@ -964,6 +975,34 @@ try {
     check('a site reports instances as well as services', site.replicas === 7 && site.services === 2);
     check('a component with no replica count counts as one',
       geo3.sitesFor([{ id: 'x', type: 'app', region: 'ap-south-1' }])[0].replicas === 1);
+  }
+
+  // ── quick fixes tidy up after themselves, and a floating zoom ──────────────
+  {
+    const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+    // A quick fix inserts a component. Dropping it wherever the old layout left
+    // room is how a tidy diagram becomes a tangle after three fixes.
+    const applyOne = (src.match(/const applyOne = s => \{([\s\S]*?)\n  \}/) || [])[1] || '';
+    const applyEvery = (src.match(/const applyEvery = \(\) => \{([\s\S]*?)\n  \}/) || [])[1] || '';
+    check('applying one quick fix re-arranges the canvas', /autoArrange\(/.test(applyOne));
+    check('applying all of them does too', /autoArrange\(/.test(applyEvery));
+    check('both then fit the result to view',
+      /fitView\(laid\)/.test(applyOne) && /fitView\(laid\)/.test(applyEvery));
+    check('and say so, rather than silently moving everything',
+      /re-arranged/.test(applyOne) && /re-arranged/.test(applyEvery));
+
+    check('there is a floating zoom control', /className="zoombar"/.test(src));
+    check('it zooms both ways, fits and resets', (() => {
+      const bar = (src.match(/className="zoombar"[\s\S]*?<\/div>/) || [])[0] || '';
+      return /Zoom in/.test(bar) && /Zoom out/.test(bar) && /Fit to view/.test(bar) && /Reset zoom/.test(bar);
+    })());
+    check('every zoom button is labelled for assistive tech', (() => {
+      const bar = (src.match(/className="zoombar"[\s\S]*?<\/div>/) || [])[0] || '';
+      return (bar.match(/aria-label=/g) || []).length >= 4;
+    })());
+    check('zoom is clamped so the canvas cannot be lost',
+      /Math\.min\(2\.5/.test(src) && /Math\.max\(0\.25/.test(src));
+    check('the current zoom level is announced', /aria-live="polite">\{Math\.round\(view\.k/.test(src));
   }
 
   // ── the map explains itself ────────────────────────────────────────────────
@@ -2434,7 +2473,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 625;
+const EXPECTED_MIN = 638;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

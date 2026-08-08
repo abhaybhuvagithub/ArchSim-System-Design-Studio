@@ -381,8 +381,10 @@ export default function App() {
     setNodes(r.nodes); setEdges(r.edges)
     setApplied(a => [...a, s.id])
     if (r.focus) { setSel(r.focus); setHover(r.focus) }
-    fitView(r.nodes)
-    notify(`⚡ ${s.title}`, 'ok')
+    const laid = autoArrange(r.nodes, r.edges)
+    setNodes(laid)
+    requestAnimationFrame(() => fitView(laid))
+    notify(`⚡ ${s.title} · re-arranged`, 'ok')
   }
   const applyEvery = () => {
     const actionable = sugs.filter(s => s.apply)
@@ -390,8 +392,10 @@ export default function App() {
     setNodes(r.nodes); setEdges(r.edges)
     setApplied(a => [...a, ...actionable.map(s => s.id)])
     if (r.focus) setSel(r.focus)
-    fitView(r.nodes)
-    notify(`⚡ Applied ${actionable.length} quick fix${actionable.length > 1 ? 'es' : ''}`, 'ok')
+    const laid = autoArrange(r.nodes, r.edges)
+    setNodes(laid)
+    requestAnimationFrame(() => fitView(laid))
+    notify(`⚡ Applied ${actionable.length} quick fix${actionable.length > 1 ? 'es' : ''} · re-arranged`, 'ok')
   }
 
   // animation + chaos + recovery loop
@@ -942,6 +946,15 @@ export default function App() {
             </div>
           )}
           {nodes.length === 0 && <div className="hint">Blank canvas — drag components in from the left, wire them from a node's ● port, or pick a template ↑</div>}
+          <div className="zoombar" role="group" aria-label="Zoom">
+            <button onClick={() => setView(v => ({ ...v, k: Math.min(2.5, +(v.k * 1.2).toFixed(3)) }))}
+              title="Zoom in" aria-label="Zoom in">+</button>
+            <span className="zoombar-pct" aria-live="polite">{Math.round(view.k * 100)}%</span>
+            <button onClick={() => setView(v => ({ ...v, k: Math.max(0.25, +(v.k / 1.2).toFixed(3)) }))}
+              title="Zoom out" aria-label="Zoom out">−</button>
+            <button onClick={() => fitView(nodes)} title="Fit the whole diagram" aria-label="Fit to view">⤢</button>
+            <button onClick={() => setView({ x: 0, y: 0, k: 1 })} title="Reset to 100%" aria-label="Reset zoom">1:1</button>
+          </div>
         <div className="flowbar" role="group" aria-label="Filter the diagram by traffic type">
             <div className="flowbar-row">
               {FLOW_MODES.map(m => (
