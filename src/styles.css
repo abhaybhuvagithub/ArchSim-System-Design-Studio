@@ -1179,3 +1179,8 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
   font-size: 9.5px; text-align: center; opacity: .6; padding: 2px 0;
   font-variant-numeric: tabular-nums;
 }
+.price-basis { font-size: 11.5px; line-height: 1.55; margin-bottom: 12px; padding: 8px 10px;
+  border-radius: 10px; background: rgba(127,127,127,.07); border-left: 3px solid var(--border); }
+.price-basis p { margin: 4px 0 0; opacity: .7; }
+.price-src a { color: var(--accent); }
+.price-stale { color: var(--warn); font-weight: 600; }
