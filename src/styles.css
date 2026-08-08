@@ -1184,3 +1184,11 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .price-basis p { margin: 4px 0 0; opacity: .7; }
 .price-src a { color: var(--accent); }
 .price-stale { color: var(--warn); font-weight: 600; }
+.tplsearch { position: relative; display: inline-flex; align-items: center; }
+.tplsearch input {
+  font: inherit; font-size: 12px; width: 132px; padding: 5px 10px;
+  border-radius: var(--r-btn); border: 1px solid var(--border);
+  background: transparent; color: inherit;
+}
+.tplsearch-n { font-size: 10px; opacity: .55; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.tplsearch-x { border: 0; background: none; color: inherit; opacity: .5; cursor: pointer; font-size: 11px; padding: 2px 4px; }
