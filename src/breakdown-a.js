@@ -638,6 +638,67 @@ export default {
   },
 },
 
+'Video Surveillance (VMS)': {
+  meta: 'Continuous ingest · medium-hard · storage and retention dominate',
+  overview: 'Cameras write continuously and nobody reads most of it. That inversion — enormous sustained write volume against rare, targeted reads — is what makes this different from every request/response system in the library. The hard parts are retention, search without scanning video, and controlling who may look.',
+  scope: 'Ingest, storage with a retention policy, event detection and indexed search, and audited operator access. Camera firmware, PTZ control and facial identification are below the line — the last deliberately, since it changes the legal and ethical footing of the whole system.',
+  planning: 'Start with the arithmetic, because storage decides this design and nothing else comes close. Then segment the stream, run detection on the live stream rather than the archive, index events instead of frames, and finish on retention and access control — which are architecture here, not policy bolted on afterwards.',
+  fr: {
+    core: ['Ingest continuous streams from many cameras', 'Store footage for a defined retention period', 'Detect motion and objects on the live stream', 'Search events by camera, type and time', 'Review and export a clip, with the access recorded'],
+    out: ['Facial recognition and identification', 'Camera PTZ control', 'Live alerting to third parties'],
+  },
+  nfr: {
+    core: ['No dropped frames during ingest — a gap is unrecoverable', 'Footage retrievable within seconds by camera and time', 'Retention enforced automatically, not manually', 'Every access to footage is attributable to a person'],
+    out: ['Sub-second live latency for operators'],
+  },
+  nums: [['1,000', 'cameras'], ['2 Mbps', 'per camera H.264'], ['~27 TB', 'per day, all cameras'], ['30 days', 'retention → ~800 TB steady state'], ['~0.1%', 'of footage ever watched']],
+  entities: [
+    ['Camera', 'id, location, stream profile, retention class'],
+    ['Segment', 'camera, start time, duration, storage key'],
+    ['Event', 'camera, type, confidence, time, segment reference'],
+    ['AccessRecord', 'who viewed or exported what, and when'],
+  ],
+  apiIntro: 'Ingest is a continuous push, not a request. The read side is small and deliberately narrow — every path that returns footage is audited.',
+  api: [
+    { dir: '→', name: 'POST /ingest/{cameraId}', body: 'chunked stream → { segmentId }' },
+    { dir: '→', name: 'GET /events', body: '?camera=&type=&from=&to= → { events[], nextCursor }' },
+    { dir: '→', name: 'GET /segments/{id}/playback', body: '→ signed short-lived URL, access recorded' },
+    { dir: '→', name: 'POST /exports', body: '{ camera, from, to, reason } → { exportId }' },
+  ],
+  dives: [
+    {
+      title: 'Storage is the design, and retention is the only lever', focus: ['blob', 'life'],
+      blocks: [
+        ['p', 'A thousand cameras at 2 Mbps is roughly 27 TB a day. Nothing about the request path matters next to that number, because it grows every day whether anyone watches or not.'],
+        ['calc', '1,000 cameras × 2 Mbps × 86,400s ≈ 27 TB/day. At 30 days retention the steady state is about 800 TB — and without an enforced retention job it is simply 27 TB/day, forever.'],
+        ['bul', ['Tier by age: recent footage on fast storage, older on cold', 'Drop to a lower bitrate or frame rate after a few days rather than deleting outright', 'Keep segments referenced by an event longer than segments nobody flagged']],
+        ['warn', 'Retention that depends on someone remembering to run a job is not retention. It belongs in the architecture as a scheduled deletion path with its own monitoring, and unbounded growth is the failure mode you should expect if it is missing.'],
+      ],
+    },
+    {
+      title: 'Detect on the stream, never on the archive', focus: ['det', 'ev'],
+      blocks: [
+        ['p', 'Running detection over stored video means re-reading everything you have kept — orders of magnitude more I/O and compute than analysing each frame once as it arrives. Do it on the live stream and store the result, not the intention.'],
+        ['steps', ['The gateway forks the stream: one branch to segmentation and storage, one to detection.', 'Detection emits events with a camera, a type, a confidence and a timestamp.', 'Events land on a log, then in an index keyed for the queries operators actually run.']],
+        ['note', 'This is why the event index exists: searching "person, camera 12, Tuesday afternoon" must hit an index and return segment references. Scanning video to answer it is the mistake this design exists to avoid.'],
+      ],
+    },
+    {
+      title: 'Who may look, and what is recorded when they do', focus: ['iam', 'view', 'audit'],
+      blocks: [
+        ['p', 'A surveillance archive is a concentration of other people\'s movements, and the access path deserves as much design attention as the ingest path. Treat viewing as a privileged operation rather than a read.'],
+        ['bul', ['Playback is a short-lived signed URL, not a durable link that can be forwarded', 'Every view and export is written to an append-only audit log the operators cannot edit', 'Export asks for a reason, and the reason is stored with the record', 'Retention class per camera, since areas differ in what is proportionate to keep']],
+        ['note', 'Most jurisdictions place real obligations here — India\'s DPDP Act and the GDPR both treat this footage as personal data with purpose and retention limits. Those constraints shape the schema and the retention job, so they belong in the design rather than in a policy document written afterwards.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Do the storage arithmetic, segment the stream, and put an index in front of the footage.',
+    senior: 'Insist on detection at ingest rather than over the archive, design the tiering and the enforced retention path, and explain why the event index and the segment store are separate.',
+    staff: 'Cover retention classes per camera, cost per camera-day as the metric that actually governs the system, audited access as a first-class requirement, and where the legal constraints change the schema rather than sitting beside it.',
+  },
+},
+
 'Local Search (Yelp)': {
   meta: 'Proximity search · medium · read-heavy and cacheable',
   overview: 'Find businesses near me, filtered by category and rating. Data changes slowly and reads dominate massively, which makes this an indexing and caching problem more than a scaling one.',
