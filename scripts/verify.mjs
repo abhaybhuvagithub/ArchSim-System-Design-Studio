@@ -2523,6 +2523,41 @@ try {
     await wait(200);
   }
 
+  // ── the review only offers a fix it can actually apply ─────────────────────
+  {
+    const { review } = await import(pathToFileURL(path.join(root, 'src/advisor.js')).href);
+    const { TEMPLATES: TP5 } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+    const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+
+    // Every finding rendered a Quick fix button, including the ones with no
+    // apply — so after Quick fix all, the remainder still showed a button that
+    // did nothing when clicked.
+    check('the fix button only renders for findings that have one', /\{s\.apply \? \(/.test(src));
+    check('and the rest say plainly that they need a decision', /sug-manual/.test(src));
+    check('the header no longer claims every finding has a fix',
+      !/Every one has a quick fix/.test(src));
+    check('it counts the actionable and the advisory separately',
+      /actionable\.length > 0/.test(src) && /sugs\.length - actionable\.length/.test(src));
+
+    // The advisory ones are advisory by design: which auth method, which
+    // invalidation rule and whether a replica may serve reads are judgements,
+    // not insertions, and a button that guessed would be worse than none.
+    const t2 = TP5.find(x => /Netflix/.test(x.name)) || TP5[0];
+    const found = review(t2.nodes, t2.edges, t2.rps);
+    check('a real design produces both kinds of finding', (() => {
+      const withFix = found.filter(f => f.apply).length;
+      return found.length > 0 && withFix > 0 && withFix < found.length;
+    })());
+    check('no advisory finding pretends to carry a fix',
+      found.filter(f => !f.apply).every(f => typeof f.apply === 'undefined'));
+    check('applying every actionable fix leaves only advisory ones', (() => {
+      // Apply-all already filters on apply; the point is that what remains is
+      // exactly the set a button could never have resolved.
+      const remaining = found.filter(f => !f.apply);
+      return remaining.every(f => /authentication|copy|stale|second copy|invalidation|analytics/i.test(f.title + ' ' + (f.detail || '')));
+    })());
+  }
+
   // ── the Cost tab renders for a loaded design ───────────────────────────────
   {
     click(byText('.tabs button', 'Cost'));
@@ -2744,7 +2779,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 695;
+const EXPECTED_MIN = 702;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
