@@ -8,7 +8,6 @@ import { faultById } from './faults.js'
 import { describeArchitecture } from './describe.js'
 import { diagnoseAll } from './health.js'
 import { ABOUT } from './about.js'
-import { breakdownFor } from './breakdown.js'
 
 const CLOUD_COLS = CLOUDS.filter(c => c.id !== 'generic')
 
@@ -36,16 +35,6 @@ const downtime = avail => {
 export const plain = s => String(s).replace(/\*\*/g, '').replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
 
 const sec = (title, body) => ({ title, ...body })
-
-// Block payloads are strings, arrays or objects such as { core, out }. Walking
-// all three is the difference between exporting the breakdown and exporting
-// its headings.
-const flatten = (v, acc = []) => {
-  if (typeof v === 'string') { const t = v.trim(); if (t) acc.push(t) }
-  else if (Array.isArray(v)) v.forEach(x => flatten(x, acc))
-  else if (v && typeof v === 'object') Object.values(v).forEach(x => flatten(x, acc))
-  return acc
-}
 
 export function buildReport(ctx) {
   const {
@@ -252,36 +241,6 @@ export function buildReport(ctx) {
         rows: template.checklist.map((c, i) => [c, checks[i] ? 'Yes' : 'Not yet']),
       },
     }))
-  }
-
-  // ---- the full written breakdown ----------------------------------------
-  // The Breakdown tab is the longest thing in the tool and the most useful to
-  // take away, and it was the one thing the export left behind.
-  if (template) {
-    const bd = breakdownFor(template)
-    for (const bsec of bd.sections || []) {
-      const paras = [], bullets = []
-      for (const [kind, payload] of bsec.blocks || []) {
-        if (kind === 'p' || kind === 'note' || kind === 'warn') {
-          if (typeof payload === 'string') paras.push(plain(payload))
-        } else if (kind === 'bul' || kind === 'steps') {
-          for (const x of flatten(payload)) bullets.push(plain(x))
-        } else if (kind === 'reqs' && payload && typeof payload === 'object') {
-          for (const x of payload.core || []) bullets.push('In scope — ' + plain(x))
-          for (const x of payload.out || []) bullets.push('Out of scope — ' + plain(x))
-        } else {
-          // ent, api, nums, opts, schema, seq, state, arch: pull the prose out
-          // rather than dropping the section, and skip anything that is only a
-          // shape on screen.
-          for (const x of flatten(payload)) if (x.length > 2) bullets.push(plain(x))
-        }
-      }
-      if (!paras.length && !bullets.length) continue
-      sections.push(sec(`${bd.title} — ${bsec.title}`, {
-        ...(paras.length ? { paras } : {}),
-        ...(bullets.length ? { bullets: bullets.slice(0, 40) } : {}),
-      }))
-    }
   }
 
   // ---- 11. multi-cloud ---------------------------------------------------
