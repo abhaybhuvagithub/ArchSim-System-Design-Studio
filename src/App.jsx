@@ -85,8 +85,6 @@ export default function App() {
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
   const [tourAt, setTourAt] = useState(null)
   const [flow, setFlow] = useState('all')
-  const [tplQ, setTplQ] = useState('')
-  const tplMatches = useMemo(() => TEMPLATES.filter(t => matchesTpl(t, tplQ)).length, [tplQ])
   const [a11y, setA11y] = useState(() => {
     try { return localStorage.getItem('archsim.a11y') === '1' } catch (e) { return false }
   })
@@ -706,32 +704,7 @@ export default function App() {
             <button className={`btn ${drawer === 'right' ? 'active' : ''}`} onClick={() => setDrawer(d => d === 'right' ? null : 'right')}>▤</button>
           </>
         )}
-        <select className="btn" data-tour="templates" value="" onChange={e => loadTemplate(e.target.value)}>
-          <option value="">📚 New / load template…</option>
-          <optgroup label="Start from scratch">
-            <option value="blank">＋ Blank canvas</option>
-            <option value="starter">◻︎ Starter scaffold (client → LB → service → DB)</option>
-          </optgroup>
-          {[...new Set(TEMPLATES.map(t => t.group))].map(g => {
-            const hits = TEMPLATES.map((t, i) => [t, i]).filter(([t]) => t.group === g && matchesTpl(t, tplQ))
-            if (!hits.length) return null
-            return (
-              <optgroup key={g} label={g}>
-                {hits.map(([t, i]) => <option key={t.name} value={i}>{t.name}</option>)}
-              </optgroup>
-            )
-          })}
-        </select>
-        <div className="tplsearch">
-          <input value={tplQ} onChange={e => setTplQ(e.target.value)} aria-label="Search templates"
-            placeholder={`Search ${TEMPLATES.length} designs…`} />
-          {tplQ && (
-            <>
-              <span className="tplsearch-n">{tplMatches}</span>
-              <button className="tplsearch-x" onClick={() => setTplQ('')} aria-label="Clear template search">✕</button>
-            </>
-          )}
-        </div>
+        <TemplatePicker onPick={loadTemplate} />
         <button className={`btn ${simOn ? 'active' : ''}`} data-tour="simulate" onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
         <button className={`btn ${chaosOn ? 'danger' : ''}`} data-tour="chaos" onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">Chaos {chaosOn ? 'ON' : 'off'}</button>
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} data-tour="improve" onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
@@ -2922,6 +2895,100 @@ export function matchesTpl(t, q) {
   if (!s2) return true
   const hay = `${t.name} ${t.group || ''} ${t.tagline || ''}`.toLowerCase()
   return s2.split(/\s+/).every(w => hay.includes(w))
+}
+
+// The template picker. A native select cannot be opened from script, so
+// filtering one from a box beside it hides the results behind a click nobody
+// realises they have to make. Here the search field is the trigger: typing
+// opens the list already filtered.
+//
+// The native select is still rendered, hidden, and still the thing that loads a
+// design. Both controls call the same loadTemplate, so there is no second copy
+// of the state to drift — and the 60-template verification sweep keeps driving
+// the select directly instead of opening and clicking sixty times.
+function TemplatePicker({ onPick }) {
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const [active, setActive] = useState(0)
+  const boxRef = useRef(null), inputRef = useRef(null), listRef = useRef(null)
+
+  const items = useMemo(() => {
+    const base = [
+      { value: 'blank', label: '＋ Blank canvas', group: 'Start from scratch' },
+      { value: 'starter', label: '◻︎ Starter scaffold', group: 'Start from scratch' },
+      ...TEMPLATES.map((t, i) => ({ value: String(i), label: t.name, group: t.group, t })),
+    ]
+    return base.filter(x => x.t ? matchesTpl(x.t, q) : matchesTpl({ name: x.label, group: x.group }, q))
+  }, [q])
+
+  useEffect(() => { setActive(0) }, [q])
+  useEffect(() => {
+    if (!open) return
+    const onDown = e => { if (!boxRef.current?.contains(e.target)) setOpen(false) }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [open])
+
+  const choose = v => { onPick(v); setOpen(false); setQ(''); inputRef.current?.blur() }
+
+  const onKey = e => {
+    if (e.key === 'Escape') { e.preventDefault(); setOpen(false); setQ('') }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActive(a => Math.min(items.length - 1, a + 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(a => Math.max(0, a - 1)) }
+    else if (e.key === 'Enter' && open && items[active]) { e.preventDefault(); choose(items[active].value) }
+  }
+
+  let lastGroup = null
+  return (
+    <div className="tplpick" ref={boxRef}>
+      <input ref={inputRef} className="btn tplpick-q" data-tour="templates"
+        value={q} placeholder={`📚 Search ${TEMPLATES.length} designs…`}
+        role="combobox" aria-expanded={open} aria-controls="tpl-list" aria-autocomplete="list"
+        aria-label="Search and load a design"
+        onFocus={() => setOpen(true)}
+        onChange={e => { setQ(e.target.value); setOpen(true) }}
+        onKeyDown={onKey} />
+      {open && (
+        <div className="tplpick-pop">
+          <div className="tplpick-n">{items.length} of {TEMPLATES.length + 2}</div>
+          <ul id="tpl-list" role="listbox" aria-label="Designs" className="tplpick-list" ref={listRef}>
+            {items.length === 0 && <li className="tplpick-none">Nothing matches “{q}”.</li>}
+            {items.map((x, i) => {
+              const head = x.group !== lastGroup ? (lastGroup = x.group) : null
+              return (
+                <React.Fragment key={x.value}>
+                  {head && <li className="tplpick-g" role="presentation">{head}</li>}
+                  <li role="option" aria-selected={i === active}
+                    className={`tplpick-i ${i === active ? 'on' : ''}`}
+                    onMouseEnter={() => setActive(i)}
+                    onPointerDown={e => { e.preventDefault(); choose(x.value) }}>
+                    {x.label}
+                    {x.t?.tagline && <small>{x.t.tagline}</small>}
+                  </li>
+                </React.Fragment>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+      {/* The control of record. Hidden from view and from assistive tech — the
+          combobox above is the accessible interface — but it still loads a
+          design, which is what the template sweep drives. */}
+      <select className="tplpick-native" aria-hidden="true" tabIndex={-1}
+        value="" onChange={e => onPick(e.target.value)}>
+        <option value="">New / load template…</option>
+        <optgroup label="Start from scratch">
+          <option value="blank">＋ Blank canvas</option>
+          <option value="starter">◻︎ Starter scaffold</option>
+        </optgroup>
+        {[...new Set(TEMPLATES.map(t => t.group))].map(g => (
+          <optgroup key={g} label={g}>
+            {TEMPLATES.map((t, i) => t.group === g ? <option key={t.name} value={i}>{t.name}</option> : null)}
+          </optgroup>
+        ))}
+      </select>
+    </div>
+  )
 }
 
 // ── Read aloud ───────────────────────────────────────────────────────────────

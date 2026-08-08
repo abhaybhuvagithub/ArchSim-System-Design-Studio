@@ -1197,3 +1197,22 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .qa summary { cursor: pointer; font-size: 14.8px; font-weight: 600; }
 .qa p { margin: 7px 0 0; font-size: 14.8px; line-height: 1.65; opacity: .82; }
 .qa-build { margin-top: 6px; font-size: 13.6px; color: var(--accent); }
+
+/* ---- Template combobox ---- */
+.tplpick { position: relative; display: inline-flex; }
+.tplpick-q { width: 210px; text-align: left; }
+.tplpick-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.tplpick-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; width: 340px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-card);
+  box-shadow: 0 16px 42px var(--shadow); padding: 6px; max-height: 62vh;
+  display: flex; flex-direction: column;
+}
+.tplpick-n { font-size: 12px; opacity: .5; padding: 2px 6px 5px; font-variant-numeric: tabular-nums; }
+.tplpick-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.tplpick-g { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; opacity: .45; padding: 8px 8px 3px; }
+.tplpick-i { padding: 7px 9px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.tplpick-i small { display: block; font-size: 12px; opacity: .55; }
+.tplpick-i.on { background: var(--accent); color: #fff; }
+.tplpick-i.on small { opacity: .85; }
+.tplpick-none { padding: 10px 9px; font-size: 13px; opacity: .6; }
