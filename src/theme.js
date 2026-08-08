@@ -80,6 +80,30 @@ export const THEMES = {
     selStroke: '#141820', barTrack: '#e6e8ee', badgeText: '#ffffff',
     stepFill: '#efe7ff', stepText: '#7c4dff', stepStroke: '#a679ff',
   },
+  'kesar-dark': {
+    canvasBg: '#0a0d12',
+    nodeFill: '#11161f', nodeFillHover: '#1b2333', nodeStrokeHover: '#FC470D',
+    nodeText: '#e8edf4', nodeSub: '#7d8a9c',
+    downFill: '#3a1c1a', downStroke: '#f6685e',
+    edge: '#2a3444', edgeActive: '#FC470D', edgeHot: '#2dd4bf',
+    arrow: '#566273', arrowHot: '#2dd4bf',
+    dot: '#FC470D', dotDrop: '#f6685e',
+    glow: '#FC470D', hotText: '#ff9d78', wire: '#FC470D',
+    selStroke: '#e8edf4', barTrack: '#0a0d12', badgeText: '#0a0d12',
+    stepFill: '#4a1e0a', stepText: '#ff9d78', stepStroke: '#FC470D',
+  },
+  kesar: {
+    canvasBg: '#f5f6f8',
+    nodeFill: '#ffffff', nodeFillHover: '#fff0e9', nodeStrokeHover: '#FC470D',
+    nodeText: '#141820', nodeSub: '#566273',
+    downFill: '#ffe7e5', downStroke: '#f6685e',
+    edge: '#d8dce4', edgeActive: '#FC470D', edgeHot: '#2dd4bf',
+    arrow: '#9aa4b2', arrowHot: '#2dd4bf',
+    dot: '#FC470D', dotDrop: '#f6685e',
+    glow: '#FC470D', hotText: '#c93706', wire: '#FC470D',
+    selStroke: '#141820', barTrack: '#e6e8ee', badgeText: '#ffffff',
+    stepFill: '#ffe4d8', stepText: '#c93706', stepStroke: '#FC470D',
+  },
 }
 
 
@@ -89,24 +113,27 @@ export const PALETTES = [
   { id: 'primary', label: 'Primary', dark: 'dark',      light: 'light' },
   { id: 'glow', label: 'Glow', dark: 'glow-dark', light: 'glow' },
   { id: 'lilac', label: 'Lilac', dark: 'lilac-dark', light: 'lilac' },
+  { id: 'kesar', label: 'Kesar', dark: 'kesar-dark', light: 'kesar' },
 ]
 export const paletteOf = t => {
   const v = String(t)
+  if (v.startsWith('kesar')) return 'kesar'
   if (v.startsWith('lilac')) return 'lilac'
   if (v.startsWith('glow')) return 'glow'
   return 'primary'
 }
-export const isDark = t => t === 'dark' || t === 'glow-dark' || t === 'lilac-dark'
+export const isDark = t => t === 'dark' || t === 'glow-dark' || t === 'lilac-dark' || t === 'kesar-dark'
 export const themeFor = (palette, dark) => {
   const p = PALETTES.find(x => x.id === palette) || PALETTES[0]
   return dark ? p.dark : p.light
 }
 
-export const THEME_ORDER = ['dark', 'light', 'glow-dark', 'glow', 'lilac-dark', 'lilac']
+export const THEME_ORDER = ['dark', 'light', 'glow-dark', 'glow', 'lilac-dark', 'lilac', 'kesar-dark', 'kesar']
 export const THEME_LABEL = {
   dark: '🌙 Dark', light: '☀️ Light',
   'glow-dark': '🟢 Glow dark', glow: '🟢 Glow light',
   'lilac-dark': '🟣 Lilac dark', lilac: '🟣 Lilac light',
+  'kesar-dark': '🟠 Kesar dark', kesar: '🟠 Kesar light',
 }
 
 export const readTheme = () => {
