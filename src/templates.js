@@ -575,6 +575,27 @@ export const TEMPLATES = [
     'Every operator view of footage is itself an event worth logging',
   ], 'Product designs'),
 
+  T('Job Scheduler (Airflow-like)', 'Cron, DAGs and exactly-once-ish execution', 3000, [
+    ['c', 'client', 'Authors / Triggers', 40, 260, 1, 1],
+    ['api', 'gateway', 'Scheduler API', 190, 260, 3],
+    ['meta', 'sql', 'DAG & Run State', 350, 380, 3],
+    ['sched', 'scheduler', 'Scheduler Loop', 350, 180, 3],
+    ['lock', 'zk', 'Leader Election', 510, 90, 3],
+    ['q', 'kafka', 'Task Queue', 510, 260, 6],
+    ['w', 'worker', 'Workers', 690, 260, 20],
+    ['res', 'blob', 'Task Logs & Artifacts', 850, 260, 3],
+    ['ev', 'queue', 'Run Events', 690, 400, 4],
+    ['obs', 'analytics', 'Run History', 850, 400, 3],
+  ], [['c','api'],['api','meta'],['sched','meta'],['sched','lock'],['sched','q'],
+      ['q','w'],['w','res'],['w','meta'],['w','ev'],['ev','obs']], [
+    'One scheduler decides what is due — several deciding at once double-runs every task',
+    'A task must be safe to run twice: the queue guarantees at-least-once, never exactly-once',
+    'A DAG is a dependency graph, so a task runs only when every upstream run has succeeded',
+    'Workers die mid-task, so a run needs a lease and a heartbeat rather than an assumption',
+    'Backfilling a year of missed runs must not starve today\'s work',
+    'Retries need backoff and a cap, or one broken task becomes a queue full of itself',
+  ], 'Product designs'),
+
   // ─────────────── quality & testing ───────────────
   T('Continuous Testing Platform', 'Shift-left pipeline: gates, suites, environments', 500, [
     ['dev', 'client', 'Developers / PRs', 40, 320, 1, 0.8],

@@ -699,6 +699,71 @@ export default {
   },
 },
 
+'Job Scheduler (Airflow-like)': {
+  meta: 'Distributed scheduling · medium-hard · correctness under duplicate execution',
+  overview: 'Run things on a schedule, in dependency order, across a fleet of workers that keep dying. The scheduling is easy; everything hard comes from the fact that a distributed queue gives you at-least-once and a task that cannot survive being run twice will eventually corrupt something.',
+  scope: 'Cron and dependency scheduling, distributed execution, retries and backfills. Data lineage, a visual DAG editor and per-task resource quotas are below the line.',
+  planning: 'Establish the two invariants first — one scheduler decides what is due, and every task must be idempotent — because every later decision follows from them. Then the queue, leases and heartbeats, and finally backfill isolation.',
+  fr: {
+    core: ['Define a DAG of tasks with dependencies', 'Trigger runs on a schedule or on demand', 'Retry failed tasks with backoff', 'Backfill a range of missed runs', 'See why a run failed'],
+    out: ['Visual DAG authoring', 'Data lineage tracking', 'Per-tenant resource quotas'],
+  },
+  nfr: {
+    core: ['A due task runs — late is acceptable, never is not', 'A task is never lost when a worker dies', 'Duplicate execution is possible and must be harmless', 'Backfills never starve scheduled work'],
+    out: ['Sub-second scheduling precision'],
+  },
+  nums: [['~50K', 'task runs per day'], ['~3K', 'DAGs'], ['~30s', 'scheduler tick'], ['~2%', 'of runs need a retry']],
+  entities: [
+    ['DAG', 'id, schedule, task graph, owner'],
+    ['TaskRun', 'dag, task, logical date, attempt, state, lease'],
+    ['Worker', 'id, heartbeat, current lease'],
+  ],
+  apiIntro: 'Mostly a control plane. The interesting endpoints are the ones that mutate run state, since those race with the scheduler.',
+  api: [
+    { dir: '\u2192', name: 'POST /dags', body: '{ schedule, tasks[] } \u2192 { dagId }' },
+    { dir: '\u2192', name: 'POST /dags/{id}/runs', body: '{ logicalDate } \u2192 { runId }' },
+    { dir: '\u2192', name: 'POST /dags/{id}/backfill', body: '{ from, to } \u2192 { queued }' },
+    { dir: '\u2192', name: 'GET /runs/{id}', body: '\u2192 { state, attempts[], logs }' },
+  ],
+  dives: [
+    {
+      title: 'One scheduler decides what is due', focus: ['sched', 'lock'],
+      blocks: [
+        ['p', 'Two schedulers reading the same table both see a task is due and both enqueue it. That is not a rare race — it is the steady state of running two schedulers. Elect a leader and let only the leader enqueue.'],
+        ['note', 'The leader holds a lease it must renew. If it pauses for longer than the lease, another takes over — and the old one may still wake up believing it leads. That is why the enqueue path is also guarded by a uniqueness constraint on (dag, task, logical date, attempt) rather than trusting the election alone.'],
+      ],
+    },
+    {
+      title: 'At-least-once, and why idempotency is the real requirement', focus: ['q', 'w'],
+      blocks: [
+        ['p', 'A worker takes a task, completes the side effect, and dies before acknowledging. The queue redelivers, correctly. Nothing in the messaging layer can prevent this, so the requirement lands on the task: running twice must be harmless.'],
+        ['bul', ['Write results keyed by (task, logical date) so a repeat overwrites rather than appends', 'Make external calls with an idempotency key', 'Prefer replace-partition over insert for anything that lands in a table']],
+        ['warn', 'A system that promises exactly-once is either lying or doing this same work on your behalf. Say which one you are building.'],
+      ],
+    },
+    {
+      title: 'Leases, heartbeats and the task that is neither running nor finished', focus: ['w', 'meta'],
+      blocks: [
+        ['p', 'A worker that disappears leaves a run marked running forever. A lease with a heartbeat fixes it: the worker renews while alive, and an expired lease means the run is reclaimable.'],
+        ['steps', ['The worker claims the run and takes a lease of a few minutes.', 'It renews the lease while the task executes.', 'If the lease expires, the scheduler marks the attempt failed and re-enqueues it.']],
+        ['note', 'Set the lease longer than your slowest normal task, or you will reclaim work that is merely slow and run it twice for no reason.'],
+      ],
+    },
+    {
+      title: 'Backfills must not starve today', focus: ['q', 'w'],
+      blocks: [
+        ['p', 'Backfilling a year of daily runs enqueues hundreds of tasks at once. On one queue they sit ahead of the run that was due this morning, and the scheduled work quietly stops.'],
+        ['bul', ['Separate queues, or a priority the scheduler respects', 'A concurrency cap per DAG so one backfill cannot take the whole fleet', 'Backfill in date order, so a partial backfill is still a usable prefix']],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Elect one scheduler, use a queue, and retry failed tasks with backoff.',
+    senior: 'Insist that tasks be idempotent because the queue is at-least-once, design leases with heartbeats for worker death, and isolate backfills from scheduled work.',
+    staff: 'Cover the uniqueness constraint that survives a split-brain election, concurrency limits per DAG and per pool, and what a partially-completed DAG run means for downstream consumers.',
+  },
+},
+
 'Local Search (Yelp)': {
   meta: 'Proximity search · medium · read-heavy and cacheable',
   overview: 'Find businesses near me, filtered by category and rating. Data changes slowly and reads dominate massively, which makes this an indexing and caching problem more than a scaling one.',
