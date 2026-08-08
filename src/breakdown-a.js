@@ -764,6 +764,72 @@ export default {
   },
 },
 
+'OS Update Delivery (OTA)': {
+  meta: 'Planet-scale rollout \u00b7 hard \u00b7 blast radius is the whole problem',
+  overview: 'Ship a new operating system to a billion devices, none of which you can reach afterwards if it goes wrong. The bandwidth is a solved problem \u2014 a CDN handles it. What is hard is that a bad build reaches devices faster than any human can react, and a bricked phone cannot download the fix.',
+  scope: 'Update check-in, staged rollout, delta payload delivery, signing and verification, install telemetry and automatic halt. Building the OS image, driver certification and the on-device installer are below the line.',
+  planning: 'Start by separating the check-in from the download, because they have completely different shapes. Then cohorts and automatic halt \u2014 that is the actual system. Signing and rollback last, as the properties that make a mistake survivable.',
+  fr: {
+    core: ['Devices check whether an update applies to them', 'Serve a delta payload for the exact installed version', 'Roll out in cohorts with automatic promotion', 'Halt a rollout when install failures rise', 'Verify authenticity on the device before installing'],
+    out: ['Building and testing the OS image', 'Driver and hardware certification', 'The on-device installer itself'],
+  },
+  nfr: {
+    core: ['A bad build must stop within minutes, not hours', 'A device must never install an unsigned or tampered payload', 'Check-in load must be smooth, not a thundering herd', 'Every update must be reversible'],
+    out: ['Instant delivery \u2014 slow and safe beats fast'],
+  },
+  nums: [['1B', 'devices'], ['~120K/s', 'check-ins at steady state'], ['~2 GB', 'full image, ~150 MB typical delta'], ['1% \u2192 5% \u2192 100%', 'cohort ladder'], ['~0.2%', 'install failure rate that should halt a rollout']],
+  entities: [
+    ['Release', 'version, signed manifest, payload set, rollout state'],
+    ['Device', 'id, model, current version, cohort, region'],
+    ['Delta', 'from version, to version, payload key, size'],
+    ['InstallReport', 'device, release, outcome, failure reason'],
+  ],
+  apiIntro: 'Two paths with nothing in common. The check-in is enormous, tiny and cacheable; the download is rare, huge and served entirely by the CDN.',
+  api: [
+    { dir: '\u2192', name: 'POST /check', body: '{ model, version, cohortSeed } \u2192 { update? , manifestUrl }' },
+    { dir: '\u2192', name: 'GET /manifest/{release}', body: '\u2192 signed manifest, long-cached' },
+    { dir: '\u2192', name: 'POST /telemetry', body: '{ release, outcome, failureCode }' },
+    { dir: '\u2192', name: 'POST /admin/rollout/{release}', body: '{ percent } \u2014 or halt' },
+  ],
+  dives: [
+    {
+      title: 'The check-in is the load, not the download', focus: ['chk', 'man', 'cdn'],
+      blocks: [
+        ['p', 'Every device asks regularly whether something applies to it, and almost every answer is no. That tiny call, multiplied by a billion, dwarfs the download traffic in requests even though it is nothing in bytes. The download is a CDN problem and therefore not your problem.'],
+        ['calc', 'A billion devices checking daily is about 12,000 per second averaged \u2014 and far higher if they all wake at midnight local time. Jittered check-in intervals turn a spike into a plateau.'],
+        ['note', 'Answer no as cheaply as possible: the eligibility decision should come from a cached manifest and a cohort rule, not a database lookup per device.'],
+      ],
+    },
+    {
+      title: 'Cohorts, and halting faster than a human can react', focus: ['cohort', 'flag', 'halt', 'tel'],
+      blocks: [
+        ['p', 'A bad build reaches devices at line rate. By the time an engineer reads an alert, millions have installed it, and a device that fails to boot cannot fetch the fix. The rollout controller must be able to stop itself.'],
+        ['steps', ['Release to 1% of devices, chosen by a stable hash so the same devices are not always first.', 'Watch install success, crash rate and check-in return rate \u2014 devices that stop checking in are the strongest signal that something is badly wrong.', 'Promote to 5%, then wider, only while the metrics hold.', 'Halt automatically on any breach, without waiting for a human.']],
+        ['warn', 'Devices that go silent will not appear in your failure metrics, because they cannot report. Measure the absence of check-ins, not just reported failures \u2014 the worst outcome is the one that cannot tell you about itself.'],
+      ],
+    },
+    {
+      title: 'Deltas against the exact installed version', focus: ['blob', 'meta'],
+      blocks: [
+        ['p', 'Shipping a full image to a billion devices is bandwidth nobody wants to buy. A delta against the specific version installed is typically a tenth of the size, at the cost of generating and storing a payload per source version.'],
+        ['bul', ['Generate deltas only for versions with meaningful population', 'Keep a full image as the fallback for old or unknown versions', 'The device verifies the result matches the expected hash, not just that the patch applied']],
+      ],
+    },
+    {
+      title: 'Signing, and treating the CDN as untrusted', focus: ['sign', 'cdn'],
+      blocks: [
+        ['p', 'Payloads travel through caches you do not control to devices you cannot reach. The device verifies a signature chained to a key baked into it at manufacture, so a compromised CDN can withhold an update but never substitute one.'],
+        ['note', 'This is why signing sits behind the storage rather than in front of the CDN, and why the manifest \u2014 not the transport \u2014 is the thing that is signed. Rollback needs the same protection: an attacker forcing a device back to a known-vulnerable version is an attack, so signed manifests carry a minimum version.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Separate check-in from download, put the payloads on a CDN, and roll out in stages.',
+    senior: 'Insist on automatic halt driven by telemetry, jittered check-ins to avoid a thundering herd, and deltas against the installed version.',
+    staff: 'Cover measuring devices that stop reporting rather than only reported failures, anti-rollback protection in the signed manifest, and how cohort selection stays stable so the same population is not always the canary.',
+  },
+},
+
 'Local Search (Yelp)': {
   meta: 'Proximity search · medium · read-heavy and cacheable',
   overview: 'Find businesses near me, filtered by category and rating. Data changes slowly and reads dominate massively, which makes this an indexing and caching problem more than a scaling one.',

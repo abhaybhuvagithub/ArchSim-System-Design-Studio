@@ -222,6 +222,24 @@ export default {
   wall: { t: 'Idempotency is not something you can add later', d: 'At scale every task will eventually run twice. Tasks written assuming single execution must each be rewritten, one at a time, by whoever owns them — which is why this is a founding constraint rather than an optimisation.' },
 },
 
+'OS Update Delivery (OTA)': {
+  constraint: 'Blast radius. Bandwidth is a solved problem; a bad build reaching devices faster than anyone can react is not.',
+  ladder: [
+    ['10K devices', '~0.1 rps', 'A static manifest on object storage. Devices poll it. Genuinely enough.'],
+    ['10M devices', '~1K rps', 'CDN for payloads, a check-in API in front of a cached manifest, and cohorts so a bad build hits 1% first.'],
+    ['100M devices', '~12K rps', 'Deltas per source version. Automatic halt on telemetry. Jittered check-in windows so midnight local time is not a wall of traffic.'],
+    ['1B devices', '~120K rps', 'Regional check-in so the call never crosses an ocean. Cohort state sharded by device hash. The failure detector becomes the most important service you run.'],
+  ],
+  levers: [
+    { t: 'Jitter the check-in', d: 'A fixed daily interval means every device in a timezone wakes together. A random offset within the window turns a spike into a plateau and costs nothing.', n: ['dev', 'chk'] },
+    { t: 'Answer no from cache', d: 'Almost every check-in is told there is nothing for it. That answer should come from a cached manifest and a cohort rule, never a per-device database read.', n: ['man', 'chk'] },
+    { t: 'Deltas, not full images', d: 'A patch against the exact installed version is roughly a tenth of the size. The cost is generating and storing one payload per meaningful source version.', n: ['blob'] },
+    { t: 'Halt without a human', d: 'A bad build reaches devices at line rate. If stopping requires someone to read an alert, you have already shipped it to millions.', n: ['halt', 'cohort'] },
+    { t: 'Watch for silence', d: 'A device that fails to boot cannot report a failure. Alert on check-ins that stop arriving, because the worst outcome is the one that cannot tell you about itself.', n: ['tel', 'halt'] },
+  ],
+  wall: { t: 'You cannot reach a bricked device', d: 'Every other system in this library can be fixed by deploying again. Here the failure mode removes your ability to deploy at all, which is why staged rollout and automatic halt are the architecture rather than an operational practice.' },
+},
+
 'Local Search (Yelp)': {
   constraint: 'Query fan-out over a large document set with combined geo, attribute and relevance filtering.',
   ladder: [

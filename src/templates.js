@@ -596,6 +596,31 @@ export const TEMPLATES = [
     'Retries need backoff and a cap, or one broken task becomes a queue full of itself',
   ], 'Product designs'),
 
+  T('OS Update Delivery (OTA)', 'Shipping a new OS to a billion devices without bricking any', 120000, [
+    ['dev', 'client', 'Devices', 40, 260, 1, 1],
+    ['gslb', 'gslb', 'Global Traffic Mgr', 180, 260, 1],
+    ['chk', 'gateway', 'Update Check API', 330, 260, 12],
+    ['cohort', 'app', 'Rollout Controller', 330, 420, 60],
+    ['flag', 'featureflag', 'Staged Rollout Rules', 490, 420, 3],
+    ['man', 'cache', 'Manifest Cache', 490, 150, 8],
+    ['meta', 'nosql', 'Device & Version State', 490, 300, 6],
+    ['cdn', 'cdn', 'Payload CDN', 660, 150, 1],
+    ['blob', 'blob', 'Signed Payloads', 830, 150, 3],
+    ['sign', 'sign', 'Release Signing', 830, 300, 2],
+    ['tel', 'kafka', 'Install Telemetry', 660, 420, 8],
+    ['halt', 'analytics', 'Failure Detector', 830, 420, 44],
+  ], [['dev','gslb'],['gslb','chk'],['chk','man'],['chk','meta'],['chk','cohort'],
+      ['cohort','flag'],['cohort','meta'],['man','cdn'],['cdn','blob'],['blob','sign'],
+      ['dev','tel'],['tel','halt'],['halt','cohort']], [
+    'The check-in is the load, not the download — every device asks, few are told yes',
+    'Stagger check-ins with jitter or a billion devices ask at the same instant',
+    'Ship deltas against the exact installed version, not the full image',
+    'Roll out in cohorts: 1%, then 5%, then everyone, and only if telemetry stays clean',
+    'The failure detector must be able to halt a rollout automatically, not just alert',
+    'Payloads are signed and verified on-device — the CDN is untrusted by design',
+    'Every update must be able to roll back, because some will need to',
+  ], 'Product designs'),
+
   // ─────────────── quality & testing ───────────────
   T('Continuous Testing Platform', 'Shift-left pipeline: gates, suites, environments', 500, [
     ['dev', 'client', 'Developers / PRs', 40, 320, 1, 0.8],
