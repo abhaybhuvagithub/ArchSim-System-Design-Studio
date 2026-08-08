@@ -2523,6 +2523,29 @@ try {
     await wait(200);
   }
 
+  // ── every component is complete ────────────────────────────────────────────
+  {
+    const cat2 = await import(pathToFileURL(path.join(root, 'src/catalog.js')).href);
+    const cl2 = await import(pathToFileURL(path.join(root, 'src/clouds.js')).href);
+    const pr2 = await import(pathToFileURL(path.join(root, 'src/pricing.js')).href);
+    const ks = Object.keys(cat2.CATALOG);
+    check('the palette has grown past ninety components', ks.length >= 90);
+    // A component added to one file and not the others is invisible until
+    // someone drops it on a canvas and the cost or the cloud name is missing.
+    const noCloud = ks.filter(k => !cl2.CLOUD_MAP[k]);
+    check('every component has a cloud mapping' + (noCloud.length ? ' — ' + noCloud.join(', ') : ''), noCloud.length === 0);
+    const noRate = ks.filter(k => !pr2.RATES[k]);
+    check('every component has a rate' + (noRate.length ? ' — ' + noRate.join(', ') : ''), noRate.length === 0);
+    const ungrouped = ks.filter(k => !cat2.PALETTE_GROUPS.some(g => g.types.includes(k)));
+    check('every component appears in a palette group' + (ungrouped.length ? ' — ' + ungrouped.join(', ') : ''), ungrouped.length === 0);
+    check('every component has capacity, latency, availability and a description',
+      ks.every(k => { const c = cat2.CATALOG[k];
+        return c.name && c.desc && c.desc.length > 20 && c.avail > 0 && (c.cap > 0 || c.source) && c.lat >= 0 }));
+    check('no two components share a name',
+      new Set(ks.map(k => cat2.CATALOG[k].name)).size === ks.length);
+    check('no palette group is left empty', cat2.PALETTE_GROUPS.every(g => g.types.length > 0));
+  }
+
   // ── nothing in the interface is too small to read ──────────────────────────
   {
     const raw = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -2835,7 +2858,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 714;
+const EXPECTED_MIN = 721;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
