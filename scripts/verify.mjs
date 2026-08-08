@@ -1204,6 +1204,21 @@ try {
       const dns = pr.RATES.dns, blob = pr.RATES.blob;
       return dns.base === 0.5 && dns.perM === 0.4 && Math.abs(blob.base - 23.55) < 1.5;
     })());
+    // The pricing block was inserted into the empty-state branch and the whole
+    // Cost tab broke for any loaded design — and the suite passed, because
+    // nothing asserted the tab still rendered its own contents.
+    check('the priced-on block sits in the populated return, not the empty one', (() => {
+      const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      const body = (src.match(/function Cost\(\{[\s\S]*?\n\}\n/) || [''])[0];
+      const empty = body.slice(body.indexOf('if (empty) return ('), body.indexOf('const max'));
+      return !/price-basis/.test(empty) && /price-basis/.test(body.slice(body.indexOf('const max')));
+    })());
+    check('the Cost component has no unbalanced fragment', (() => {
+      const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      const body = (src.match(/function Cost\(\{[\s\S]*?\n\}\n/) || [''])[0];
+      return (body.match(/<>/g) || []).length === (body.match(/<\/>/g) || []).length;
+    })());
+
     check('the cost panel shows when it was priced and links the sources', (() => {
       const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
       return /PRICED_AT/.test(src) && /PRICE_SOURCES/.test(src) && /price-basis/.test(src);
@@ -2508,6 +2523,25 @@ try {
     await wait(200);
   }
 
+  // ── the Cost tab renders for a loaded design ───────────────────────────────
+  {
+    click(byText('.tabs button', 'Cost'));
+    await wait(250);
+    check('the cost tab shows a monthly figure', !!doc.querySelector('.cost-big'));
+    check('and the fixed/usage split', !!doc.querySelector('.cost-split'));
+    check('and the per-cloud footer', !!doc.querySelector('.cost-foot'));
+    check('scale up and scale down are reachable', (() => {
+      const t2 = doc.querySelector('section')?.textContent || doc.body.textContent;
+      return /scale|right.?size|replica/i.test(t2);
+    })());
+    check('the priced-on note is present', !!doc.querySelector('.price-basis'));
+    check('and links at least one provider page',
+      (doc.querySelectorAll('.price-src a') || []).length >= 3);
+    check('no crash rendering the cost tab', errs.length === 0);
+    click(byText('.tabs button', 'Scale'));
+    await wait(200);
+  }
+
   // ── flow filter in the UI ──────────────────────────────────────────────────
   {
     const fl2 = await import(pathToFileURL(path.join(root, 'src/flow.js')).href);
@@ -2710,7 +2744,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 688;
+const EXPECTED_MIN = 695;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
