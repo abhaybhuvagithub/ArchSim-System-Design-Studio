@@ -186,6 +186,24 @@ export default {
   wall: { t: 'Accuracy versus latency', d: 'Perfectly exact global counting requires consensus per request, which is far more expensive than the thing you are protecting. Every real limiter is approximate; the engineering is in choosing where the error lands.' },
 },
 
+'Video Surveillance (VMS)': {
+  constraint: 'Sustained write volume that never pauses, against reads that almost never happen. Storage grows whether or not anyone watches.',
+  ladder: [
+    ['10 cameras', '~0.3 TB/day', 'One recorder writing segments to local disk. Genuinely enough, and far simpler than what follows.'],
+    ['1K cameras', '~27 TB/day', 'Edge recorders buffer locally so a network blip does not lose footage. Segments to object storage, detection on the live stream, events in an index.'],
+    ['10K cameras', '~270 TB/day', 'Tier by age and drop bitrate after a few days. Shard the event index by camera group. Retention becomes the largest cost lever in the system.'],
+    ['100K cameras', '~2.7 PB/day', 'Regional ingest and regional storage — moving this volume between regions costs more than storing it. Detection at the edge so only events cross the wire.'],
+  ],
+  levers: [
+    { t: 'Buffer at the edge', d: 'A camera cannot retransmit what it did not keep. An edge recorder with hours of local buffer turns a network outage into a delayed upload instead of a permanent gap.', n: ['edge'] },
+    { t: 'Tier and downsample by age', d: 'Yesterday needs full fidelity; last month rarely does. Dropping bitrate after a few days cuts the steady state far more than any compression choice.', n: ['blob', 'life'] },
+    { t: 'Detect once, at ingest', d: 'Re-scanning the archive costs orders of magnitude more than analysing each frame as it arrives. Store the event, not the intention to look later.', n: ['det'] },
+    { t: 'Index events, not frames', d: 'Every operator query should hit an index and come back with segment references. A query that scans video is the failure this architecture exists to prevent.', n: ['meta'] },
+    { t: 'Retention as a scheduled path', d: 'Deletion has to be part of the system with its own monitoring. Retention that depends on someone remembering is unbounded growth with extra steps.', n: ['life'] },
+  ],
+  wall: { t: 'Cost per camera-day', d: 'Past a few thousand cameras the binding constraint is not throughput but the monthly bill, and the only real levers are retention period and bitrate. Every other optimisation is rounding error against those two.' },
+},
+
 'Local Search (Yelp)': {
   constraint: 'Query fan-out over a large document set with combined geo, attribute and relevance filtering.',
   ladder: [

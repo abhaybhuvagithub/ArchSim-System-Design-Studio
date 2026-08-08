@@ -550,6 +550,31 @@ export const TEMPLATES = [
   ], 'India · fintech'),
 
 
+  T('Video Surveillance (VMS)', 'Continuous camera ingest, retention and search', 6000, [
+    ['cam', 'client', 'Cameras', 40, 250, 1, 0.9],
+    ['op', 'client', 'Operators', 40, 430, 1, 0.1],
+    ['edge', 'app', 'Edge Recorder', 190, 250, 12],
+    ['gw', 'gateway', 'Ingest Gateway', 350, 250, 6],
+    ['iam', 'app', 'Access Control', 350, 430, 3],
+    ['seg', 'worker', 'Segmenter', 510, 160, 10],
+    ['blob', 'blob', 'Segment Store', 690, 160, 3],
+    ['life', 'scheduler', 'Retention Job', 850, 160, 6],
+    ['det', 'ml', 'Motion / Object Detect', 510, 330, 8],
+    ['ev', 'kafka', 'Event Stream', 690, 330, 4],
+    ['meta', 'nosql', 'Event Index', 850, 330, 4],
+    ['view', 'app', 'Review & Export', 510, 470, 4],
+    ['audit', 'audit', 'Access Audit Log', 690, 470, 3],
+  ], [['cam','edge'],['edge','gw'],['gw','seg'],['seg','blob'],['blob','life'],
+      ['gw','det'],['det','ev'],['ev','meta'],
+      ['op','iam'],['iam','view'],['view','meta'],['view','blob'],['view','audit']], [
+    'Cameras never stop — ingest is a constant write load, not a request/response workload',
+    'Segment the stream into short chunks so storage, retention and export all operate on the same unit',
+    'Run detection on the stream, not on stored video: re-scanning the archive costs orders of magnitude more',
+    'Retention is the design. Storage grows linearly forever unless something deletes on a schedule',
+    'Index events, not frames — searching "person, camera 12, Tuesday" must never scan video',
+    'Every operator view of footage is itself an event worth logging',
+  ], 'Product designs'),
+
   // ─────────────── quality & testing ───────────────
   T('Continuous Testing Platform', 'Shift-left pipeline: gates, suites, environments', 500, [
     ['dev', 'client', 'Developers / PRs', 40, 320, 1, 0.8],
