@@ -204,6 +204,24 @@ export default {
   wall: { t: 'Cost per camera-day', d: 'Past a few thousand cameras the binding constraint is not throughput but the monthly bill, and the only real levers are retention period and bitrate. Every other optimisation is rounding error against those two.' },
 },
 
+'Job Scheduler (Airflow-like)': {
+  constraint: 'Correctness under duplicate execution, not throughput. Scheduling 50,000 tasks is easy; making each safe to run twice is the work.',
+  ladder: [
+    ['10 DAGs', 'a few runs/hour', 'A single process with cron and a table. Genuinely enough, and far easier to reason about.'],
+    ['1K DAGs', '~50K runs/day', 'Leader-elected scheduler, a queue, a worker pool. Leases and heartbeats so worker death is recoverable.'],
+    ['10K DAGs', '~1M runs/day', 'Shard the scheduler by DAG group so one tick does not scan everything. Separate queues per priority so backfills cannot starve scheduled work.'],
+    ['100K DAGs', '~10M runs/day', 'Run state outgrows one database — partition by DAG. Archive completed runs aggressively; run history grows faster than anything else here.'],
+  ],
+  levers: [
+    { t: 'Elect one scheduler', d: 'Two schedulers reading the same table both enqueue the same due task. Leader election plus a uniqueness constraint on the attempt is what makes that harmless rather than rare.', n: ['sched', 'lock'] },
+    { t: 'Leases with heartbeats', d: 'A worker that dies leaves a run marked running forever. An expiring lease turns that into a reclaimable task instead of a stuck one.', n: ['w', 'meta'] },
+    { t: 'Separate the backfill queue', d: 'A year of backfill enqueued at once sits ahead of this morning\'s run. Different queues, or a priority the scheduler honours.', n: ['q'] },
+    { t: 'Shard the scheduler tick', d: 'One loop scanning every DAG becomes the bottleneck long before the workers do. Partition by DAG group and give each its own tick.', n: ['sched'] },
+    { t: 'Archive run history', d: 'Every task attempt writes a row and a log. History outgrows the operational data by an order of magnitude, so move it out on a schedule.', n: ['obs', 'res'] },
+  ],
+  wall: { t: 'Idempotency is not something you can add later', d: 'At scale every task will eventually run twice. Tasks written assuming single execution must each be rewritten, one at a time, by whoever owns them — which is why this is a founding constraint rather than an optimisation.' },
+},
+
 'Local Search (Yelp)': {
   constraint: 'Query fan-out over a large document set with combined geo, attribute and relevance filtering.',
   ladder: [
