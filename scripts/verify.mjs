@@ -2523,6 +2523,33 @@ try {
     await wait(200);
   }
 
+  // ── nothing in the interface is too small to read ──────────────────────────
+  {
+    const raw = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    // SVG text is in viewBox units, not screen pixels — scaling it would
+    // distort the diagram rather than help anyone read it, so it is exempt.
+    const SVG = ['.map-svg', '.map-site', '.map-link', '.bd-dia', '.bd-seq', '.bd-st'];
+    const tooSmall = [];
+    for (const block of raw.split(/(?=\n[^\n{]*\{)/)) {
+      const sel = block.split('{')[0];
+      if (SVG.some(x => sel.includes(x))) continue;
+      for (const m of block.matchAll(/font-size:\s*([0-9.]+)px/g))
+        if (Number(m[1]) < 12) tooSmall.push(sel.trim().slice(0, 40) + ' → ' + m[1] + 'px');
+    }
+    check('no interface text is set below 12px' +
+      (tooSmall.length ? ' — ' + tooSmall.slice(0, 3).join(', ') : ''), tooSmall.length === 0);
+    check('the body text is comfortably readable', (() => {
+      const b = (raw.match(/\nbody\s*\{([^}]*)\}/) || [])[1] || '';
+      const m = b.match(/font-size:\s*([0-9.]+)px/);
+      return !m || Number(m[1]) >= 13;
+    })());
+    check('diagram text is left in its own units', (() => {
+      const svgRules = [...raw.matchAll(/\.(?:bd-seq|bd-st|map-site)[^{]*\{([^}]*)\}/g)]
+        .map(m => (m[1].match(/font-size:\s*([0-9.]+)px/) || [])[1]).filter(Boolean);
+      return svgRules.length > 0 && svgRules.some(v => Number(v) < 12);
+    })());
+  }
+
   // ── the question bank ──────────────────────────────────────────────────────
   {
     const qb = await import(pathToFileURL(path.join(root, 'src/questions.js')).href);
@@ -2808,7 +2835,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 711;
+const EXPECTED_MIN = 714;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
