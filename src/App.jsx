@@ -6,7 +6,7 @@ import { review, applyAll, addComponent, insertBefore } from './advisor.js'
 import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL, PALETTES, paletteOf, isDark, themeFor } from './theme.js'
 import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS, TIPS } from './learn.js'
-import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency } from './pricing.js'
+import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency, PRICED_AT, PRICE_BASIS, PRICE_SOURCES, VERIFIED, daysSincePriced } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
 import { FAULTS, FAULT_GROUPS, faultById, faultOnNode, pickTarget, compileFaults } from './faults.js'
@@ -1379,6 +1379,18 @@ function Chaos({ faults, nodes, sel, onInject, onClear, onRecoverAll, sim, fx })
 function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSetReplicas }) {
   const [detail, setDetail] = useState(null)
   if (empty) return (
+    <>
+      <div className="price-basis">
+        <b>Priced {new Date(PRICED_AT).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</b>
+        {daysSincePriced() > 180 && <span className="price-stale"> · these rates are over six months old</span>}
+        <p>{PRICE_BASIS}</p>
+        <p className="price-src">
+          Checked against{' '}
+          {PRICE_SOURCES.map((x, i2) => (
+            <span key={x.label}>{i2 ? ', ' : ''}<a href={x.url} target="_blank" rel="noreferrer noopener">{x.label}</a></span>
+          ))}.
+        </p>
+      </div>
     <section>
       <h3>Running cost</h3>
       <div className="empty">Nothing to price yet. Add components and the estimate updates live — it reacts to both replica counts and the traffic actually flowing through each node.</div>
@@ -1465,6 +1477,7 @@ function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSe
         traffic slider or adding replicas moves this number immediately. Click a line item for its assumption.
       </div>
     </section>
+    </>
   )
 }
 

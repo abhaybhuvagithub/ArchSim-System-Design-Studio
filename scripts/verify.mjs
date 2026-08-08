@@ -977,6 +977,47 @@ try {
       geo3.sitesFor([{ id: 'x', type: 'app', region: 'ap-south-1' }])[0].replicas === 1);
   }
 
+  // ── pricing is sourced and dated ───────────────────────────────────────────
+  {
+    const pr = await import(pathToFileURL(path.join(root, 'src/pricing.js')).href);
+    check('the rates carry the date they were checked', /^\d{4}-\d{2}-\d{2}$/.test(pr.PRICED_AT));
+    check('that date is real and not in the future', (() => {
+      const d = new Date(pr.PRICED_AT + 'T00:00:00Z');
+      return !isNaN(d) && d <= new Date();
+    })());
+    // A static file cannot track live prices. It can refuse to pretend it is
+    // current — a figure that was right when written and wrong two years later
+    // is worse than one openly labelled approximate, because it looks certain.
+    check('the rates are not more than six months stale' +
+      (pr.daysSincePriced() > 180 ? ` — ${pr.daysSincePriced()} days old, recheck them` : ''),
+      pr.daysSincePriced() <= 180);
+    check('every source is a real provider pricing page',
+      pr.PRICE_SOURCES.length >= 5 &&
+      pr.PRICE_SOURCES.every(x => x.label && /^https:\/\/aws\.amazon\.com\/.*pricing/.test(x.url)));
+    check('the basis says what is excluded, rather than implying a quote',
+      /reservation/i.test(pr.PRICE_BASIS) && /egress/i.test(pr.PRICE_BASIS));
+    check('the verified rates name the figure they were checked against',
+      Object.keys(pr.VERIFIED).length >= 4 &&
+      Object.values(pr.VERIFIED).every(v => /\$[\d.]/.test(v)));
+    check('every verified key is a component that exists', (() => {
+      const { RATES } = pr;
+      return Object.keys(pr.VERIFIED).every(k => !!RATES[k]);
+    })());
+    check('the two figures I could check exactly still match their source', (() => {
+      // Route 53: $0.50 hosted zone + $0.40/M queries. S3 Standard: $0.023/GB.
+      const dns = pr.RATES.dns, blob = pr.RATES.blob;
+      return dns.base === 0.5 && dns.perM === 0.4 && Math.abs(blob.base - 23.55) < 1.5;
+    })());
+    check('the cost panel shows when it was priced and links the sources', (() => {
+      const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      return /PRICED_AT/.test(src) && /PRICE_SOURCES/.test(src) && /price-basis/.test(src);
+    })());
+    check('and warns on screen once the rates go stale', (() => {
+      const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      return /daysSincePriced\(\) > 180/.test(src);
+    })());
+  }
+
   // ── quick fixes tidy up after themselves, and a floating zoom ──────────────
   {
     const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
@@ -2473,7 +2514,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 638;
+const EXPECTED_MIN = 648;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');
