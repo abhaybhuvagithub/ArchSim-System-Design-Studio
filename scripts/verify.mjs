@@ -1009,6 +1009,46 @@ try {
       Object.entries(cat.CATALOG).every(([k, c]) => c.avail < 1 || c.source));
   }
 
+  // ── template search ────────────────────────────────────────────────────────
+  {
+    const { matchesTpl } = await import(pathToFileURL(path.join(root, 'dist/../src/App.jsx')).href).catch(() => ({}));
+    const { TEMPLATES: TP4 } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+    const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+    // Matching is defined in App.jsx alongside the picker; assert its behaviour
+    // through the same rules rather than importing JSX, which node cannot load.
+    const match = (t2, q) => {
+      const s2 = String(q || '').trim().toLowerCase();
+      if (!s2) return true;
+      const hay = `${t2.name} ${t2.group || ''} ${t2.tagline || ''}`.toLowerCase();
+      return s2.split(/\s+/).every(w => hay.includes(w));
+    };
+    check('the picker has a search box', /className="tplsearch"/.test(src) && /aria-label="Search templates"/.test(src));
+    check('it can be cleared', /Clear template search/.test(src));
+    check('and shows how many designs matched', /tplsearch-n/.test(src));
+    check('the matcher lives next to the picker rather than inline', /export function matchesTpl/.test(src));
+
+    check('an empty query keeps every design', TP4.every(t2 => match(t2, '')));
+    check('a name match works', match(TP4.find(t2 => /WhatsApp/.test(t2.name)), 'whatsapp'));
+    check('search is case-insensitive', match(TP4.find(t2 => /WhatsApp/.test(t2.name)), 'WHATSAPP'));
+    // Titles alone are not enough: people search for what a design is about.
+    check('the group is searchable, so "India" finds the Indian designs',
+      TP4.filter(t2 => match(t2, 'india')).length >= 3);
+    // "redirect" appears only in Bitly's tagline, not its name or group — so a
+    // hit proves the tagline is searched rather than just the title.
+    check('the tagline is searchable, so a concept finds its design', (() => {
+      const hits = TP4.filter(t2 => match(t2, 'redirect'));
+      return hits.length >= 1 && hits.every(t2 => !/redirect/i.test(t2.name + ' ' + (t2.group || '')));
+    })());
+    check('multiple words all have to match',
+      TP4.filter(t2 => match(t2, 'news feed')).length >= 1 &&
+      TP4.filter(t2 => match(t2, 'news quantum')).length === 0);
+    check('a query that matches nothing returns nothing rather than everything',
+      TP4.filter(t2 => match(t2, 'zzzznope')).length === 0);
+    check('every design is reachable by searching its own name',
+      TP4.every(t2 => match(t2, t2.name.toLowerCase())));
+    check('whitespace alone is treated as no query', TP4.every(t2 => match(t2, '   ')));
+  }
+
   // ── discrete-event core ────────────────────────────────────────────────────
   {
     const d = await import(pathToFileURL(path.join(root, 'src/des.js')).href);
@@ -2670,7 +2710,7 @@ for (const [n, ok] of results) { log(`  ${ok ? '✓' : '✗'} ${n}`); if (!ok) f
 // Without this the summary happily reports "269/269 passed" on a run that
 // stopped two thirds of the way through — which is exactly how a real bug got
 // past me. The floor only ever goes up.
-const EXPECTED_MIN = 676;
+const EXPECTED_MIN = 688;
 if (results.length < EXPECTED_MIN) {
   log(`\n*** TRUNCATED: ${results.length} checks ran, expected at least ${EXPECTED_MIN}.`);
   log('    Something threw and took the rest of the suite with it. See RUNTIME ERRORS.');

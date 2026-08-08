@@ -84,6 +84,8 @@ export default function App() {
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
   const [tourAt, setTourAt] = useState(null)
   const [flow, setFlow] = useState('all')
+  const [tplQ, setTplQ] = useState('')
+  const tplMatches = useMemo(() => TEMPLATES.filter(t => matchesTpl(t, tplQ)).length, [tplQ])
   const [a11y, setA11y] = useState(() => {
     try { return localStorage.getItem('archsim.a11y') === '1' } catch (e) { return false }
   })
@@ -709,12 +711,26 @@ export default function App() {
             <option value="blank">＋ Blank canvas</option>
             <option value="starter">◻︎ Starter scaffold (client → LB → service → DB)</option>
           </optgroup>
-          {[...new Set(TEMPLATES.map(t => t.group))].map(g => (
-            <optgroup key={g} label={g}>
-              {TEMPLATES.map((t, i) => t.group === g ? <option key={t.name} value={i}>{t.name}</option> : null)}
-            </optgroup>
-          ))}
+          {[...new Set(TEMPLATES.map(t => t.group))].map(g => {
+            const hits = TEMPLATES.map((t, i) => [t, i]).filter(([t]) => t.group === g && matchesTpl(t, tplQ))
+            if (!hits.length) return null
+            return (
+              <optgroup key={g} label={g}>
+                {hits.map(([t, i]) => <option key={t.name} value={i}>{t.name}</option>)}
+              </optgroup>
+            )
+          })}
         </select>
+        <div className="tplsearch">
+          <input value={tplQ} onChange={e => setTplQ(e.target.value)} aria-label="Search templates"
+            placeholder={`Search ${TEMPLATES.length} designs…`} />
+          {tplQ && (
+            <>
+              <span className="tplsearch-n">{tplMatches}</span>
+              <button className="tplsearch-x" onClick={() => setTplQ('')} aria-label="Clear template search">✕</button>
+            </>
+          )}
+        </div>
         <button className={`btn ${simOn ? 'active' : ''}`} data-tour="simulate" onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
         <button className={`btn ${chaosOn ? 'danger' : ''}`} data-tour="chaos" onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">Chaos {chaosOn ? 'ON' : 'off'}</button>
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} data-tour="improve" onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
@@ -2863,6 +2879,17 @@ function LevelTable() {
       ))}
     </tbody></table>
   )
+}
+
+// Searching a picker of 57 designs. Matches the name, the group and the
+// tagline, because people look for "chat" or "India" or "payments" as often as
+// they look for "WhatsApp" — and a search that only matched titles would send
+// them back to scrolling.
+export function matchesTpl(t, q) {
+  const s2 = String(q || '').trim().toLowerCase()
+  if (!s2) return true
+  const hay = `${t.name} ${t.group || ''} ${t.tagline || ''}`.toLowerCase()
+  return s2.split(/\s+/).every(w => hay.includes(w))
 }
 
 // ── Read aloud ───────────────────────────────────────────────────────────────
