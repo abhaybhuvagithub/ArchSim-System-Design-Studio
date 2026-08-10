@@ -423,6 +423,32 @@ export const TEMPLATES = [
     'Cash rides still exist: settlement and captain wallet reconciliation is a real subsystem',
   ], 'India · consumer'),
 
+  T('Ola', 'Multi-category ride hailing with EV fleet and in-app wallet', 16000, [
+    ['r', 'client', 'Riders', 40, 170, 1, 0.55], ['d', 'client', 'Driver Fleet', 40, 380, 1, 0.45],
+    ['lb', 'lb', 'LB', 180, 265], ['gw', 'gateway', 'API Gateway', 310, 265, 3],
+    ['fare', 'micro', 'Fare Engine', 450, 90, 3],
+    ['loc', 'ws', 'Driver Location WS', 450, 380, 4],
+    ['geo', 'cache', 'Geo Index (H3)', 600, 380, 3],
+    ['match', 'app', 'Allocation Engine', 450, 230, 6],
+    ['ev', 'micro', 'EV Range & Charging Svc', 600, 230, 2],
+    ['trip', 'sql', 'Trips DB', 750, 170, 3],
+    ['k', 'kafka', 'Ride Events', 600, 90],
+    ['surge', 'analytics', 'Surge Pricing', 750, 90, 3],
+    ['wallet', 'micro', 'Ola Money Wallet', 450, 500, 3],
+    ['ledger', 'sql', 'Wallet Ledger', 600, 500, 3],
+    ['upi', 'partner', 'UPI / PG', 750, 500, 4],
+  ], [['r','lb'],['d','lb'],['lb','gw'],['gw','fare'],['gw','loc'],['loc','geo'],['gw','match'],
+      ['match','geo'],['match','ev'],['match','trip'],['loc','k'],['k','surge'],
+      ['gw','wallet'],['wallet','ledger'],['wallet','upi']], [
+    'Fare is quoted per category (Mini, Sedan, Auto, electric) before a driver is even searched for — pricing and allocation are separate concerns',
+    'Allocation filters the fleet by category first, then ranks on distance and acceptance rate only inside that slice',
+    'Electric rides need range, not just distance: the allocation engine checks battery and nearby charging stations before offering the ride, not after',
+    'Driver location pings dominate write QPS just like any ride-hailing design — now every ping also carries battery state for the electric subset',
+    'Wallet balance is checked and debited before UPI is even attempted — a local ledger write is faster and fully within your control',
+    'UPI is the fallback and top-up rail: a rate-limited partner API, so top-ups queue and retry rather than blocking a ride',
+    'Trips DB and Wallet Ledger are separate systems of record — a ride can complete while a debit is still settling, so reconcile asynchronously, never inline',
+  ], 'India · consumer'),
+
   T('Zomato', 'Discovery, ordering and delivery', 20000, [
     ['u', 'client', 'Users', 40, 260], ['cdn', 'cdn', 'CDN (images)', 170, 150],
     ['lb', 'lb', 'LB', 170, 340], ['gw', 'gateway', 'API Gateway', 300, 260, 4],

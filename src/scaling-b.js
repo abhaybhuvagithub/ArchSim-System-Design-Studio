@@ -20,6 +20,23 @@ export default {
   wall: { t: 'Captain supply', d: 'During monsoon or rush hour there are simply fewer captains than riders in a cell. No architecture fixes that; the system degrades to a queue plus a price signal, and honest ETAs matter more than throughput.' },
 },
 
+'Ola': {
+  constraint: 'Category-filtered allocation across a mixed fleet, plus an EV range check that ordinary matching does not need.',
+  ladder: [
+    ['10K riders', '~15 rps', 'One allocation service, one geo index, category as a simple filter. Fine for a single city pilot.'],
+    ['1M riders', '~1.5K rps', 'EV range service split out so a battery check never slows down a Mini or Auto match. Wallet debit becomes the default payment path.'],
+    ['10M riders', '~16K rps', 'Kafka between location ingest and the geo index. Per-city sharding, same as any city-bound ride design.'],
+    ['100M riders', '~150K rps', 'Regional cells with their own index, allocation service and wallet ledger shard. Charging-station data becomes its own service as the electric fleet grows.'],
+  ],
+  levers: [
+    { t: 'One geo index, filtered by category', d: 'Mini, Sedan, Auto and electric riders all search the same city cell, so a shared index beats several smaller ones — filter by category before ranking rather than partitioning the index itself.', n: ['geo', 'match'] },
+    { t: 'EV range is a pre-filter, not a retry', d: 'Checking battery level and charging-station proximity before an offer goes out is cheap. Discovering the range problem after acceptance costs a cancelled ride and a stranded rider.', n: ['ev', 'match'] },
+    { t: 'Wallet debit is the hot path', d: 'A local ledger write is fast and fully within your control. Route every ride through it first and treat the UPI call as a background top-up, never a blocking one.', n: ['wallet', 'ledger'] },
+    { t: 'City is still the shard key', d: 'Nothing about multiple categories or electric vehicles changes the fact that rides do not cross cities — the same per-city partition that works for a single-category design works here too.', n: ['geo', 'match', 'trip'] },
+  ],
+  wall: { t: 'Charging infrastructure', d: 'No amount of software makes a battery last longer or a charging station appear where none exists. At high electric-fleet share, the binding constraint stops being allocation logic and becomes physical charging capacity in the city.' },
+},
+
 'Zomato': {
   constraint: 'Discovery reads at lunch and dinner peaks — a spiky, heavily cacheable read workload sitting next to a small, contended order path.',
   ladder: [
