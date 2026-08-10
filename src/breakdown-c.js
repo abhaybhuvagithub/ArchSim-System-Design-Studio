@@ -59,6 +59,64 @@ export default {
   },
 },
 
+'Ola': {
+  meta: 'India · consumer · multi-category fleet with EV and in-app wallet',
+  overview: 'Ride hailing across several vehicle categories at once: Mini, Sedan, Auto and a growing electric fleet, all matched from one city-level geo index. A rider is quoted a fare per category before a driver is even searched for, an electric ride is only offered a driver whose battery can actually make the trip, and payment goes through the in-app wallet first with UPI as the slower fallback.',
+  scope: 'Category-filtered allocation, the EV range check and the wallet-first payment path are the interview. Driver onboarding and advance-scheduled outstation or rental bookings are below the line.',
+  planning: 'Establish that every category shares one geo index per city and is only filtered apart at ranking time, not partitioned into separate indexes. Then treat the wallet as the fast, local payment path and UPI as an external rail that must never block a ride.',
+  fr: {
+    core: ['Rider requests a ride in a chosen category and sees a fare', 'Driver streams location and battery state, and receives offers', 'Allocate the nearest suitable driver in that category, honouring EV range for electric rides', 'Pay from the in-app wallet, falling back to UPI when the balance is short'],
+    out: ['Driver onboarding and KYC', 'Outstation and rental bookings, which are advance-scheduled rather than live-matched'],
+  },
+  nfr: {
+    core: ['Allocation within about 20 to 30 seconds', 'A driver is never allocated two rides at once, across any category', 'An electric ride is never offered a driver who cannot reach pickup plus drop-off with margin', 'A wallet debit is atomic, or the ride never confirms'],
+    out: ['Cross-city matching'],
+  },
+  nums: [['~16K/s', 'requests at peak'], ['every 4s', 'driver location ping'], ['per city', 'the natural shard'], ['~15%', 'of the fleet electric, and growing']],
+  entities: [
+    ['Driver', 'id, category (Mini, Sedan, Auto, electric), status, current cell, battery level where it applies'],
+    ['Rider', 'id, pickup point, chosen category, active ride'],
+    ['Ride', 'the state machine from request through allocation to completion'],
+    ['Wallet', 'balance, ledger reference, linked UPI handle for top-up'],
+  ],
+  apiIntro: 'REST for the fare quote and ride request, a socket for driver location and offers. The wallet debit happens synchronously with ride confirmation; a UPI top-up is a separate, asynchronous flow.',
+  api: [
+    { dir: '→', name: 'POST /fare', body: '{ pickup, drop, category } → { fare, eta }' },
+    { dir: '→', name: 'POST /rides', body: '{ pickup, drop, category } → { rideId, driverId, eta }' },
+    { dir: '→', name: 'ws: driverLocation', body: '{ driverId, lat, lng, batteryPct, ts }' },
+    { dir: '←', name: 'ws: rideOffer', body: '{ rideId, pickup, fare, expiresIn }' },
+    { dir: '→', name: 'POST /wallet/topup', body: '{ amount } → { status, balance }' },
+  ],
+  dives: [
+    {
+      title: 'Category is a filter before allocation ever ranks anyone', focus: ['fare', 'match', 'geo'],
+      blocks: [
+        ['p', 'Mini, Sedan, Auto and electric each pull from a different slice of the same fleet. The geo index stays one shared structure per city; allocation filters by category first and only then ranks on distance and acceptance rate inside that slice.'],
+        ['note', 'Fare is quoted from the category plus the current supply and demand in the cell before a driver is even searched for, so pricing and matching stay two separate concerns that can be built, tested and scaled independently.'],
+      ],
+    },
+    {
+      title: 'Electric rides need range, not just distance', focus: ['ev', 'match', 'geo'],
+      blocks: [
+        ['p', 'An electric driver five minutes away is no use if the battery cannot cover the pickup, the trip and a safety margin. The EV range service checks remaining range against the route and the nearest charging stations before that driver is ever offered the ride.'],
+        ['warn', 'Do this check inside allocation, not after an offer goes out. Declining an accepted ride because the battery would not make it is a far worse experience than never offering it in the first place.'],
+      ],
+    },
+    {
+      title: 'Wallet is the fast path, UPI is the slow one', focus: ['wallet', 'ledger', 'upi'],
+      blocks: [
+        ['p', 'A wallet debit is a local, atomic write against the ledger and completes in milliseconds. Confirm the ride on that. UPI only enters when the wallet balance is short, and a top-up is a queued, retried call to an external partner that must never block a ride already in progress.'],
+        ['p', 'Keep the wallet ledger and the trips database as separate systems of record, reconciled asynchronously. A ride can finish while a debit is still settling, and that is fine as long as reconciliation is real and monitored.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Category-filtered allocation and a working fare-then-match flow.',
+    senior: 'EV range checked before an offer goes out, and a wallet-first payment path with UPI as an asynchronous fallback.',
+    staff: 'Per-city sharding, charging-station-aware EV dispatch, and reconciliation between the wallet ledger and the trips store that never blocks a ride.',
+  },
+},
+
 'Zomato': {
   meta: 'India · consumer · spiky reads, contended writes',
   overview: 'Restaurant discovery and food ordering in one product. Browsing is a heavily cacheable read workload with sharp, entirely predictable peaks; ordering is a small transactional path that must not be affected by it.',
