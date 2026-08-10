@@ -112,8 +112,8 @@ export const THEMES = {
 export const PALETTES = [
   { id: 'primary', label: 'Primary', dark: 'dark',      light: 'light' },
   { id: 'glow', label: 'Glow', dark: 'glow-dark', light: 'glow' },
-  { id: 'lilac', label: 'Lilac', dark: 'lilac-dark', light: 'lilac' },
   { id: 'kesar', label: 'Kesar', dark: 'kesar-dark', light: 'kesar' },
+  { id: 'lilac', label: 'Lilac', dark: 'lilac-dark', light: 'lilac' },
 ]
 export const paletteOf = t => {
   const v = String(t)
@@ -128,12 +128,12 @@ export const themeFor = (palette, dark) => {
   return dark ? p.dark : p.light
 }
 
-export const THEME_ORDER = ['dark', 'light', 'glow-dark', 'glow', 'lilac-dark', 'lilac', 'kesar-dark', 'kesar']
+export const THEME_ORDER = ['dark', 'light', 'glow-dark', 'glow', 'kesar-dark', 'kesar', 'lilac-dark', 'lilac']
 export const THEME_LABEL = {
   dark: '🌙 Dark', light: '☀️ Light',
   'glow-dark': '🟢 Glow dark', glow: '🟢 Glow light',
-  'lilac-dark': '🟣 Lilac dark', lilac: '🟣 Lilac light',
   'kesar-dark': '🟠 Kesar dark', kesar: '🟠 Kesar light',
+  'lilac-dark': '🟣 Lilac dark', lilac: '🟣 Lilac light',
 }
 
 export const readTheme = () => {
