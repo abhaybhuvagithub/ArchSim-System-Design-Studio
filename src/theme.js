@@ -110,9 +110,9 @@ export const THEMES = {
 // Two palettes, each with a dark and a light. Primary is the system-native
 // set; Glow is the editorial one.
 export const PALETTES = [
+  { id: 'kesar', label: 'Kesar', dark: 'kesar-dark', light: 'kesar' },
   { id: 'primary', label: 'Primary', dark: 'dark',      light: 'light' },
   { id: 'glow', label: 'Glow', dark: 'glow-dark', light: 'glow' },
-  { id: 'kesar', label: 'Kesar', dark: 'kesar-dark', light: 'kesar' },
   { id: 'lilac', label: 'Lilac', dark: 'lilac-dark', light: 'lilac' },
 ]
 export const paletteOf = t => {
