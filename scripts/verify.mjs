@@ -843,9 +843,9 @@ try {
   {
     const th = await import(pathToFileURL(path.join(root, 'src/theme.js')).href);
     const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
-    check('the palettes are Primary, Glow, Kesar and Lilac',
-      th.PALETTES.map(p2 => p2.id).join() === 'primary,glow,kesar,lilac' &&
-      th.PALETTES.map(p2 => p2.label).join() === 'Primary,Glow,Kesar,Lilac');
+    check('the palettes are Kesar, Primary, Glow and Lilac',
+      th.PALETTES.map(p2 => p2.id).join() === 'kesar,primary,glow,lilac' &&
+      th.PALETTES.map(p2 => p2.label).join() === 'Kesar,Primary,Glow,Lilac');
     check('Kesar carries its saffron in both copies',
       th.THEMES.kesar.dot.toLowerCase() === '#fc470d' &&
       /\[data-theme="kesar"\][\s\S]*?--accent:\s*#FC470D/i.test(css));
