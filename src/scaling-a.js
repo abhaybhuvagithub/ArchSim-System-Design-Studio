@@ -186,6 +186,24 @@ export default {
   wall: { t: 'Accuracy versus latency', d: 'Perfectly exact global counting requires consensus per request, which is far more expensive than the thing you are protecting. Every real limiter is approximate; the engineering is in choosing where the error lands.' },
 },
 
+'Redis (Distributed Cache)': {
+  constraint: 'Everything lives in memory on a fixed number of shards, so total RAM across the cluster is the hard ceiling, not CPU or disk.',
+  ladder: [
+    ['10K ops/s', 'single instance', 'One Redis process, no cluster, no replica. Whatever fits in one box\'s memory is the whole capacity.'],
+    ['100K ops/s', 'primary + replicas', 'Reads split to replicas, writes stay on the primary. Async replication means a failover can lose the last few writes.'],
+    ['1M ops/s', 'clustered', 'Hash slots spread across many primaries, each with its own replicas. Hot keys now live on one shard and can still bottleneck it.'],
+    ['10M ops/s', 'client-side caching', 'Push the hottest keys into an in-process cache on the app server itself, invalidated over the cluster bus, so the cluster only sees the misses.'],
+  ],
+  levers: [
+    { t: 'Hash slots, not consistent hashing', d: 'Real Redis Cluster fixes 16384 slots and assigns ranges to shards, which makes resharding a matter of moving whole slot ranges rather than rehashing every key.', n: ['primary', 'gw'] },
+    { t: 'Replication is async by default', d: 'A write is acknowledged before it reaches a replica. Losing a primary loses a small window of writes unless you pay the latency cost of WAIT.', n: ['primary', 'replica'] },
+    { t: 'AOF and RDB are different trade-offs', d: 'RDB is a cheap periodic snapshot with a bigger loss window on crash; AOF logs every write and replays it on restart, at the cost of write overhead and a longer recovery.', n: ['persist'] },
+    { t: 'One structure, several products', d: 'Strings back the cache, sorted sets back the leaderboard, and pub/sub backs live invalidation — the same cluster serves all of it, which is convenient until one workload starves another for memory.', n: ['cache', 'zset', 'sess'] },
+    { t: 'Hot keys defeat sharding', d: 'A single celebrity key still lands on one shard no matter how many shards exist. Client-side caching or explicit key splitting is the only fix once that shard saturates.', n: ['primary'] },
+  ],
+  wall: { t: 'Memory is the whole budget', d: 'Every byte stored is a byte of RAM across the cluster, and RAM does not get cheaper the way disk does. At real scale the question stops being throughput and becomes what earns a place in memory at all, with everything else evicted or pushed to a cheaper store.' },
+},
+
 'Video Surveillance (VMS)': {
   constraint: 'Sustained write volume that never pauses, against reads that almost never happen. Storage grows whether or not anyone watches.',
   ladder: [
