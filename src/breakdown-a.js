@@ -638,6 +638,63 @@ export default {
   },
 },
 
+'Redis (Distributed Cache)': {
+  meta: 'Infrastructure · medium-hard · data structures and replication trade-offs',
+  overview: 'Build the store itself: a sharded, replicated, in-memory key-value cluster that application servers lean on for four different jobs — a general cache, atomic counters for rate limiting, sorted sets for a leaderboard, and pub/sub for cache invalidation and session events. One cluster, several very different access patterns competing for the same memory.',
+  scope: 'Sharding by hash slot, replication and failover, and persistence trade-offs are the interview. Multi-region active-active replication and full LRU/LFU eviction policy tuning are below the line, though worth naming.',
+  planning: 'Start from the constraint: everything lives in RAM, so capacity is a memory budget, not a CPU one. Then work outward — how a key finds its shard, how a shard survives losing its primary, and how the same cluster serves a cache, a counter, a sorted set and a pub/sub channel without one starving the others.',
+  fr: {
+    core: ['Get and set a value by key, with an optional TTL', 'Increment a counter atomically for rate limiting', 'Update and read a ranked leaderboard by score', 'Publish and subscribe to a channel for invalidation and session events'],
+    out: ['Multi-region active-active replication', 'Full eviction-policy tuning (LRU vs LFU vs random)'],
+  },
+  nfr: {
+    core: ['Sub-millisecond reads and writes for a single key', 'A primary failure promotes a replica automatically, with a small, bounded data loss window', 'Resharding moves whole hash-slot ranges without a full rehash', 'A hot key does not take down the shard it lives on'],
+    out: ['Perfectly synchronous replication on every write'],
+  },
+  nums: [['~60K/s', 'ops at peak across the cluster'], ['16384', 'hash slots (real Redis Cluster)'], ['<1 ms', 'target round trip per op'], ['~15%', 'RAM headroom kept free for spikes and forks']],
+  entities: [
+    ['Key', 'the string identifying a value, hashed to pick its slot and shard'],
+    ['Shard', 'a primary plus its replicas, owning a contiguous range of hash slots'],
+    ['Slot Map', 'the assignment of hash slots to shards, cached by every client'],
+    ['Channel', 'a named pub/sub topic with no persistence and no replay'],
+  ],
+  apiIntro: 'A binary protocol (RESP), not REST — clients hold a persistent connection and a cached slot map, and reconnect on a MOVED response after a resharding.',
+  api: [
+    { dir: '→', name: 'GET/SET key [EX ttl]', body: '→ value' },
+    { dir: '→', name: 'INCR key / EXPIRE key ttl', body: '→ new count' },
+    { dir: '→', name: 'ZADD key score member / ZRANGE key start stop', body: '→ ranked members' },
+    { dir: '→', name: 'PUBLISH channel message / SUBSCRIBE channel', body: '→ delivered to live subscribers only' },
+  ],
+  dives: [
+    {
+      title: 'How a key finds its shard', focus: ['gw', 'primary'],
+      blocks: [
+        ['p', 'Every key hashes to one of a fixed number of slots, and slots are assigned to shards in contiguous ranges. The client caches that slot-to-shard map and talks to the right shard directly; a stale map gets a redirect telling it where the slot actually lives now.'],
+        ['note', 'This is why resharding moves whole slot ranges rather than rehashing every key one at a time — the unit of movement is the slot, not the key.'],
+      ],
+    },
+    {
+      title: 'A primary dies mid-write', focus: ['primary', 'replica', 'sentinel'],
+      blocks: [
+        ['p', 'Replication to a replica is asynchronous, so an acknowledged write can still be lost if the primary fails before it ships. A failover monitor detects the primary is gone, promotes the most up-to-date replica, and the cluster keeps serving that slot range with a small window of lost writes.'],
+        ['warn', 'Synchronous acknowledgement from a replica removes that loss window but adds latency to every write. Decide which one the workload actually needs — a cache can usually afford the loss; a counter used for billing usually cannot.'],
+      ],
+    },
+    {
+      title: 'One cluster, four workloads', focus: ['cache', 'rl', 'zset', 'sess'],
+      blocks: [
+        ['p', 'Strings back the cache, INCR and EXPIRE back the rate limiter, sorted sets back the leaderboard, and pub/sub back invalidation and session events — all the same in-memory store. That is convenient to operate but means a memory-hungry leaderboard and a high-cardinality cache are competing for the same RAM.'],
+        ['p', 'Separate key prefixes, separate TTL policies, and where memory pressure is real, separate clusters per workload rather than one shared pool with no isolation.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Explain hash-slot sharding and why the client caches the slot map.',
+    senior: 'Cover async replication and its loss window, and how AOF and RDB trade off recovery time against write overhead.',
+    staff: 'Handle hot-key saturation, multiple competing workloads on one cluster, and when the right answer is a separate cluster rather than a bigger one.',
+  },
+},
+
 'Video Surveillance (VMS)': {
   meta: 'Continuous ingest · medium-hard · storage and retention dominate',
   overview: 'Cameras write continuously and nobody reads most of it. That inversion — enormous sustained write volume against rare, targeted reads — is what makes this different from every request/response system in the library. The hard parts are retention, search without scanning video, and controlling who may look.',
