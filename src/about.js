@@ -52,6 +52,7 @@ export const ABOUT = [
       '**Not a benchmark.** These are order-of-magnitude models chosen to make trade-offs visible, not measurements of your workload. A real system has request-size variance, connection pools, GC pauses and correlated failures this does not model.',
       '**Not a quote.** Prices are on-demand US list rates with no reserved instances, committed-use discounts or negotiated pricing, and currency conversion uses static rates rather than a live FX feed.',
       '**Not a replacement for load testing.** It models the traffic; a real load test generates it. That is exactly why the component library includes one.',
+      '**Not a production-ready reference architecture.** This is a learning and interview-prep tool. The templates are simplified for teaching trade-offs, not audited or battle-tested designs — a real system built for the same company would differ in ways this tool cannot capture: internal constraints, team structure, existing infrastructure, compliance requirements and years of incident-driven changes.',
       'Use it to compare two designs, to find the bottleneck before you build it, and to explain a decision to someone else. Do not use it to size a purchase order.',
     ],
   },
