@@ -225,6 +225,62 @@ export default {
   },
 },
 
+'Cloud-Native Gateway API Platform': {
+  meta: 'Microservice patterns · medium-hard · the 2020-2026 edge stack',
+  overview: 'Two lanes on one platform. Ordinary product traffic comes in as REST, gets transcoded once at the edge into gRPC, and runs behind a service mesh that owns mTLS and retries. A separate AI-assistant lane carries its own token-aware rate limiter, its own guardrails and its own semantic cache in front of the one genuinely expensive resource on the platform: a GPU-served LLM. The Kubernetes Gateway API sits in front of both and is where every canary rollout actually happens.',
+  scope: 'The interview is in why the platform is split into two lanes, where the gRPC-JSON translation happens exactly once, and why the AI lane is rate-limited and cached differently from everything else. Individual business-service logic and LLM fine-tuning are below the line.',
+  planning: 'Start from the traffic shape: one lane is cheap and high-volume, the other is a small fraction of requests but the most expensive resource on the platform by far. Route them separately from the edge so each can be sized and protected on its own terms, then work outward — transcoding, mesh, cache, guardrails.',
+  fr: {
+    core: ['Route external REST/JSON traffic to internal gRPC services, and translate exactly once', 'Roll out a new service version to a percentage of traffic without a second pipeline', 'Rate-limit and cache the AI-assistant lane by token cost, not by request count', 'Encrypt and authenticate every service-to-service call automatically'],
+    out: ['Business logic inside any individual service', 'Training or fine-tuning the LLM itself'],
+  },
+  nfr: {
+    core: ['A canary rollout is a config change to the gateway, not a parallel deployment', 'No internal service ever parses JSON on the hot path', 'A GPU replica is only spun up for what the cache could not answer', 'A blocked prompt never reaches the cache or the model'],
+    out: ['Zero latency added by the mesh or the transcoder'],
+  },
+  nums: [['~20K/s', 'requests at peak across both lanes'], ['~85/15', 'split between data-plane and AI-assistant traffic'], ['~80%', 'semantic cache hit rate on repeated-intent prompts'], ['12', 'GPU replicas sized to the AI lane alone, independent of the rest'],],
+  entities: [
+    ['Route', 'a Gateway API rule: match, weight, backend'],
+    ['Service', 'an internal gRPC-only capability behind the mesh'],
+    ['Prompt', 'the AI-lane request: checked by guardrails, then the cache, then the model'],
+    ['Policy', 'mTLS, retry budget and circuit breaker configuration applied by the sidecar'],
+  ],
+  apiIntro: 'External clients only ever see REST/JSON, whichever lane they hit. Internal service-to-service calls are gRPC over mTLS, never JSON, and carry a deadline and a trace id propagated by the sidecar.',
+  api: [
+    { dir: '→', name: 'POST /orders', body: 'REST/JSON in → transcoded to a gRPC call, JSON back out' },
+    { dir: '→', name: 'POST /assistant/ask', body: '{ prompt } → guardrail check, cache lookup, model call only on a miss' },
+    { dir: '↔', name: 'internal: any gRPC call', body: 'protobuf payload, mTLS, x-request-id and deadline propagated by the sidecar' },
+  ],
+  dives: [
+    {
+      title: 'Transcode once, never twice', focus: ['tgw', 'mesh'],
+      blocks: [
+        ['p', 'External clients keep speaking REST and JSON indefinitely — that is a public contract and expensive to change. The gRPC-JSON transcoder is the single place that translation happens; every internal hop after it is protobuf over gRPC, which is smaller on the wire and faster to (de)serialize than repeatedly parsing JSON at every service.'],
+        ['note', 'Put the transcoder at the edge, not inside each service. One correct implementation beats twenty inconsistent ones.'],
+      ],
+    },
+    {
+      title: 'Two lanes, two capacity plans', focus: ['gw', 'ai', 'llm'],
+      blocks: [
+        ['p', 'The data-plane lane and the AI-assistant lane have almost nothing in common in cost or shape: gRPC calls are cheap and fast, an LLM call is slow and GPU-bound. Routing them through separate entry points at the gateway means each can be rate-limited, cached and capacity-planned on its own curve instead of one setting compromising both.'],
+        ['warn', 'Counting AI-lane requests instead of tokens under-protects the model — a single request can cost 50 times another depending on prompt and output length. Rate limit on tokens, not requests.'],
+      ],
+    },
+    {
+      title: 'Guardrails, then cache, then the model — in that order', focus: ['guard', 'sem', 'llm'],
+      blocks: [
+        ['p', 'Prompt-injection and PII filtering run before the semantic cache is even checked. If guardrails ran after the cache, a blocked prompt could still poison or be served from the cache; running first means a rejected prompt never gets that far.'],
+        ['p', 'The semantic cache matches on intent, not exact text, so two differently-worded questions with the same meaning still hit — which is what makes an 80% hit rate realistic and keeps the GPU replica count an order of magnitude smaller than the request volume would otherwise demand.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Explain why REST-to-gRPC translation happens once at the edge rather than per service.',
+    senior: 'Split the AI-assistant lane from the data plane unprompted, and justify token-based rather than request-based rate limiting.',
+    staff: 'Cover canary rollouts as a Gateway API config concern, GPU capacity as the real bottleneck no amount of mesh tuning fixes, and the ordering of guardrails before caching.',
+  },
+},
+
 'µsvc: BFF + Mesh Platform': {
   meta: 'Microservice patterns · medium · operational surface',
   overview: 'Each client type gets its own backend-for-frontend, and cross-cutting resilience lives in a service mesh rather than in every service. The mesh scales fine; the number of moving parts is what bites.',

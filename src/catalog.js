@@ -20,10 +20,13 @@ export const CATALOG = {
   cdn:         { name: 'CDN',            glyph: '⚡', color: '#f59e0b', cap: 200000,   lat: 5,   avail: 0.999, cacheHit: 0.9, desc: 'Edge cache for static content. 90% hit ratio.' },
   lb:          { name: 'Load Balancer',  glyph: '⚖️', color: '#8b5cf6', cap: 100000,  lat: 1,   avail: 0.9999, desc: 'Distributes traffic (L4/L7, round-robin, least-conn).' },
   gateway:     { name: 'API Gateway',    glyph: '🚪', color: '#8b5cf6', cap: 50000,   lat: 3,   avail: 0.9995,  desc: 'Auth, routing, throttling, request shaping.' },
+  k8sgw:       { name: 'Kubernetes Gateway API', glyph: '🛣️', color: '#8b5cf6', cap: 55000, lat: 3, avail: 0.9995, desc: 'Cloud-native successor to Ingress — protocol-aware routing (HTTP, gRPC, TCP), native weighted traffic splitting for canary rollouts, role-split between infra and app teams.' },
+  grpcgw:      { name: 'gRPC-JSON Transcoder', glyph: '🔁', color: '#8b5cf6', cap: 40000, lat: 5, avail: 0.9995, desc: 'Envoy / grpc-gateway plugin at the edge — accepts REST/JSON from external clients, calls internal gRPC services, translates the response back to JSON.' },
   ratelimiter: { name: 'Rate Limiter',   glyph: '🚦', color: '#ef4444', cap: 80000,   lat: 1,   avail: 0.999,  desc: 'Token bucket / sliding window request limiting.' },
   web:         { name: 'Web Server',     glyph: '🖥️', color: '#3b82f6', cap: 5000,    lat: 10,  avail: 0.9999,  desc: 'Serves HTTP, static assets, SSR.' },
   app:         { name: 'App Server',     glyph: '⚙️', color: '#3b82f6', cap: 2000,    lat: 25,  avail: 0.9999,  desc: 'Business logic tier (stateless service).' },
   micro:       { name: 'Microservice',   glyph: '🧩', color: '#06b6d4', cap: 3000,    lat: 15,  avail: 0.9995,  desc: 'Single-purpose stateless service.' },
+  grpc:        { name: 'gRPC Service',   glyph: '📶', color: '#06b6d4', cap: 6000,    lat: 8,   avail: 0.9995,  desc: 'Internal binary RPC over HTTP/2 — protobuf payloads, multiplexed streams, typed contracts between services.' },
   ws:          { name: 'WebSocket Srv',  glyph: '🔌', color: '#06b6d4', cap: 50000,   lat: 5,   avail: 0.999,  desc: 'Persistent connections for realtime push.' },
   cache:       { name: 'Cache (Redis)',  glyph: '🧠', color: '#ef4444', cap: 100000,  lat: 1,   avail: 0.999,  cacheHit: 0.8, desc: 'In-memory KV store. 80% hit ratio.' },
   sql:         { name: 'SQL Database',   glyph: '🗄️', color: '#10b981', cap: 5000,    lat: 10,  avail: 0.9995,  desc: 'Relational store (Postgres/MySQL). ACID.' },
@@ -124,8 +127,8 @@ export const CATALOG = {
 }
 
 export const PALETTE_GROUPS = [
-  { label: 'Traffic',       types: ['client', 'dns', 'gslb', 'waf', 'cdn', 'edge', 'lb', 'gateway', 'graphql', 'ratelimiter', 'bff', 'tenant'] },
-  { label: 'Compute',       types: ['sandbox', 'transcode', 'web', 'app', 'micro', 'ws', 'worker', 'scheduler', 'k8s'] },
+  { label: 'Traffic',       types: ['client', 'dns', 'gslb', 'waf', 'cdn', 'edge', 'lb', 'gateway', 'k8sgw', 'grpcgw', 'graphql', 'ratelimiter', 'bff', 'tenant'] },
+  { label: 'Compute',       types: ['sandbox', 'transcode', 'web', 'app', 'micro', 'grpc', 'ws', 'worker', 'scheduler', 'k8s'] },
   { label: 'Storage',       types: ['geoidx', 'graph', 'cache', 'sql', 'nosql', 'search', 'blob', 'backup'] },
   { label: 'Async',         types: ['push', 'queue', 'kafka', 'mq', 'esb', 'saga'] },
   { label: 'Data',          types: ['batch', 'stream', 'cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
