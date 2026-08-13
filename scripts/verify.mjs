@@ -159,7 +159,7 @@ try {
     const { TEMPLATES } = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
     // Findings are built as "<label> has a single copy", so a label that starts
     // lowercase reads as a broken sentence. Genuine brand names are exempt.
-    const BRAND_LOWERCASE = new Set(['goCash Wallet', 'iCloud Sync', 'eKYC Service']);
+    const BRAND_LOWERCASE = new Set(['goCash Wallet', 'iCloud Sync', 'eKYC Service', 'gRPC-JSON Transcoder', 'gRPC Service']);
     const labels = TEMPLATES.flatMap(t => t.nodes.map(n => ({ t: t.name, l: n.label })));
     const offenders = labels.filter(x => /^[a-z]/.test(x.l) && !BRAND_LOWERCASE.has(x.l));
     check('every node label is non-empty', labels.every(x => x.l && x.l.trim()));

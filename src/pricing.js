@@ -51,6 +51,8 @@ export const RATES = {
   edge:        { hourly: 0,     base: 0,    perM: 0.50, note: 'edge function invocations' },
   lb:          { hourly: 0.03,  base: 0,    perM: 0.01, note: 'ALB hours + capacity units' },
   gateway:     { hourly: 0,     base: 0,    perM: 1.00, note: 'managed HTTP API at $1.00 per million calls' },
+  k8sgw:       { hourly: 0.09,  base: 0,    perM: 0,    note: 'Envoy-based gateway controller pods, self-hosted on the cluster' },
+  grpcgw:      { hourly: 0.07,  base: 0,    perM: 0,    note: 'transcoding proxy instances' },
   graphql:     { hourly: 0.09,  base: 0,    perM: 0.10, note: 'self-hosted router instances' },
   ratelimiter: { hourly: 0.05,  base: 0,    perM: 0,    note: 'small always-on instances' },
   bff:         { hourly: 0.09,  base: 0,    perM: 0,    note: 'application instances' },
@@ -59,6 +61,7 @@ export const RATES = {
   web:         { hourly: 0.085, base: 0,    perM: 0,    note: 'general-purpose instance per replica' },
   app:         { hourly: 0.096, base: 0,    perM: 0,    note: 'general-purpose instance per replica' },
   micro:       { hourly: 0.08,  base: 0,    perM: 0,    note: 'container task per replica' },
+  grpc:        { hourly: 0.08,  base: 0,    perM: 0,    note: 'container task per replica, same footprint as a microservice' },
   ws:          { hourly: 0.10,  base: 0,    perM: 0,    note: 'connection-heavy instance per replica' },
   worker:      { hourly: 0.10,  base: 0,    perM: 0,    note: 'batch/async compute per replica' },
   scheduler:   { hourly: 0.02,  base: 0,    perM: 0,    note: 'orchestrator instance' },
@@ -155,8 +158,8 @@ export const rateFor = type => RATES[type] || FALLBACK
 
 const GROUP_OF = {
   client: 'Traffic', dns: 'Traffic', gslb: 'Traffic', waf: 'Traffic', cdn: 'Traffic', edge: 'Traffic',
-  lb: 'Traffic', gateway: 'Traffic', graphql: 'Traffic', ratelimiter: 'Traffic', bff: 'Traffic', tenant: 'Traffic',
-  web: 'Compute', app: 'Compute', micro: 'Compute', ws: 'Compute', worker: 'Compute', scheduler: 'Compute',
+  lb: 'Traffic', gateway: 'Traffic', k8sgw: 'Traffic', grpcgw: 'Traffic', graphql: 'Traffic', ratelimiter: 'Traffic', bff: 'Traffic', tenant: 'Traffic',
+  web: 'Compute', app: 'Compute', micro: 'Compute', grpc: 'Compute', ws: 'Compute', worker: 'Compute', scheduler: 'Compute',
   k8s: 'Compute', saga: 'Compute',
   cache: 'Storage', sql: 'Storage', nosql: 'Storage', search: 'Storage', blob: 'Storage', backup: 'Storage',
   queue: 'Async', kafka: 'Async', mq: 'Async', esb: 'Async',

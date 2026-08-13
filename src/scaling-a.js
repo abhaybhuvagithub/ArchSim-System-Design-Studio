@@ -384,6 +384,24 @@ export default {
   wall: { t: 'The log is forever', d: 'Events are immutable, so a schema mistake is permanent and must be handled by upcasting on read for the life of the system. Rebuild time grows with history, and past a few billion events "just rebuild it" stops being an option you can exercise casually.' },
 },
 
+'Cloud-Native Gateway API Platform': {
+  constraint: 'Two very different traffic shapes on one platform — cheap, high-volume gRPC calls on one lane, and expensive, GPU-bound LLM calls on another. Sizing them the same way wastes money in one direction and starves the other.',
+  ladder: [
+    ['10K users', '~15 rps', 'A single API Gateway in front of a couple of REST services. No mesh, no transcoding, no AI lane yet.'],
+    ['1M users', '~1K rps', 'Internal services move to gRPC for the lower overhead; the gateway gains a transcoder so external REST clients notice nothing.'],
+    ['10M users', '~20K rps', 'Sidecar mesh takes over east-west mTLS and retries. The AI-assistant feature gets its own token-aware rate limiter and semantic cache, sized independently of the data-plane traffic.'],
+    ['100M users', '~200K rps', 'Gateway API canary rules drive every rollout. The LLM lane scales its GPU replica count on its own curve, disconnected from the REST/gRPC replica count.'],
+  ],
+  levers: [
+    { t: 'Split the lanes at the edge', d: 'Data-plane traffic and AI-assistant traffic have completely different cost and latency profiles. Routing them through separate entry points means each can be capacity-planned and rate-limited on its own terms instead of one setting compromising both.', n: ['gw', 'ai'] },
+    { t: 'Transcode once, at the edge', d: 'External clients keep speaking REST/JSON forever — that contract is expensive to change. Doing the gRPC translation once at the edge means internal services never pay the JSON-parsing cost on every hop.', n: ['tgw'] },
+    { t: 'mTLS in the mesh, not in every service', d: 'Certificate rotation and mutual authentication implemented once in the sidecar apply uniformly to every service added later, rather than being re-implemented and occasionally forgotten per language.', n: ['mesh'] },
+    { t: 'Semantic cache before the GPU, always', d: 'An LLM replica is the most expensive unit of capacity on the whole platform by a wide margin. Every request that a cache hit can absorb is a request that never needs a GPU replica at all.', n: ['sem', 'llm'] },
+    { t: 'Canary through the Gateway API, not a side channel', d: 'Weighted traffic splitting built into the Gateway API means a rollout is a config change, not a second deployment pipeline bolted on beside the real one.', n: ['gw'] },
+  ],
+  wall: { t: 'GPU capacity for the AI lane', d: 'The data-plane services scale close to linearly with commodity compute. The LLM lane does not — GPU availability and cost dominate long before the gateway, mesh or transcoder come close to their own ceilings.' },
+},
+
 'µsvc: BFF + Mesh Platform': {
   constraint: 'Operational surface. The mesh scales fine; the number of moving parts is what bites.',
   ladder: [
