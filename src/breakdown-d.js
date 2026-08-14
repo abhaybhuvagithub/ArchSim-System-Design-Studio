@@ -676,6 +676,63 @@ export default {
   },
 },
 
+'Tesla Ecosystem': {
+  meta: 'Robotics & edge · hard · edge inference, batch training and a money-critical lane that must never touch telemetry',
+  overview: 'A fleet of vehicles, each running Autopilot inference locally, streaming telemetry and flagged edge cases back to a training pipeline that periodically ships improved models out through a staged OTA rollout. Alongside it sits a completely separate lane for remote commands and the Supercharger network, where consistency and money correctness matter far more than throughput.',
+  scope: 'The interview is in why the fleet splits into two lanes, why inference happens on the vehicle before anything is uploaded, and how a firmware rollout stays reversible. Vehicle hardware design and the driving-policy neural network architecture itself are below the line.',
+  planning: 'Start from the two constraints that shape everything: cellular uplink from a moving vehicle is small and unreliable, and a firmware or model mistake pushed fleet-wide is a safety incident, not a bug. Both push toward the same answer — infer locally, upload only what is necessary, and roll out changes gradually with a rollback path.',
+  fr: {
+    core: ['Run Autopilot inference on the vehicle and flag disagreements or rare scenes for upload', 'Train improved models on the curated fleet of flagged clips', 'Roll out firmware and model updates to the fleet in stages, with rollback', 'Deliver remote commands (unlock, climate, summon) to a specific vehicle reliably', 'Plan a route with charging stops using live Supercharger availability'],
+    out: ['The driving-policy model architecture itself', 'Vehicle hardware and sensor design'],
+  },
+  nfr: {
+    core: ['Uploads never saturate the vehicle cellular connection', 'A firmware rollout can be halted and rolled back mid-cohort', 'A remote command reaches a sleeping or briefly-offline vehicle once connectivity returns', 'Charging-session billing is exact — never lost, never double-counted'],
+    out: ['Real-time telemetry dashboards for every vehicle'],
+  },
+  nums: [['~10K/s', 'aggregate across the fleet at scale'], ['~85/15', 'split between telemetry and app/charging traffic'], ['kilobytes not gigabytes', 'uploaded per flagged event, thanks to on-vehicle inference'], ['staged over days', 'a fleet-wide OTA rollout, never all at once']],
+  entities: [
+    ['Vehicle', 'id, hardware/firmware version, current cohort for rollout purposes'],
+    ['Flagged Clip', 'a short recording uploaded because on-vehicle inference disagreed with the driver or saw something rare'],
+    ['Rollout', 'a firmware or model version, its target cohort, and its current success/failure rate'],
+    ['Charging Session', 'a stall, a vehicle, a start and end meter reading, and the resulting invoice line'],
+  ],
+  apiIntro: 'Vehicles upload flagged events over a persistent, authenticated connection, not one request per event. The mobile app and Supercharger network are conventional REST plus a push channel for commands.',
+  api: [
+    { dir: '→', name: 'vehicle: telemetry batch', body: '{ vehicleId, state, flaggedClips[] } over the vehicle uplink' },
+    { dir: '→', name: 'POST /commands', body: '{ vehicleId, command } → queued on the persistent Command Channel' },
+    { dir: '→', name: 'POST /trip/plan', body: '{ origin, destination, batteryPct } → route with charging stops' },
+    { dir: '→', name: 'POST /charging/sessions', body: '{ vehicleId, siteId, stallId } → session started, metered' },
+  ],
+  dives: [
+    {
+      title: 'Infer on the vehicle, upload the exception', focus: ['edge', 'veh', 'tel'],
+      blocks: [
+        ['p', 'The Autopilot model runs locally in real time. Only moments where its prediction disagreed with what the driver actually did, or scenes rare enough to be worth reviewing, get flagged and queued for upload — everything else stays on the vehicle and is discarded.'],
+        ['calc', 'Raw video from every car, all the time, is gigabytes per vehicle per day. Flagged-clip upload is a small fraction of that. The ratio is what makes a fleet of millions of vehicles feasible over cellular at all.'],
+      ],
+    },
+    {
+      title: 'Training is a batch job that feeds a staged rollout', focus: ['clips', 'train', 'ota', 'img'],
+      blocks: [
+        ['p', 'The training cluster pulls from the curated clip archive on its own schedule, the way a Spark job would — restartable, idempotent, nothing waiting on it synchronously. A finished model candidate becomes just another artifact in the same signed-image pipeline that any firmware update goes through.'],
+        ['warn', 'Ship it to a small canary cohort first and watch fleet-wide disagreement and disengagement rates before wider rollout. A model regression discovered after it reaches the whole fleet is a very different kind of incident than one caught in a cohort of a few thousand cars.'],
+      ],
+    },
+    {
+      title: 'Two lanes, two consistency models', focus: ['cmd', 'sess', 'bill', 'tel'],
+      blocks: [
+        ['p', 'Telemetry can be lossy and eventually consistent — losing a few seconds of sensor data is a non-event. A charging session cannot: it is directly a billing record, so it lives on a strongly consistent SQL store with the same guarantees any payments system would demand.'],
+        ['p', 'Remote commands need a persistent connection rather than polling, both for latency and so a parked, sleeping vehicle is not woken every few seconds just to check for nothing — that would drain the battery for no benefit at all.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Explain why inference happens on the vehicle rather than uploading raw video, and sketch the telemetry and command lanes.',
+    senior: 'Design the staged OTA rollout with rollback, and justify separating charging/billing consistency from telemetry.',
+    staff: 'Treat model training as a batch pipeline feeding the same rollout mechanism as firmware, and cover fleet-wide failure containment as a first-class design constraint, not an afterthought.',
+  },
+},
+
 // ── WhatsApp keeps its authored high-level design ───────────────────────────
 'Chat (WhatsApp)': {
   meta: 'Real-time updates · medium · ~35 minutes',

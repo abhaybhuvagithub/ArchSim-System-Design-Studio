@@ -434,4 +434,22 @@ export default {
   wall: { t: 'Robots are physical', d: 'A store gets scanned as often as a robot can drive the aisles — a few times a day at best. Data freshness is bounded by wheels and battery life, not by anything in this diagram.' },
 },
 
+'Tesla Ecosystem': {
+  constraint: 'On-vehicle compute and cellular uplink are both fixed and shared across everything the car does — Autopilot inference, telemetry, OTA downloads and remote commands all compete for the same limited pipe.',
+  ladder: [
+    ['1K vehicles', 'a few hundred rps', 'Upload most telemetry raw, train on whatever arrives. Fine at pilot fleet scale.'],
+    ['100K vehicles', '~2K rps', 'On-vehicle shadow-mode inference becomes mandatory so only disagreements and rare scenes leave the car. This is the change that makes the training pipeline viable.'],
+    ['1M vehicles', '~10K rps', 'Staged OTA rollouts by cohort and hardware version. Supercharger site service and trip planning split onto their own capacity plan, decoupled from the telemetry pipeline entirely.'],
+    ['10M vehicles', '~100K rps', 'Regional ingest for telemetry, a dedicated training cluster (Dojo-style) running continuously on the curated clip archive, and charger-network capacity planning driven by real-time grid load, not just vehicle demand.'],
+  ],
+  levers: [
+    { t: 'Infer on the vehicle first', d: 'Running Autopilot inference on the car and uploading only disagreements turns gigabytes of video per car per day into kilobytes of flagged clips. Nothing else in this design saves as much bandwidth.', n: ['edge', 'veh'] },
+    { t: 'Treat training as a batch job, not a service', d: 'The training cluster does not sit in anyone\'s request path. It pulls from the curated clip archive on its own schedule and pushes a new model candidate out through the same OTA pipeline as any other update.', n: ['train', 'ota'] },
+    { t: 'OTA is staged, not all-at-once', d: 'A canary cohort, a signed image, and telemetry-driven rollback criteria turn a fleet-wide firmware push from a single point of failure into a gradual, reversible rollout.', n: ['ota', 'img'] },
+    { t: 'Money and telemetry never share a store', d: 'Charging-session state and billing need strong consistency and audit trails; vehicle telemetry needs throughput and can tolerate loss. Keeping them on separate systems means a telemetry outage never touches billing correctness.', n: ['sess', 'bill', 'tel'] },
+    { t: 'Commands are push, not poll', d: 'A parked, sleeping car cannot afford to poll a server every few seconds for new commands — that drains the battery for no benefit. A persistent connection woken only when a command arrives is the only workable shape.', n: ['cmd'] },
+  ],
+  wall: { t: 'Physical charging capacity', d: 'No software change moves electrons faster. Once Supercharger sites run near their power-delivery ceiling, the binding constraint is grid connection and stall count at that physical site, not anything in the software stack.' },
+},
+
 }
