@@ -38,7 +38,44 @@ export default {
   wall: { t: 'Non-determinism', d: 'The same input can take a different path on every run, so capacity planning is statistical rather than exact and a p99 run may cost fifty times the median. You size for a distribution you do not control, which is why caps matter more than throughput.' },
 },
 
+'Multi-Agent Orchestration Platform': {
+  constraint: 'LLM call volume, not task volume — one task fans out into a decomposition call, several specialist-agent calls, and coordination overhead, so the model traffic behind each incoming task is not the number you would guess from the task rate alone.',
+  ladder: [
+    ['100 tasks/day', 'negligible', 'One supervisor process routing to a couple of specialist agents in-process. No queue, no blackboard versioning, just shared in-memory state.'],
+    ['10K tasks/day', '~1 rps', 'A real queue between supervisor and specialists so they run concurrently. Blackboard becomes a real datastore with versioned writes.'],
+    ['1M tasks/day', '~15 rps', 'Human approval gates and guardrails become their own scaled services, not inline checks. Tracing becomes sampled for successful runs, full for failures.'],
+    ['100M tasks/day', '~600 rps', 'Specialist agent pools scale independently based on which task types dominate — a spike in coding tasks should not starve the research agent pool.'],
+  ],
+  levers: [
+    { t: 'Concurrent sub-agents, bounded by the slowest', d: 'Running specialist agents in parallel off a shared queue means total task latency is bounded by whichever sub-agent takes longest, not the sum of all of them — worth the coordination complexity for anything beyond a handful of sequential steps.', n: ['queue', 'research', 'code', 'write'] },
+    { t: 'Version the blackboard, do not lock it', d: 'A lock serializes agents that could otherwise run concurrently. Append-only, versioned writes with the supervisor resolving conflicts scale far better than pessimistic locking on shared task state.', n: ['board'] },
+    { t: 'Approval gates scale separately from agents', d: 'Human review throughput is bounded by humans, not compute. Queue approval requests and let agents continue other sub-tasks while one waits, rather than blocking the whole run on a single pending approval.', n: ['hitl'] },
+    { t: 'Shared tool and model infrastructure', d: 'Every specialist agent hitting one Tool Router and one LLM pool, rather than each maintaining its own, is what makes capacity planning and auditing tractable as the number of agent types grows.', n: ['tools', 'llm'] },
+    { t: 'Sample traces, keep every failure', d: 'Full multi-agent traces are large — every sub-agent nested under the supervisor. Keep all of them for failed or flagged runs, sample the clean successful ones.', n: ['trace'] },
+  ],
+  wall: { t: 'Decomposition overhead compounds', d: 'Each additional layer of delegation adds its own LLM calls for planning and coordination on top of the actual work. Past a certain task complexity, the coordination overhead itself becomes the dominant cost, not the specialist work being coordinated.' },
+},
+
+'Autonomous Coding Agent': {
+  constraint: 'Sandbox lifecycle, not raw request throughput — every task needs a fully provisioned environment (dependencies installed, a real shell, a test runner) held for the task\'s entire multi-minute duration.',
+  ladder: [
+    ['100 tasks/day', 'negligible', 'One shared sandbox pool, tasks queue for a slot. Fine while task volume is low enough that queueing rarely happens.'],
+    ['10K tasks/day', '~1 rps', 'Checkpointing becomes mandatory so a crashed sandbox does not mean restarting a ten-minute task from zero. Guardrails become a hard gate, not a warning.'],
+    ['1M tasks/day', '~10 rps', 'Sandbox pool becomes elastic, provisioned per-repo-type (different dependency sets warm-started separately). Review queue becomes its own scaled service.'],
+    ['100M tasks/day', '~400 rps', 'Sandboxes are pre-warmed per common repo configuration to cut provisioning latency out of the critical path entirely.'],
+  ],
+  levers: [
+    { t: 'Checkpoint after every completed phase', d: 'Plan committed, change applied, tests run — checkpoint at each boundary so a crash resumes from the last completed phase instead of replaying the whole task, which is the difference between a blip and losing ten minutes of work.', n: ['ckpt', 'planner'] },
+    { t: 'Pre-warm sandboxes by repo profile', d: 'Cold-starting a full dependency install on every task adds minutes before any actual work begins. Keeping a small pool of pre-provisioned sandboxes per common language/framework combination removes that from the latency budget.', n: ['sandbox'] },
+    { t: 'Guardrails block before the sandbox, not after', d: 'Checking a generated command for destructive patterns before it reaches the shell is strictly cheaper and safer than running it and checking the aftermath — there is no aftermath to check if it never runs.', n: ['guard', 'sandbox'] },
+    { t: 'Review queue scales independently of agent throughput', d: 'A backlog of changes awaiting human review should never block new tasks from starting — agents keep working on new tasks while completed ones wait their turn for a reviewer.', n: ['review'] },
+    { t: 'Test runner shares infrastructure, not sandboxes', d: 'Running the test suite is CPU-bound and separable from the interactive shell session — give it its own scaled worker pool so a slow test run does not tie up a whole sandbox.', n: ['test'] },
+  ],
+  wall: { t: 'Human review throughput', d: 'No amount of sandbox or LLM scaling changes how fast a human can read a diff and decide whether to merge it. At high task volume, the review queue — not agent compute — is what determines how quickly finished work actually ships.' },
+},
+
 'AI Code Assistant (Copilot)': {
+
   constraint: 'A two-hundred-millisecond budget that includes network, context assembly, inference and filtering.',
   ladder: [
     ['1K developers', '~50 rps', 'One region, one model, whole-file context. Latency is tolerable because nobody is far away yet.'],
