@@ -1151,6 +1151,37 @@ export const TEMPLATES = [
     'Night scanning shifts the load profile — schedule the heavy analytics for when the stores are closed',
   ], 'Robotics & edge'),
 
+  T('Tesla Ecosystem', 'Vehicle fleet telemetry, on-vehicle Autopilot inference, OTA rollouts and the Supercharger network', 10000, [
+    ['veh', 'client', 'Vehicle Fleet', 40, 120, 1, 0.85],
+    ['app', 'client', 'Mobile App Users', 40, 560, 1, 0.15],
+    ['edge', 'edge', 'On-Vehicle Inference (Shadow Mode)', 190, 120, 2],
+    ['vgw', 'gateway', 'Vehicle Cloud Gateway (mTLS)', 340, 120, 2],
+    ['tel', 'kafka', 'Telemetry Stream', 490, 120],
+    ['clips', 'blob', 'Flagged Clip Archive', 640, 60, 2],
+    ['train', 'batch', 'Autopilot Model Training (Dojo)', 640, 180, 4],
+    ['ota', 'config', 'Fleet Mgmt & OTA', 790, 120, 2],
+    ['img', 'blob', 'Firmware & Model Images', 940, 120, 2],
+    ['agw', 'gateway', 'App / Charging Gateway', 190, 560, 1],
+    ['cmd', 'ws', 'Command Channel', 340, 440],
+    ['trip', 'micro', 'Trip Planner', 340, 620],
+    ['geoidx', 'geoidx', 'Charger Location Index', 490, 560],
+    ['sc', 'micro', 'Supercharger Site Service', 490, 680],
+    ['sess', 'sql', 'Charging Sessions DB', 640, 680, 2],
+    ['bill', 'billing', 'Metering & Billing', 790, 680],
+    ['push', 'push', 'Push / SMS / Email', 940, 440],
+  ], [['veh','edge'],['edge','vgw'],['vgw','tel'],['tel','clips'],['clips','train'],['train','ota'],['ota','img'],
+      ['app','agw'],['agw','cmd'],['agw','trip'],['cmd','push'],
+      ['trip','geoidx'],['trip','sc'],['sc','sess'],['sess','bill'],['bill','push']], [
+    'Vehicle telemetry is the dominant traffic by volume; remote commands and Supercharger queries are a small fraction — split them into separate lanes at the edge so one does not starve capacity planning for the other',
+    'Autopilot inference runs on the vehicle first: only disagreements between the model and the human driver, or genuinely rare scenes, get flagged for upload — raw video from every car all the time would saturate cellular uplink and the cloud pipeline both',
+    'Autopilot model training is a batch job over the curated clip archive, not a request-path service — restartable and idempotent, like Spark, not an inference endpoint',
+    'OTA rollouts are staged and reversible: a canary cohort first, cryptographically signed images, and a rollback path if the fleet-wide failure rate rises — a bad firmware push is a safety incident, not just a bug',
+    'The Command Channel is a persistent connection, not polling — commands like unlock or climate control need low latency and store-and-forward delivery for a car that is asleep or briefly out of signal',
+    'Charging sessions are money: session state and billing live on a strongly consistent SQL store, never on the eventually consistent telemetry path',
+    'Trip planning reads live stall availability and a geospatial index together — a route that assumes every charger is free is a stranded car',
+    'Fleet management, training and billing are entirely separate systems of record with very different consistency needs — conflating them because it is all one car is how a billing bug becomes a fleet-wide rollback',
+  ], 'Robotics & edge'),
+
   // ── AI systems ──────────────────────────────────────────────────────────────
   T('ChatGPT (conversational AI)', 'Consumer chat over a GPU fleet', 20000, [
     ['u', 'client', 'Users', 40, 250], ['cdn', 'cdn', 'CDN (static)', 170, 130],
