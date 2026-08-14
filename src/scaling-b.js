@@ -146,6 +146,42 @@ export default {
   wall: { t: 'Feedback latency', d: 'Beyond about ten minutes developers context-switch and the pipeline stops shaping behaviour. That budget is fixed by human attention, so past a point you must run less rather than run faster.' },
 },
 
+'Windy': {
+  constraint: 'Multiple real-time weather data streams from different sources arriving asynchronously, against a client base constantly panning and zooming maps.',
+  ladder: [
+    ['100K users', '~8K rps', 'Pre-computed global tiles served via CDN, forecast updates on an hourly schedule. Static tiles handle the volume.'],
+    ['1M users', '~80K rps', 'Tile cache becomes critical — pre-compute against the forecast grid so render-on-demand never enters the latency budget. Model aggregation runs hourly.'],
+    ['10M users', '~400K rps', 'WebSocket lanes split from REST API lanes so live-map subscribers do not contend with forecast-API users. Geospatial queries shard by H3 cell.'],
+    ['100M users', '~2M rps', 'Forecast computation shards by geographic region. Tile storage becomes object-storage-backed with a distributed cache in front.'],
+  ],
+  levers: [
+    { t: 'Pre-render and cache tiles aggressively', d: 'Rendering on-demand at map-view scale is dozens of milliseconds per tile. Pre-render the forecast grid once per hour into a matrix of tiles, cache them, and serve static assets — that is orders of magnitude cheaper than dynamic render.', n: ['tiles', 'tile'] },
+    { t: 'Separate websocket from HTTP', d: 'A user panning a live weather map needs real-time updates; an API consumer querying "weather at point X" wants a snapshot. Different traffic shapes, different SLOs, separate lanes mean one does not starve the other.', n: ['map', 'api'] },
+    { t: 'Geospatial index by fixed grid', d: 'H3 cells or a similar fixed-grid index let you precompute and shard cleanly. A location query becomes a cell lookup, not a distance calculation across a scatter of points.', n: ['geo'] },
+    { t: 'Model disagreement is data, not a problem', d: 'Different weather models disagree, and users benefit from seeing that uncertainty. Show the range from the model ensemble rather than picking one and hiding the rest.', n: ['models', 'forecast'] },
+    { t: 'Forecast and alert lanes diverge at the source', d: 'Some users want the finest detail you can compute; others just want to know if a storm is coming. Different query patterns and different cache TTLs — separate lanes mean neither starves the other.', n: ['forecast', 'alert'] },
+  ],
+  wall: { t: 'Weather model latency', d: 'You can cache aggressively because forecasts do not change every second — but you also cannot make a forecast faster than the model runs. A 24-hour forecast takes time to compute, so freshness is bounded below by model runtime, not your infrastructure.' },
+},
+
+'AccuWeather': {
+  constraint: 'API quota and tiering enforcement at scale — different customers pay for different throughput, and an outage on quota-checking is an outage on revenue.',
+  ladder: [
+    ['1K API customers', '~25K rps', 'Quota per API key checked inline at the gateway. Forecast stored in SQL, cached for 1 hour. No fine-grained metering yet.'],
+    ['100K API customers', '~250K rps', 'Quota checks move to a dedicated service so a cache miss never blocks the gateway. Usage begins to be logged for billing. Free tier pooled.'],
+    ['1M API customers', '~2M rps', 'Per-customer quota and billing shards by customer cohort. Forecast computation runs regionally, keyed by latitude-band and model.'],
+    ['10M API customers', '~25M rps', 'Usage events are fire-and-forget to an analytics cluster — never inline. Quota checks read from a pre-computed quota-cache updated at transaction boundaries.'],
+  ],
+  levers: [
+    { t: 'Quota checks off the critical path', d: 'Checking an API key\'s remaining quota against a database is latency you do not want inline. Pre-compute quota-remaining and cache it; update happens asynchronously as usage is logged and processed.', n: ['auth', 'tier'] },
+    { t: 'Usage is never inline', d: 'Billing-critical accounting must be durable, but generating a record on every API call is too expensive to run synchronously. Fire-and-forget to an events topic; process and bill asynchronously.', n: ['usage'] },
+    { t: 'Subscription tier is a dimension', d: 'Free, Starter, Pro, Enterprise — each tier is not just a rate limit, it\'s a separate SLO bucket. Do not promise enterprise-grade latency to free users when they spike.', n: ['tier', 'sub'] },
+    { t: 'Forecast is pre-computed, not on-demand', d: 'You cannot calculate a weather forecast at request time. Batch compute on a schedule (hourly or every 6 hours) and serve cached results — cache TTL is your freshness guarantee.', n: ['compute', 'cache'] },
+    { t: 'Historical data is cold', d: 'Current and forecast data are hot; anything older than a week is rarely read. Separate stores, different TTLs, different read patterns mean cache strategy does not have to be one-size-fits-all.', n: ['store'] },
+  ],
+  wall: { t: 'Forecast accuracy ', d: 'A forecast is only as good as the underlying model and data. At scale you hit the edge of meteorological science — no amount of infrastructure makes a forecast more accurate than the data and model quality allow.' },
+},
+
 'Booking.com': {
   constraint: 'A 1000:1 search-to-book ratio against supplier availability you do not own.',
   ladder: [

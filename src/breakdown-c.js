@@ -454,6 +454,120 @@ export default {
   },
 },
 
+'Windy': {
+  meta: 'Product designs · hard · pre-computation and geospatial indexing',
+  overview: 'A real-time, interactive weather map where users pan and zoom into forecasts and alerts from a global model ensemble. The same data serves web maps, mobile apps, and an API for weather-dependent services. The hard part is not ingesting weather data — it is serving interactive map tiles fast while keeping the forecast fresh.',
+  scope: 'The tile-caching and pre-render strategy, geospatial queries, and splitting the websocket map lane from the REST API lane are the interview. The weather-model internals and the specifics of which model or satellite data to ingest are below the line.',
+  planning: 'Start from the constraint: you have a forecast grid that updates every hour, and millions of users panning maps that can render anything in a second or two. That single fact — pre-computation + caching — is what shapes everything. Then add the geospatial index so "weather at this location" is sub-millisecond.',
+  fr: {
+    core: ['Display global weather maps with current and forecast conditions', 'Serve that map interactively — pan, zoom, and render in under 500ms', 'Send weather alerts to users subscribed to a location', 'Provide an API for weather-dependent services to query forecasts and current conditions'],
+    out: ['The internals of any specific weather model', 'Satellite imagery and raw radar data — only processed model output'],
+  },
+  nfr: {
+    core: ['Map tiles render in under 500ms regardless of zoom level', 'A forecast update every hour without pausing the map', 'Alerts fire within seconds of a weather event crossing a subscribed boundary', 'Geospatial queries (weather at point X) in under 100ms'],
+    out: ['Perfect forecast accuracy — that is meteorology, not infrastructure'],
+  },
+  nums: [['~8K/s', 'requests at peak'], ['~1 hour', 'forecast update cadence'], ['millions', 'of map tile combinations pre-rendered per update'], ['13 nodes', 'in the system design']],
+  entities: [
+    ['Forecast', 'temperature, wind, precipitation for a grid cell at a specific time'],
+    ['Tile', 'a pre-rendered image at a specific zoom level and location'],
+    ['Alert', 'a condition (rain above X mm/hr) subscribed by a user to a location'],
+    ['H3 Cell', 'a hexagonal grid cell for efficient geospatial indexing'],
+  ],
+  apiIntro: 'Web and mobile apps consume tiles via HTTP and websockets; backend services use a REST API for point-in-time queries. Everything reads from the same forecast cache underneath.',
+  api: [
+    { dir: '→', name: 'GET /tiles/{z}/{x}/{y}', body: 'render weather at this tile coordinates → PNG or WebP' },
+    { dir: '→', name: 'ws: /live', body: 'subscribe to live forecast updates at a region → streamed tile diffs' },
+    { dir: '→', name: 'GET /forecast', body: '{ lat, lng, timestamp } → { conditions, alerts }' },
+    { dir: '→', name: 'POST /alerts', body: '{ location, condition: "rain_gt_5mm" } → subscription created' },
+  ],
+  dives: [
+    {
+      title: 'Pre-render tiles every forecast cycle', focus: ['tiles', 'forecast', 'tile'],
+      blocks: [
+        ['p', 'Rendering weather tiles on-demand every time a user pans is tens or hundreds of milliseconds per tile across millions of pans per second. Instead, render the entire forecast grid once per hour into a matrix of tiles at every zoom level, store them, and serve cached static assets.'],
+        ['calc', 'Pre-rendering all tiles for all zoom levels is an upfront cost every hour. Serving a tile is one cache hit. The tradeoff is worth it: serve 8K rps of tiles, not 1 tile per request-path computation.'],
+      ],
+    },
+    {
+      title: 'Geospatial grid for location queries', focus: ['geo', 'models', 'forecast'],
+      blocks: [
+        ['p', 'A query like "weather at latitude X, longitude Y" needs to find the nearest forecast grid cell instantly. Use an H3 hexagonal grid or a fixed geospatial index so every location maps to a cell ID in one step — never a distance calculation across millions of cells.'],
+        ['note', 'The same index also makes "alert: notify everyone in this cell" tractable — subscribers are bucketed by cell, not scattered globally.'],
+      ],
+    },
+    {
+      title: 'WebSocket for maps, REST for APIs', focus: ['map', 'api', 'forecast'],
+      blocks: [
+        ['p', 'Interactive map users want every forecast update pushed to their viewport as they pan. API consumers want a single accurate snapshot at a point in time. These are opposite traffic shapes — push vs pull, many small updates vs few large queries — so they need separate lanes or one will starve the other.'],
+        ['p', 'Both read from the same forecast cache underneath, but the gateway routes them separately and applies different SLOs.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Pre-rendered tiles, geospatial indexing, and model aggregation on a fixed schedule.',
+    senior: 'Split websocket and REST lanes, implement tile caching with per-hour invalidation, and handle model ensemble disagreement.',
+    staff: 'Cover alert-subscription mechanics (how do you fire billions of location-based alerts?), tile storage cost vs pre-computation tradeoffs, and how forecasts stay in sync across multiple server instances.',
+  },
+},
+
+'AccuWeather': {
+  meta: 'Product designs · hard · monetization through quota and tiering',
+  overview: 'A weather forecasting API where organizations pay for accuracy, volume and freshness. The same forecast engine serves free and enterprise tiers with completely different SLOs, and billing must be rock-solid because customers can see every API call on their bill. The hard part is enforcing quota and billing at 25K rps without those checks becoming the latency bottleneck.',
+  scope: 'Quota enforcement off the critical path, the usage-metering pipeline, and the per-tier SLO differences are the interview. Historical forecast data retention policies and customer billing cycles are below the line.',
+  planning: 'Start from monetization: different customers pay different amounts, so different SLOs. Then work outward — how do you enforce a quota on 25K rps without checking a database on every call? The answer (cache quota-remaining, update asynchronously) is what shapes the design.',
+  fr: {
+    core: ['Serve weather forecasts via API to thousands of paying customers', 'Enforce API quotas so a free-tier customer cannot access enterprise throughput', 'Generate accurate usage bills for every customer at the end of the month', 'Maintain an SLA that varies by subscription tier'],
+    out: ['Customer support or dispute resolution', 'Historical forecast accuracy analysis'],
+  },
+  nfr: {
+    core: ['API quota enforced with zero false negatives — never let a customer overshoot their limit', 'Usage metering accurate to the call — bills match API logs', 'Free-tier users never see enterprise latency at peak', 'Forecast freshness varies by tier but is monotonic'],
+    out: ['Forecast accuracy — that is meteorology'],
+  },
+  nums: [['~25K/s', 'API calls at peak'], ['4', 'subscription tiers (Free, Starter, Pro, Enterprise)'], ['100K', 'API customers'], ['1 hour', 'forecast freshness']],
+  entities: [
+    ['API Key', 'identifies a customer and their tier'],
+    ['Quota', 'calls-per-day limit for a tier'],
+    ['Usage Event', 'a log of one API call, destined for billing'],
+    ['Forecast', 'temperature, wind, precipitation for a point and time'],
+  ],
+  apiIntro: 'RESTful JSON API keyed by API key. Different endpoints for current conditions, forecasts, and alerts. Quota is checked at the gateway; billing is computed asynchronously from usage logs.',
+  api: [
+    { dir: '→', name: 'GET /current', body: '{ apiKey, lat, lng } → { conditions }' },
+    { dir: '→', name: 'GET /forecast', body: '{ apiKey, lat, lng, days } → { hourly or daily forecast }' },
+    { dir: '→', name: 'POST /alerts', body: '{ apiKey, location, condition } → subscription' },
+    { dir: '→', name: 'GET /usage', body: '{ apiKey } → { usedToday, limit, percentUsed }' },
+  ],
+  dives: [
+    {
+      title: 'Quota checks never block the request', focus: ['auth', 'tier', 'usage'],
+      blocks: [
+        ['p', 'Checking "does this customer have quota left" against a SQL database for every API call adds unacceptable latency. Instead, maintain a cache of remaining-quota-per-customer, updated asynchronously as usage is processed. A gateway cache miss falls back to a default (deny), not a database query.'],
+        ['warn', 'Zero false negatives on quota means occasionally denying a request even when the customer truly has quota left (if the cache lags a few seconds behind reality). That is better than sometimes allowing overage.'],
+      ],
+    },
+    {
+      title: 'Usage is fire-and-forget', focus: ['usage', 'sub', 'tier'],
+      blocks: [
+        ['p', 'Recording a usage event synchronously on every API call would double the latency. Instead, emit the event asynchronously (Kafka or a job queue) and process it in batches for billing and quota updates. The quota cache is updated from those batch results.'],
+        ['p', 'Usage events are immutable once emitted — they become billing line items. Log them redundantly if needed, but once recorded, they are the source of truth for how much to charge.'],
+      ],
+    },
+    {
+      title: 'Tiers are SLO buckets, not just rate limits', focus: ['tier', 'auth', 'cache'],
+      blocks: [
+        ['p', 'A free customer and an enterprise customer should not compete for the same infrastructure. Free tier hits a standard queue; enterprise tier hits a separate, smaller queue with guaranteed capacity. When peak load arrives, free-tier latency degrades, but enterprise stays fast.'],
+        ['p', 'Same API, different queueing disciplines — that is what enforcing a tier means at scale.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'An API with subscription tiers, quota enforcement, and usage metering for billing.',
+    senior: 'Separate quota cache from request path, tier-aware queueing, and asynchronous usage processing.',
+    staff: 'Cover billing accuracy (what happens to in-flight requests when UTC rolls over?), quota cache staleness (how long can the cache lag?), and how to handle subscription downgrades mid-billing cycle.',
+  },
+},
+
 'Booking.com': {
   meta: 'Travel · hard · a thousand searches per booking',
   overview: 'Search accommodation across supplier inventory you do not own, then book without overselling. The search-to-book ratio is what shapes every decision.',

@@ -6,7 +6,19 @@
 // and nobody notices. `data-tour` attributes exist for exactly that reason,
 // and there is a test asserting every step still finds its target.
 
+import { TEMPLATES } from './templates.js'
+
 export const TOUR_KEY = 'archsim.tour.v1'
+
+// A curated slice of recognisable names for the marquee on the templates
+// step — text wordmarks, not brand artwork. Kept separate from TEMPLATES
+// itself since many entries there (patterns, generic designs) aren't
+// company names and wouldn't read as one in a logo-strip-style scroll.
+export const TOUR_MARQUEE = [
+  'WhatsApp', 'Uber', 'Netflix', 'YouTube', 'Ticketmaster', 'ChatGPT',
+  'Dropbox', 'Spotify', 'Instagram', 'Amazon', 'Anthropic Claude', 'Redis',
+  'Tesla', 'Razorpay', 'Zomato', 'Ola', 'Rapido', 'BHIM (UPI)', 'Google Docs', 'Yelp',
+]
 
 // `tab` switches the Analysis panel before the step is shown, so the target
 // exists by the time we measure it. `load` pulls in a template on the first
@@ -23,8 +35,9 @@ export const TOUR_STEPS = [
     id: 'templates',
     target: '[data-tour="templates"]',
     title: 'Start from a real design',
-    body: '57 worked designs live here — WhatsApp, Uber, Ticketmaster, ChatGPT, UPI, and more. Pick one to study it, or start from a blank canvas. Loading one now so the rest of the tour has something to show.',
+    body: `${TEMPLATES.length} worked designs live here — WhatsApp, Uber, Ticketmaster, ChatGPT, UPI, and more. Pick one to study it, or start from a blank canvas. Loading one now so the rest of the tour has something to show.`,
     load: 'Ticketmaster',
+    marquee: true,
   },
   {
     id: 'canvas',
