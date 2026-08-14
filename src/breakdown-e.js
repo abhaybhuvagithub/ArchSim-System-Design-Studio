@@ -129,6 +129,118 @@ export default {
   },
 },
 
+'Multi-Agent Orchestration Platform': {
+  meta: 'AI / ML · hard · coordination between agents is the whole problem',
+  overview: 'One agent decomposes a task and hands pieces of it to specialist agents built for narrower jobs — research, coding, writing — running concurrently. The single-agent problems (unbounded loops, untrusted tools) do not go away; a new one is added on top: agents now need to see a consistent shared picture of a task that several of them are changing at once.',
+  scope: 'Task decomposition, shared state between agents, and where human approval gates sit are the interview. The internal implementation of any one specialist agent is below the line — that part is just the single-agent problem, already solved.',
+  planning: 'Start from the failure mode that is unique to this design: two agents racing on shared state, or a downstream agent starting before an upstream one has posted what it found. That is what makes a blackboard, not private per-agent memory, the right call, and it is what determines where tracing and approval gates need to sit.',
+  fr: {
+    core: ['Decompose an incoming task into sub-tasks and route each to the right specialist agent', 'Let sub-agents run concurrently against a shared view of task state', 'Pause for human approval before an agent takes an irreversible or high-cost action', 'Produce one trace covering the supervisor and every sub-agent for a given run'],
+    out: ['The internal reasoning loop of any individual specialist agent', 'A general-purpose agent marketplace or plugin ecosystem'],
+  },
+  nfr: {
+    core: ['A sub-agent never acts on stale state from before another sub-agent posted its result', 'An irreversible action always waits for approval, with no bypass', 'Total run cost and wall-clock time are bounded at the supervisor level, not just per sub-agent', 'A failed sub-agent does not silently stall the whole run'],
+    out: ['Deterministic decomposition — the same task may split differently on different runs'],
+  },
+  nums: [['~600/s', 'tasks at peak'], ['2-6', 'sub-agents typically active per task'], ['10x', 'blowup in LLM calls versus a single-agent run for the same task'], ['seconds to minutes', 'time added by a human approval gate']],
+  entities: [
+    ['Task', 'the top-level request, owned by the Supervisor Agent'],
+    ['Sub-task', 'one unit of decomposed work, assigned to one specialist agent'],
+    ['Blackboard Entry', 'a fact or result posted by one agent that others can read'],
+    ['Approval', 'a paused, high-risk action awaiting a human decision before it proceeds'],
+  ],
+  apiIntro: 'A task is a durable, resumable run, the same as a single agent — but its status now includes the state of every sub-agent working on it, not just one step sequence.',
+  api: [
+    { dir: '→', name: 'POST /tasks', body: '{ goal, budgetTokens, maxSubAgents } → { taskId } — streams sub-agent activity as it happens' },
+    { dir: '→', name: 'GET /tasks/{id}', body: '→ { status, subAgents: [{agent, status, steps}], blackboard, pendingApprovals }' },
+    { dir: '→', name: 'POST /approvals/{id}', body: '{ decision: approve | reject } → resumes or aborts the waiting agent' },
+  ],
+  dives: [
+    {
+      title: 'A blackboard, not each agent\'s private memory', focus: ['board', 'sup', 'queue'],
+      blocks: [
+        ['p', 'If the coding agent and the research agent each kept their own private scratchpad, the coding agent could start writing code before the research agent has posted what it found — or worse, act on a stale copy of a fact the research agent has since corrected. A shared blackboard that every agent reads from and writes to is what keeps them working off the same picture of the task.'],
+        ['warn', 'A blackboard introduces its own race: two agents can both read a state, both act on it, and both write conflicting updates. Version the entries, or make writes append-only and let the supervisor resolve conflicts explicitly rather than silently overwriting.'],
+      ],
+    },
+    {
+      title: 'Autonomy stops where the blast radius gets large', focus: ['sandbox', 'hitl', 'guard'],
+      blocks: [
+        ['p', 'A coding agent editing a scratch file is low risk; the same agent force-pushing to a shared branch, or a research agent sending an email on the user\'s behalf, is not. The human-in-the-loop gate is not a blanket slowdown — it triggers specifically on the class of action where a wrong autonomous decision is expensive or hard to undo.'],
+        ['p', 'Guardrails and the approval gate are different layers doing different jobs: guardrails block content that should never happen at all (a secret in a tool call, a prompt-injected instruction). The approval gate is for content that is legitimate but consequential enough to want a human to see it first.'],
+      ],
+    },
+    {
+      title: 'One trace, not three separate logs', focus: ['trace', 'sup'],
+      blocks: [
+        ['p', 'When a multi-agent run produces a bad outcome, the useful question is rarely "what did the coding agent do" in isolation — it is "what did the coding agent do given what the research agent had posted at that point." A single trace tree rooted at the supervisor, with every sub-agent\'s steps nested under it in the order they actually happened, is what makes that reconstructable.'],
+        ['calc', 'Multi-agent runs cost meaningfully more than single-agent ones for the same task, because decomposition itself takes model calls and specialist agents duplicate some context-gathering work. Budget accordingly rather than assuming linear scaling with task complexity.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A supervisor that routes sub-tasks to specialist agents, with some shared state between them.',
+    senior: 'Design the blackboard\'s conflict handling, place the human approval gate correctly, and unify tracing across all agents in a run.',
+    staff: 'Cover cost blowup from decomposition overhead, graceful handling of a stalled or failed sub-agent without stalling the whole run, and where autonomy should structurally stop rather than just be discouraged.',
+  },
+},
+
+'Autonomous Coding Agent': {
+  meta: 'AI / ML · hard · verification and human review, not just generation',
+  overview: 'An agent that plans a code change, executes it in an isolated sandbox with a real shell and test runner, verifies the result against the test suite, and only then hands a diff to a human reviewer. The interesting design problems are not "generate code" — they are surviving a run that takes minutes, verifying a change actually works before claiming it does, and stopping an agent from running a destructive command.',
+  scope: 'The plan-execute-verify loop, sandbox isolation, checkpointing for long-running tasks, and the human review gate are the interview. The code-generation model itself and IDE integration details are below the line.',
+  planning: 'Start from run duration: this is not a sub-second request, it is a task that can run for minutes with real side effects along the way (files changed, commands run, a test suite executed). That single fact is what forces checkpointing, sandbox isolation and a verify step before anything reaches a human — a fast single-shot design does not survive contact with a task like this.',
+  fr: {
+    core: ['Take a task description and produce a code change', 'Execute and test that change in an isolated environment before proposing it', 'Resume a long-running task from its last checkpoint after a failure', 'Route every change through a human review gate before it can merge'],
+    out: ['The code-generation model architecture itself', 'IDE-native editing UX'],
+  },
+  nfr: {
+    core: ['A generated command that could delete data or force-push never executes unreviewed', 'A crashed or restarted run resumes without redoing completed work', 'A change that fails its own test suite never reaches a human as if it passed', 'Sandbox resource limits (CPU, memory, network) are hard, not advisory'],
+    out: ['Guaranteed-correct code on the first attempt'],
+  },
+  nums: [['~400/s', 'tasks at peak'], ['minutes', 'typical task duration'], ['1', 'sandbox per task, torn down after'], ['0', 'unreviewed merges, by design']],
+  entities: [
+    ['Task', 'the top-level coding request, tracked through plan, execute and verify phases'],
+    ['Checkpoint', 'a durable snapshot of task state, enabling resume after a crash or pause'],
+    ['Change', 'a diff produced by the agent, tied to its test results'],
+    ['Review', 'a human decision — approve, request changes, or reject — gating merge'],
+  ],
+  apiIntro: 'A task is a durable, resumable object exactly like a single agent run, but its state now includes sandbox handle, checkpoint history and test results, not just a step log.',
+  api: [
+    { dir: '→', name: 'POST /tasks', body: '{ repo, description, budgetMinutes } → { taskId } — streams plan/execute/verify progress' },
+    { dir: '→', name: 'GET /tasks/{id}', body: '→ { status, plan, diff, testResults, checkpoints }' },
+    { dir: '→', name: 'POST /reviews/{taskId}', body: '{ decision: approve | request_changes | reject, comment }' },
+  ],
+  dives: [
+    {
+      title: 'Verify before claiming done', focus: ['sandbox', 'test', 'tools'],
+      blocks: [
+        ['p', 'A change is not "done" because the model produced a diff — it is done when the sandbox actually runs the test suite against it and the tests pass. Skipping this step and handing raw model output to a human turns the reviewer into the test suite, which is slower and less reliable than an actual one.'],
+        ['note', 'A failing test result goes back into the loop as feedback for another attempt, not out to the human as a finished proposal.'],
+      ],
+    },
+    {
+      title: 'A twenty-minute task has to survive a crash', focus: ['ckpt', 'planner'],
+      blocks: [
+        ['p', 'Anything that runs long enough will occasionally get interrupted — a deploy, a timeout, an infra blip. Without checkpointing, that means redoing the entire task from scratch, which is expensive and, for anything with side effects already applied in the sandbox, potentially inconsistent.'],
+        ['p', 'Checkpoint after each meaningful phase (plan committed, change applied, tests run) so a resume picks up from the last completed phase rather than replaying work that already succeeded.'],
+      ],
+    },
+    {
+      title: 'Guardrails block the command, not just flag it', focus: ['guard', 'llm'],
+      blocks: [
+        ['p', 'A generated shell command sits between the model and the sandbox. Pattern-match for destructive operations — recursive deletes, force-pushes, credential exfiltration attempts — and block execution outright rather than logging a warning and letting it run anyway.'],
+        ['warn', 'Passing every test is necessary but not sufficient for a merge. The human review gate exists precisely for the class of problem tests do not catch: a technically-correct change that is the wrong approach.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A plan-execute-verify loop running in a sandbox with a test runner and a human review step before merge.',
+    senior: 'Design checkpointing for long-running tasks and place guardrails as hard blocks in front of the sandbox, not advisory warnings after.',
+    staff: 'Cover resumability semantics precisely (what a resume actually replays versus skips), and treat "tests passed" as necessary but not sufficient for merge.',
+  },
+},
+
 'AI Code Assistant (Copilot)': {
   meta: 'AI / ML · hard · inference inside a typing loop',
   overview: 'Inline code completion as the developer types. The model is the easy part; fitting inference into the gap between keystrokes is not.',
