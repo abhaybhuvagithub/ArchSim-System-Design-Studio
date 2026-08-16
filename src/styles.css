@@ -245,7 +245,8 @@ select.btn { appearance: auto; }
   padding: 6px 14px; font-size: 13.6px; color: var(--muted); pointer-events: none; white-space: nowrap;
 }
 .statbar {
-  position: absolute; top: 10px; left: 10px; display: flex; gap: 8px; flex-wrap: wrap;
+  position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; flex-wrap: wrap;
+  z-index: 5; pointer-events: auto; justify-content: flex-end;
 }
 .chip {
   background: var(--chip-bg); border: 1px solid var(--border); border-radius: 980px;
@@ -458,7 +459,7 @@ select.btn { appearance: auto; }
   .rps input[type=range] { width: 76px; }
   .rps b { min-width: 58px; font-size: 13.6px; }
   .rps span { display: none; }
-  .statbar { top: 6px; left: 6px; gap: 5px; max-width: calc(100% - 12px); }
+  .statbar { top: 6px; right: 6px; left: auto; gap: 5px; max-width: calc(100% - 12px); }
   .chip { font-size: 12.4px; padding: 4px 8px; }
   .hint { display: none; }
   .foot { font-size: 12.4px; padding: 6px 10px; gap: 5px; }
