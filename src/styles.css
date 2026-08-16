@@ -718,7 +718,7 @@ select.btn { appearance: auto; }
 
 /* ---- Selected-template header, floating over the canvas ---- */
 .tpl-header {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 10px; z-index: 4;
   max-width: min(720px, calc(100% - 32px));
   padding: 7px 8px 7px 15px; border-radius: 999px;
