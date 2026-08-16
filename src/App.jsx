@@ -931,6 +931,7 @@ export default function App() {
               <div className={`chip ${sim.successRate < 0.99 ? 'bad' : 'ok'}`}>success <b>{(sim.successRate * 100).toFixed(2)}%</b></div>
               <div className="chip">availability <b>{(sim.sysAvail * 100).toFixed(3)}%</b></div>
               <div className="chip" title="Estimated monthly cloud cost at this traffic level">cost <b>{money(cost.total)}/mo</b></div>
+              <div className="chip" title="OpenTelemetry observability — traces (request paths), metrics (per-node stats), logs (events)">🔭 <b>traces</b>, <b>metrics</b>, <b>logs</b></div>
               {sim.totalDropped > 1 && <div className="chip bad">dropping <b>{fmt(sim.totalDropped)}/s</b></div>}
               {Object.keys(down).length > 0 && <div className="chip bad">down: <b>{Object.keys(down).length}</b></div>}
               {faults.length > 0 && <div className="chip bad">faults <b>{faults.length}</b></div>}
@@ -1864,9 +1865,12 @@ function Inspector({ n, sim, setNodes, cloud, cloudMult = 1 }) {
       {s && !spec.source && (
         <>
           <div className="row"><span>Incoming</span><span className="v">{fmt(s.in)}/s</span></div>
+          <div className="row"><span>Processed</span><span className="v">{fmt(s.processed)}/s</span></div>
+          <div className="row"><span>Success rate</span><span className="v" style={{ color: (s.processed / (s.processed + s.dropped) * 100) > 99 ? '#10b981' : '#ef4444' }}>{(s.processed / (s.processed + s.dropped) * 100).toFixed(2)}%</span></div>
+          {s.dropped > 0 && <div className="row"><span>Error rate</span><span className="v" style={{ color: '#ef4444' }}>{(s.dropped / (s.processed + s.dropped) * 100).toFixed(2)}%</span></div>}
           <div className="row"><span>Capacity</span><span className="v">{fmt(spec.cap * (s.replicas || 1))}/s</span></div>
           <div className="row"><span>Utilization</span><span className="v" style={{ color: utilColor(s.util) }}>{(s.util * 100).toFixed(0)}%</span></div>
-          <div className="row"><span>Dropped</span><span className="v" style={{ color: s.dropped > 0 ? '#ef4444' : undefined }}>{fmt(s.dropped)}/s</span></div>
+          {s.dropped > 0 && <div className="row"><span>Dropped</span><span className="v" style={{ color: '#ef4444' }}>{fmt(s.dropped)}/s</span></div>}
           <div className="row"><span>Latency (queued)</span><span className="v">{s.latency.toFixed(1)} ms</span></div>
           <div className="row"><span>Availability</span><span className="v">{(s.avail * 100).toFixed(3)}%</span></div>
         </>
