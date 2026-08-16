@@ -924,6 +924,7 @@ export default function App() {
 
           {simOn && (
             <div className="statbar">
+              <div className="chip">QPS <b>{rps >= 1000 ? (rps / 1000).toFixed(rps >= 10000 ? 0 : 1) + 'k' : rps}</b></div>
               <div className="chip">p50 <b>{Math.round(sim.p50)} ms</b></div>
               <div className="chip">p95 <b>{Math.round(sim.p95)} ms</b></div>
               <div className="chip">p99 <b>{Math.round(sim.p99)} ms</b></div>
