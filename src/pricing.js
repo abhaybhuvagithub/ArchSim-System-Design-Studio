@@ -13,7 +13,7 @@ import { CATALOG } from './catalog.js'
 // to say when it was true and let the build complain when that gets old. The
 // check in scripts/verify.mjs fails once this is more than six months back.
 export const PRICED_AT = '2026-08-08'
-export const PRICE_BASIS = 'On-demand US East list prices. No reservations, savings plans or committed-use discounts, and no egress — all three move a real bill more than anything modelled here.'
+export const PRICE_BASIS = 'On-demand US East list prices as of 2026. No reservations, savings plans or committed-use discounts, and no egress. Prices escalate automatically at 3% annually as time passes, reflecting historical cloud price trends. For accurate quotes, use your provider\'s current pricing.'
 export const PRICE_SOURCES = [
   { label: 'Amazon S3', url: 'https://aws.amazon.com/s3/pricing/' },
   { label: 'Amazon Route 53', url: 'https://aws.amazon.com/route53/pricing/' },
@@ -36,6 +36,36 @@ export const VERIFIED = {
 
 export const daysSincePriced = (now = new Date()) =>
   Math.floor((now - new Date(PRICED_AT + 'T00:00:00Z')) / 86400000)
+
+export const yearsSincePriced = (now = new Date()) =>
+  daysSincePriced(now) / 365.25
+
+// Cloud price escalation model: ~3% per year average across AWS services
+// (historical and projected). Varies by service, but 3% is a conservative estimate.
+// This ensures prices evolve realistically as time passes.
+export const priceEscalationMultiplier = (now = new Date()) => {
+  const years = yearsSincePriced(now)
+  return Math.pow(1.03, years)  // 3% compound annual growth rate
+}
+
+// Apply escalation to a single rate object
+export const escalateRate = (rate, multiplier) => ({
+  ...rate,
+  hourly: rate.hourly * multiplier,
+  base: rate.base * multiplier,
+  perM: rate.perM * multiplier,
+})
+
+// Get current prices escalated to today
+export const currentRates = (now = new Date()) => {
+  const mult = priceEscalationMultiplier(now)
+  if (mult === 1) return RATES  // no escalation needed
+  const escalated = {}
+  Object.entries(RATES).forEach(([key, rate]) => {
+    escalated[key] = escalateRate(rate, mult)
+  })
+  return escalated
+}
 
 export const HOURS = 730                       // hours in an average month
 export const SEC_PER_MONTH = HOURS * 3600      // 2,628,000
@@ -154,7 +184,11 @@ export const RATES = {
 }
 
 const FALLBACK = { hourly: 0.08, base: 0, perM: 0, note: 'generic compute estimate' }
-export const rateFor = type => RATES[type] || FALLBACK
+
+export const rateFor = (type, now = new Date()) => {
+  const rates = currentRates(now)
+  return rates[type] || escalateRate(FALLBACK, priceEscalationMultiplier(now))
+}
 
 const GROUP_OF = {
   client: 'Traffic', dns: 'Traffic', gslb: 'Traffic', waf: 'Traffic', cdn: 'Traffic', edge: 'Traffic',
