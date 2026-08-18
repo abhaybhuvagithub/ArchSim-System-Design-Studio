@@ -28,6 +28,7 @@ import { buildInterview, report as interviewReport, STAGES } from './interview.j
 import * as LLM from './interview-llm.js'
 import { matchConcepts, pickProbe, respond as interviewRespond } from './interview.js'
 import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
+import { HLD, LLD } from './hld-lld.jsx'
 import { REGIONS, SITE_ROLES, project, sitesFor, siteLinks, regionById } from './geo.js'
 import { AUTH, SESSION, ENTITLEMENT, revocationRisk } from './identity.js'
 import { LADDER, ladderFor, signalsFor, nextBand } from './levels.js'
@@ -994,6 +995,8 @@ export default function App() {
           <div className="tabs" role="tablist" aria-label="Analysis views" data-tour="analysis">
             {[
               ['brief', 'Brief', null, 'Written description of this architecture'],
+              ['hld', 'HLD', null, 'High-level design: requirements, components, data flow'],
+              ['lld', 'LLD', null, 'Low-level design: algorithms, schemas, edge cases, observability'],
               ['capacity', 'Capacity', null, 'Bottlenecks and the replicas each tier needs'],
               ['improve', 'Improve', sugs.length || null, 'Architecture advisor findings'],
               ['chaos', 'Chaos', faults.length || null, 'Inject faults and watch it degrade'],
@@ -1009,7 +1012,7 @@ export default function App() {
                 data-tour={`tab-${key}`}
                 title={hint}
                 className={`${tab === key ? 'on' : ''} ${key === 'chaos' && faults.length ? 'alarm' : ''}`}
-                onClick={() => { setTab(key); if (key !== 'capacity' && key !== 'brief') setSel(null) }}>
+                onClick={() => { setTab(key); if (key !== 'capacity' && key !== 'brief' && key !== 'hld' && key !== 'lld') setSel(null) }}>
                 {label}
                 {badge != null && <span className="tab-badge">{badge}</span>}
               </button>
@@ -1035,6 +1038,10 @@ export default function App() {
             <About />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
+          ) : tab === 'hld' ? (
+            <HLD template={template} nodes={nodes} edges={edges} sim={sim} />
+          ) : tab === 'lld' ? (
+            <LLD template={template} nodes={nodes} edges={edges} sim={sim} />
           ) : tab === 'chaos' ? (
             <Chaos faults={faults} nodes={nodes} sel={sel} onInject={injectFault}
               onClear={clearFault} onRecoverAll={recoverAll} sim={sim} fx={fx} />
