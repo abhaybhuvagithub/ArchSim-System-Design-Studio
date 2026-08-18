@@ -6,7 +6,7 @@ import { review, applyAll, addComponent, insertBefore } from './advisor.js'
 import { THEMES, readTheme, saveTheme, THEME_ORDER, THEME_LABEL, PALETTES, paletteOf, isDark, themeFor } from './theme.js'
 import { applyRequirement, undoRequirement, requirementEffect } from './requirements.js'
 import { LESSON, COMPARISONS, QUIZ, NUMBERS, TIPS } from './learn.js'
-import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency, PRICED_AT, PRICE_BASIS, PRICE_SOURCES, VERIFIED, daysSincePriced } from './pricing.js'
+import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency, PRICED_AT, PRICE_BASIS, PRICE_SOURCES, VERIFIED, daysSincePriced, yearsSincePriced, priceEscalationMultiplier } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
 import { FAULTS, FAULT_GROUPS, faultById, faultOnNode, pickTarget, compileFaults } from './faults.js'
@@ -1392,6 +1392,7 @@ function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSe
       <div className="price-basis">
         <b>Priced {new Date(PRICED_AT).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</b>
         {daysSincePriced() > 180 && <span className="price-stale"> · these rates are over six months old</span>}
+        {yearsSincePriced() > 0.1 && <span className="price-escalated"> · prices escalated {(priceEscalationMultiplier() * 100 - 100).toFixed(1)}% for {new Date().getFullYear()}</span>}
         <p>{PRICE_BASIS}</p>
         <p className="price-src">
           Checked against{' '}

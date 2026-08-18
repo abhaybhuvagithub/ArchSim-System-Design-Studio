@@ -1234,6 +1234,7 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .price-basis p { margin: 4px 0 0; opacity: .7; }
 .price-src a { color: var(--accent); }
 .price-stale { color: var(--warn); font-weight: 600; }
+.price-escalated { color: var(--accent); font-weight: 500; }
 .tplsearch { position: relative; display: inline-flex; align-items: center; }
 .tplsearch input {
   font: inherit; font-size: 14.2px; width: 132px; padding: 5px 10px;
