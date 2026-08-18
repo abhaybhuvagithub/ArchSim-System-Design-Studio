@@ -318,6 +318,16 @@ select.btn { appearance: auto; }
 .brief-p { font-size: 14.2px; line-height: 1.62; color: var(--muted); margin-bottom: 6px; }
 .brief-p b { color: var(--text); font-weight: 600; }
 
+/* HLD/LLD section styling */
+.hld-section, .lld-section { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.hld-section h4, .lld-section h4 { font-size: 13.6px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.hld-section ul, .lld-section ul { list-style: none; padding: 0; }
+.hld-section li, .lld-section li { font-size: 13.2px; line-height: 1.5; color: var(--muted); margin-bottom: 4px; }
+.hld-section li b, .lld-section li b { color: var(--text); font-weight: 500; }
+.hld-section p, .lld-section p { font-size: 13.2px; line-height: 1.5; color: var(--muted); margin: 0 0 6px; }
+.lld-component { background: rgba(127,140,160,.06); padding: 8px 10px; border-radius: 4px; margin: 6px 0; font-size: 12.6px; }
+.comp-name { font-weight: 600; color: var(--text); margin-bottom: 4px; font-size: 13px; }
+
 /* Chaos panel */
 .tabs button.alarm { border-color: var(--bad); color: var(--bad); }
 .chaos-live {
