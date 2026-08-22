@@ -38,6 +38,8 @@ const COMPOSE_IMAGES = {
   config: { image: 'consul:1.15' },
   zk: { image: 'zookeeper:3.9' },
   gemmaos: { image: 'ollama/ollama:latest', command: 'ollama run gemma:7b', ports: ['11434:11434'] },
+  llmobs: { image: 'langfuse/langfuse:2', ports: ['3001:3000'] },
+  agentgraph: { image: 'node:20-alpine', command: 'node agent-graph.js' },
 }
 
 export function generateCompose(nodes, edges) {

@@ -195,6 +195,9 @@ export const RATES = {
   gemmaos:     { hourly: 0,     base: 0,    perM: 0,    note: 'on-device (free), no cloud cost' },
   duetai:      { hourly: 0,     base: 0,    perM: 0.50, note: 'suggestions in GCP console (part of Cloud bill)' },
   aiagent:     { hourly: 0.10,  base: 0,    perM: 50,   note: 'Vertex agent orchestration + tool calls' },
+  agentgraph:  { hourly: 0.12,  base: 0,    perM: 100,  note: 'orchestrator compute + checkpoint storage; the LLM calls it makes bill separately' },
+  finetune:    { hourly: 3.50,  base: 0,    perM: 0,    note: 'GPU training instance (A100-class), billed only while a job runs' },
+  llmobs:      { hourly: 0,     base: 100,  perM: 2.00, note: 'tracing platform tier + per-trace ingestion' },
 }
 
 const FALLBACK = { hourly: 0.08, base: 0, perM: 0, note: 'generic compute estimate' }

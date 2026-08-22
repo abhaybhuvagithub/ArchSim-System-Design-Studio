@@ -369,8 +369,8 @@ export default function App() {
     maxUtil: Math.max(0, ...cap.rows.map(r => r.util)),
     has: t => nodes.some(n => n.type === t),
     any: ts => nodes.some(n => ts.includes(n.type)),
-    internalsViewed, wallUnderstood,
-  }), [nodes, edges, rps, simOn, steps, chaosUsed, sim, cap, internalsViewed, wallUnderstood])
+    internalsViewed, wallUnderstood, cloud,
+  }), [nodes, edges, rps, simOn, steps, chaosUsed, sim, cap, internalsViewed, wallUnderstood, cloud])
   const doneSteps = useMemo(() => LESSON.map(s => { try { return !!s.check(lessonCtx) } catch { return false } }), [lessonCtx])
 
   const fitView = useCallback(ns => {

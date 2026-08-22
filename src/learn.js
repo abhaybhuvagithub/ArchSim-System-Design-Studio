@@ -93,7 +93,7 @@ export const LESSON = [
     title: 'Know your wall',
     do: 'Open the Scale tab and scroll to "The Wall" section — this is the fundamental limit of your design.',
     why: 'Past the wall, throwing more money or capacity does not help. The wall is where design ends and business decisions (pricing, scope, admission control) begin. Every design here has a wall, and naming it is the senior move.',
-    check: c => c.wallUnerstood,
+    check: c => c.wallUnderstood,
   },
   // ── Pending: AI Ecosystem Exploration ────────────────────────────────────
   {
@@ -204,6 +204,70 @@ export const LESSON = [
     do: 'Type "/" in Cloud SQL console or Terraform editor. Duet suggests queries, infrastructure code, debugging steps.',
     why: 'Duet is Gemini embedded in GCP tools. Context-aware (reads your existing code/config). Saves time on boilerplate and catches mistakes.',
     check: c => false,
+  },
+  // ── AI Engineering, job-ready (from 342 Indian AI JDs, last 90 days) ────
+  // Each step is one of the ten most-demanded skills, ordered by how many
+  // job descriptions asked for it — and each grades itself against your
+  // canvas, so working through the track builds the system that proves it.
+  {
+    title: '💼 #1 RAG — asked for in 89% of JDs',
+    do: 'Build the retrieval loop on the canvas: a service tier wired to a Vector DB and an LLM (add an Embedding service for the full picture).',
+    why: 'Retrieval-Augmented Generation tops every hiring list because it is how real products ground an LLM in their own data. If you canvas one architecture this year, canvas this one.',
+    check: c => c.has('vector') && c.any(['llm', 'gemini3', 'gemini2', 'gemmaos']),
+  },
+  {
+    title: '💼 #2 Chain framework (LangChain) — 82% of JDs',
+    do: 'Complete the chain: Embeddings feeding the Vector DB alongside your LLM. That embed → retrieve → generate pipeline is what LangChain orchestrates.',
+    why: 'Frameworks come and go; the chain shape they orchestrate does not. Interviewers probe whether you know what LangChain does under the hood — this canvas is the answer.',
+    check: c => c.has('embed') && c.has('vector') && c.any(['llm', 'gemini3', 'gemini2', 'gemmaos']),
+  },
+  {
+    title: '💼 #3 API service tier (FastAPI) — 76% of JDs',
+    do: 'Put a service tier (App Server / Microservice / BFF) in front of your AI components — the LLM is never internet-facing directly.',
+    why: 'FastAPI is the de-facto Python serving layer for AI endpoints. Architecturally it is your app tier: auth, validation, streaming responses, and the place your Code tab generates a real server for.',
+    check: c => c.any(['app', 'micro', 'bff', 'web']),
+  },
+  {
+    title: '💼 #4 Vector databases — 71% of JDs',
+    do: 'Open the Vector DB\'s 🔍 internals: HNSW graph navigation, ef_search recall tuning, int8 quantization. Then check its cost at your traffic in the Cost tab.',
+    why: 'Pinecone, FAISS, Chroma, Weaviate — different products, one data structure. Interviews ask how approximate nearest neighbor actually works, not which vendor you picked.',
+    check: c => c.has('vector'),
+  },
+  {
+    title: '💼 #5 Prompt engineering (+ guardrails) — 64% of JDs',
+    do: 'Add a Guardrails component on your LLM path — injection scanning in, PII redaction out. That is prompt engineering\'s production half.',
+    why: 'In a JD, "prompt engineering" means making model behavior reliable and safe, not clever wording. The architecture version is a guard tier on both directions of every prompt.',
+    check: c => c.has('guard'),
+  },
+  {
+    title: '💼 #6 Docker & containers — 61% of JDs',
+    do: 'Open the Code tab → docker-compose: every component on your canvas is already containerized with images, healthchecks and replica counts. Run a microservice or K8s tier to go deeper.',
+    why: 'AI systems ship as containers. The compose file the studio generates from your design is exactly the artifact these JDs expect you to be able to write and debug.',
+    check: c => c.any(['micro', 'k8s', 'worker']),
+  },
+  {
+    title: '💼 #7 AWS / GCP deployment — 58% of JDs',
+    do: 'Switch the cloud picker off Generic: every component relabels to its managed service (SageMaker vs Vertex, ElastiCache vs Memorystore) and the bill reprices.',
+    why: 'Deployment fluency means knowing what your boxes are called on a real cloud and what they cost there. The Terraform view in the Code tab turns the diagram into the deployment.',
+    check: c => c.cloud && c.cloud !== 'generic',
+  },
+  {
+    title: '💼 #8 Multi-agent systems (LangGraph) — 49% of JDs',
+    do: 'Add an Agent Orchestrator and wire it to your LLM and tools. Open its 🔍 internals: stateful graph, cycles, checkpoints, human-in-the-loop.',
+    why: 'The step past chains: agents that plan, call tools, reflect and retry as a graph with persisted state. Half of these JDs now ask for it — it is the fastest-growing skill on the list.',
+    check: c => c.has('agentgraph'),
+  },
+  {
+    title: '💼 #9 LoRA / QLoRA fine-tuning — 37% of JDs',
+    do: 'Add the Fine-tuning component and read its internals: frozen base, rank-r adapters, 4-bit QLoRA — and why the artifact ships in megabytes.',
+    why: 'When RAG is not enough, you tune. LoRA is the technique that made tuning affordable — one GPU for a 70B-class model — and hot-swappable adapters are how one base serves many tenants.',
+    check: c => c.has('finetune'),
+  },
+  {
+    title: '💼 #10 LLM observability (Langfuse) — 28% of JDs',
+    do: 'Add the LLM Observability component downstream of your LLM. Its internals show trace trees, token-cost attribution and eval scoring.',
+    why: 'Rarest on the list, which makes it the differentiator: candidates who can say how they would trace a chain, attribute token spend and eval prompt versions stand out immediately.',
+    check: c => c.has('llmobs'),
   },
 ]
 

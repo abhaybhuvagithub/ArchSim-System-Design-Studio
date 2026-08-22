@@ -2778,6 +2778,29 @@ try {
       check(`code generation runs clean across all ${tp2.TEMPLATES.length} templates` + (genFail.length ? ' — ' + genFail.slice(0, 3).join('; ') : ''), genFail.length === 0);
       check(`every generated JS file parses under node --check (${checked} files)` + (syntaxFail.length ? ' — ' + syntaxFail.slice(0, 3).join('; ') : ''), syntaxFail.length === 0);
     }
+
+    // ── the JD-driven AI Engineering track must actually grade itself ────────
+    // Ten steps from real job-description data; unlike the aspirational Google
+    // steps, these carry live checks — build the RAG canvas and they tick.
+    {
+      const ln = await import(pathToFileURL(path.join(root, 'src/learn.js')).href);
+      const jd = ln.LESSON.filter(s => s.title.startsWith('💼'));
+      check('the AI Engineering track has all ten JD skills', jd.length === 10);
+      const mk = types => ({
+        nodes: types.map((t, i) => ({ id: 'n' + i, type: t })),
+        cloud: 'generic',
+        has(t) { return this.nodes.some(n => n.type === t) },
+        any(ts) { return this.nodes.some(n => ts.includes(n.type)) },
+      });
+      const ragCanvas = mk(['app', 'embed', 'vector', 'llm', 'guard', 'micro', 'agentgraph', 'finetune', 'llmobs']);
+      const empty = mk([]);
+      const graded = jd.filter(s => { try { return s.check(ragCanvas) && !s.check(empty) } catch { return false } });
+      check('at least nine JD steps grade themselves against the canvas (no c => false)', graded.length >= 9);
+      check('the cloud-deployment step passes only off Generic',
+        !jd[6].check(mk([])) && jd[6].check({ ...mk([]), cloud: 'aws' }));
+      check('the wall step reads the field App.jsx actually sets (typo regression)',
+        !/wallUnerstood/.test(fs.readFileSync(path.join(root, 'src/learn.js'), 'utf8')));
+    }
   }
 
   // ── nothing in the interface is too small to read ──────────────────────────

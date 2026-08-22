@@ -252,6 +252,33 @@ const COMPONENT_DIAGRAMS = {
     
     QUALITY: Trained on Google Cloud docs + customer patterns
   `,
+  agentgraph: `
+    STATE IN -> Node runs (planner / agent / tool) -> state delta + route decision
+
+    -> CHECKPOINT persisted per step -> next node -> ... -> END
+
+    CYCLES ALLOWED: reflect -> retry -> re-plan. Resume any thread from its last checkpoint.
+
+    HUMAN-IN-LOOP: a node that pauses the thread until a person answers.
+  `,
+  finetune: `
+    BASE MODEL (frozen, optionally 4-bit = QLoRA) + ADAPTER matrices (rank r)
+
+    -> Train: gradients flow ONLY into adapters -> save adapter (MBs)
+
+    SERVE: merge into base, or hot-swap adapters per tenant on one shared base
+
+    ECONOMICS: 70B-class tuning on one GPU; the artifact ships like a config file.
+  `,
+  llmobs: `
+    SDK wraps each chain step -> span { prompt, completion, tokens, ms, cost }
+
+    -> Async ingest -> trace tree reassembled -> per-step waterfall in the UI
+
+    EVALS: dataset -> chain -> score (exact / LLM-judge / human) -> diff versions
+
+    COST: tokens roll up per user, feature, prompt version.
+  `,
   aiagent: `
     DEFINE TOOLS: API endpoints + preconditions/postconditions in Vertex builder
     
