@@ -21,6 +21,11 @@ cp -r "$STAGE"/* .
 rm -rf "$STAGE"
 git add -A
 git commit -m "Deploy: $(git log main -1 --pretty=%s)"
-git push origin gh-pages
+# Push with $GH_TOKEN when set (CI / sandboxes with no stored credentials).
+if [ -n "${GH_TOKEN:-}" ]; then
+  git push "https://x-access-token:${GH_TOKEN}@github.com/abhaybhuvagithub/ArchSim-System-Design-Studio.git" gh-pages
+else
+  git push origin gh-pages
+fi
 git checkout main
 echo "✓ deployed $(grep -o 'index-[^\"]*\.js' index.html 2>/dev/null || echo '')"
