@@ -2171,7 +2171,7 @@ try {
     splitters[0].dispatchEvent(new win.MouseEvent('dblclick', { bubbles: true }));
     await wait(120);
     check('double-clicking the splitter resets to the default width',
-      widthOf(palette()) === 168 && before === 168);
+      widthOf(palette()) === 220 && before === 220);
   }
 
   // ── ①②③ step badges default to on ──────────────────────────────────────────
