@@ -1,5 +1,5 @@
 import { CATALOG } from './catalog.js'
-import { COMPONENT_INTERNALS } from './component-internals.js'
+import { getComponentInternals } from './component-internals.js'
 
 export function ComponentComparison({ selected = [] }) {
   if (selected.length < 2) {
@@ -14,7 +14,7 @@ export function ComponentComparison({ selected = [] }) {
   const components = selected.map(type => ({
     type,
     spec: CATALOG[type],
-    internals: COMPONENT_INTERNALS[type],
+    internals: getComponentInternals(type),
   }))
 
   return (
