@@ -29,7 +29,7 @@ import * as LLM from './interview-llm.js'
 import { matchConcepts, pickProbe, respond as interviewRespond } from './interview.js'
 import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
 import { HLD, LLD } from './hld-lld.jsx'
-import { ComponentDetails, componentDetailsStyles } from './component-details.jsx'
+import { ComponentComparison, comparisonStyles } from './component-comparison.jsx'
 import { REGIONS, SITE_ROLES, project, sitesFor, siteLinks, regionById } from './geo.js'
 import { AUTH, SESSION, ENTITLEMENT, revocationRisk } from './identity.js'
 import { LADDER, ladderFor, signalsFor, nextBand } from './levels.js'
@@ -1060,7 +1060,7 @@ export default function App() {
           ) : tab === 'interview' ? (
             <Interview template={template} />
           ) : tab === 'learn' ? (
-            <Learn done={doneSteps} />
+            <Learn done={doneSteps} nodes={nodes} />
           ) : tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
               onHover={setHover} empty={nodes.length === 0} />
@@ -1491,16 +1491,18 @@ function Cost({ cost, onHover, empty, cloud, plan, onRightSize, onScaleAll, onSe
 
 const REAL_CLOUDS = CLOUDS.filter(c => c.id !== 'generic')
 
-function Learn({ done }) {
+function Learn({ done, nodes = [] }) {
   const [sub, setSub] = useState('steps')
   const [answers, setAnswers] = useState({})
   const [cq, setCq] = useState('')
+  const [selectedTypes, setSelectedTypes] = useState([])
   const doneCount = done.filter(Boolean).length
   const score = Object.entries(answers).filter(([i, a]) => QUIZ[+i].answer === a).length
+  const uniqueTypes = [...new Set(nodes.map(n => n.type))].filter(t => t)
   return (
     <section>
       <div className="tabs sub">
-        {[['steps', 'Steps'], ['consistency', 'Consistency'], ['questions', 'Questions'], ['tips', 'Tips'], ['clouds', 'Clouds'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
+        {[['steps', 'Steps'], ['consistency', 'Consistency'], ['questions', 'Questions'], ['tips', 'Tips'], ['clouds', 'Clouds'], ['matrix', 'Matrix'], ['compare', 'Compare'], ['quiz', 'Quiz'], ['numbers', 'Numbers']].map(([k, l]) => (
           <button key={k} className={sub === k ? 'on' : ''} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
@@ -1641,6 +1643,41 @@ function Learn({ done }) {
               </div>
             )
           })}
+        </>
+      )}
+
+      {sub === 'matrix' && (
+        <>
+          <h3>Component comparison matrix</h3>
+          <div className="muted" style={{ marginBottom: 12 }}>
+            Select 2–3 component types from your design to compare their internals, specs, and trade-offs side by side.
+          </div>
+          {uniqueTypes.length > 0 ? (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 12 }}>
+                {uniqueTypes.map(type => (
+                  <button
+                    key={type}
+                    className={`comp-select ${selectedTypes.includes(type) ? 'on' : ''}`}
+                    onClick={() => setSelectedTypes(s => s.includes(type) ? s.filter(t => t !== type) : s.length < 3 ? [...s, type] : s)}
+                    style={{
+                      padding: '8px 10px', fontSize: 12, border: `1px solid ${selectedTypes.includes(type) ? 'var(--accent)' : 'var(--border)'}`,
+                      background: selectedTypes.includes(type) ? 'rgba(79,172,254,.1)' : 'var(--bg)', borderRadius: 4, cursor: 'pointer',
+                      color: selectedTypes.includes(type) ? 'var(--accent)' : 'var(--text)', fontWeight: selectedTypes.includes(type) ? 600 : 400,
+                    }}
+                  >
+                    {CATALOG[type]?.glyph} {type}
+                  </button>
+                ))}
+              </div>
+              {selectedTypes.length > 0 && (
+                <button className="btn" onClick={() => setSelectedTypes([])} style={{ fontSize: 11, marginBottom: 12 }}>Clear selection</button>
+              )}
+            </div>
+          ) : (
+            <div className="muted" style={{ marginBottom: 12 }}>Add components to your design first to compare them.</div>
+          )}
+          <ComponentComparison selected={selectedTypes} />
         </>
       )}
 

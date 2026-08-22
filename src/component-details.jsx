@@ -1,11 +1,130 @@
 import { COMPONENT_INTERNALS, getComponentInternals } from './component-internals.js'
 import { CATALOG } from './catalog.js'
 
+const COMPONENT_DIAGRAMS = {
+  cache: `
+    REQUEST → HASH LOOKUP (O(1), 2μs) → HIT? 
+    ├─ YES: Read LRU list head → return value
+    └─ NO: Query DB → Insert into hash + LRU head
+    
+    TTL EXPIRY: Background thread every 100ms scans expired entries
+    
+    MEMORY PRESSURE: LRU tail evicted when full
+  `,
+  sql: `
+    WRITE: Query → WAL (disk sync) → Memtable (in-memory) → Commit ✓
+    
+    READ: Query → B-tree index scan → Read set of rows → MVCC snapshot
+    
+    CONFLICT: Multiple writes to same row → Locking → Rollback via undo log
+  `,
+  nosql: `
+    WRITE (LSM): In-memory memtable (fast) → Full? → Flush to SSTable (sorted)
+    
+    READ: Check memtable → Scan SSTables (Bloom filter skips non-matches)
+    
+    COMPACT: Merge overlapping SSTables in background (reduces read amp)
+  `,
+  queue: `
+    PRODUCE: Append → Tail pointer ↑ → Return 200 ✓
+    
+    CONSUME: Read head → Lock (visibility timeout 30s) → Process → ACK
+    
+    FAILURE: Timeout → Unlock → Re-queue (retry counter ↑)
+  `,
+  llm: `
+    TOKEN N: Read KV cache (prev tokens) → Compute attention → Next token
+    
+    TOKEN N+1: Cache K,V matrices → Avoid re-computing 1..N ✓
+    
+    BATCH: 10 requests → Queue up → GPU inference (all at once)
+  `,
+  cdn: `
+    REQUEST → EDGE LOCATION → Cache hit? → Return (2ms latency)
+    
+    CACHE MISS → Origin pull → Store locally → Return + Cache
+    
+    PURGE: New version deployed → Propagate to 200+ edges (5min)
+  `,
+  lb: `
+    NEW REQUEST → Connection count map → Pick instance with fewest → Forward
+    
+    HEALTH CHECK (5s) → Instance down? → Remove from pool
+    
+    DRAIN: Old instance marked "draining" → No new requests → Wait existing
+  `,
+  app: `
+    REQUEST → Parse → Check cache (hit?) → Query DB → Apply logic → Response
+    
+    FAIL: Exponential backoff (100ms, 400ms, 1.6s) → Circuit breaker opens
+    
+    RECOVERY: Test endpoint → Success → Close breaker
+  `,
+  kafka: `
+    PRODUCE: Append to partition log (sequential I/O) → Leader ACK → Replicas pull
+    
+    CONSUME: Start at offset → Read messages → Advance consumer offset
+    
+    REBALANCE: Consumer fails → Re-assign partitions to remaining consumers
+  `,
+  ratelimiter: `
+    TOKEN BUCKET (per tenant):
+    Tokens = min(capacity, tokens + (rate × time_elapsed))
+    
+    REQUEST: tokens ≥ 1? → tokens -= 1 → Allow | Deny
+    
+    REFILL: Background every second (or event-driven)
+  `,
+  web: `
+    REQUEST → Match route → Render template with data → Static assets from CDN
+    
+    SESSION: Stored in distributed cache (Redis) → Hash by user_id
+    
+    ETAG: If-None-Match header → Return 304 Not Modified (saves bandwidth)
+  `,
+  backup: `
+    FULL SNAPSHOT: All blocks → Hash → Store in archive (S3, GCS)
+    
+    INCREMENTAL: Hash each block → Store only new/changed → Dedup
+    
+    RECOVERY: Find backup → Restore blocks in parallel → Verify checksums
+  `,
+  search: `
+    INDEX: Text → Tokenize → Inverted index (term → doc_ids)
+    
+    QUERY: Parse → Lookup posting lists → Merge by rank (BM25)
+    
+    RANKING: freq(term in doc) × log(N / docs_with_term)
+  `,
+  gateway: `
+    REQUEST → Parse path/method → Route table (trie match) → Add auth headers
+    
+    → Inject trace_id → Forward to backend → Timeout gate (30s)
+    
+    RESPONSE: Success → 2xx. Timeout → 504. Backend error → 502.
+  `,
+  mq: `
+    PUBLISH: Enlist message in transaction → Subscribers added to scope
+    
+    COMMIT: All-or-nothing → All subscribers consume or all fail
+    
+    DEADLETTER: Failed subscriptions after 3 retries → Routed to DLQ
+  `,
+  worker: `
+    POLL: Fetch job from queue (lock: visibility timeout 5min)
+    
+    EXECUTE: Run task (email, transcode, aggregate)
+    
+    ACK/RETRY: Success → Remove from queue. Fail → Retry counter ↑
+  `,
+}
+
 export function ComponentDetails({ nodeId, node, onClose }) {
   if (!node) return null
 
   const spec = CATALOG[node.type]
   const internals = getComponentInternals(node.type)
+  const diagram = COMPONENT_DIAGRAMS[node.type]
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -23,6 +142,15 @@ export function ComponentDetails({ nodeId, node, onClose }) {
             <h3>📝 Description</h3>
             <p>{spec?.desc}</p>
           </div>
+
+          {diagram && (
+            <div className="details-section">
+              <h3>📊 Diagram (Data Flow)</h3>
+              <div className="diagram-box">
+                <pre>{diagram.trim()}</pre>
+              </div>
+            </div>
+          )}
 
           <div className="details-section">
             <h3>⚙️ Core Algorithm</h3>
@@ -161,107 +289,3 @@ export function ComponentDetails({ nodeId, node, onClose }) {
   )
 }
 
-export const componentDetailsStyles = `
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 8px; max-width: 600px; max-height: 85vh; 
-  overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.modal-header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  padding: 16px; border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, rgba(127,140,160,.06), transparent);
-  position: sticky; top: 0; z-index: 10;
-}
-
-.modal-title {
-  display: flex; align-items: center; gap: 12px; flex: 1;
-}
-
-.component-glyph {
-  font-size: 32px; line-height: 1;
-}
-
-.modal-title h2 {
-  font-size: 20px; margin: 0; color: var(--text);
-}
-
-.component-type {
-  font-size: 12px; opacity: 0.6; font-weight: normal;
-}
-
-.modal-close {
-  background: none; border: none; font-size: 28px; cursor: pointer;
-  color: var(--muted); padding: 0; width: 32px; height: 32px;
-  display: flex; align-items: center; justify-content: center;
-}
-
-.modal-close:hover { color: var(--text); }
-
-.modal-body {
-  padding: 16px;
-}
-
-.details-section {
-  margin-bottom: 18px;
-}
-
-.details-section h3 {
-  font-size: 13.6px; font-weight: 600; color: var(--text);
-  margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;
-}
-
-.details-section p {
-  font-size: 13.2px; line-height: 1.6; color: var(--muted); margin: 0;
-}
-
-.details-box {
-  background: rgba(127,140,160,.06); padding: 10px 12px;
-  border-radius: 4px; border-left: 2px solid var(--accent);
-}
-
-.details-box p {
-  margin: 0; font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 12px; color: var(--text);
-}
-
-.details-section ul {
-  list-style: none; padding: 0; margin: 0;
-}
-
-.details-section li {
-  font-size: 13px; line-height: 1.5; color: var(--muted);
-  margin-bottom: 6px; padding-left: 20px; position: relative;
-}
-
-.details-section li:before {
-  content: '▪'; position: absolute; left: 8px; color: var(--accent);
-}
-
-.details-section li b { color: var(--text); font-weight: 600; }
-
-.specs-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-}
-
-.spec-item {
-  display: flex; flex-direction: column; padding: 8px;
-  background: rgba(127,140,160,.06); border-radius: 4px; text-align: center;
-}
-
-.spec-label {
-  font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase;
-}
-
-.spec-value {
-  font-size: 14px; font-weight: 600; color: var(--accent);
-}
-`
