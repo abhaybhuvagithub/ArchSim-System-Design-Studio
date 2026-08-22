@@ -2698,6 +2698,86 @@ try {
       check('a vector store plus an LLM generates a grounded /ask endpoint',
         rag.includes("/ask'") && rag.includes('points/search') && rag.includes('context'));
     }
+
+    // ── production-grade invariants and the no-regression net ────────────────
+    // Two layers: (1) every design decision the hardened generator promises is
+    // actually present in the output; (2) every JS file it can emit, for every
+    // one of the shipped templates, parses — checked by node itself, so a
+    // template-literal escaping slip or a stray brace fails the build here
+    // rather than in a user's terminal.
+    {
+      const richNs = [
+        { id: 'a', type: 'app', label: 'API Server' },
+        { id: 'c', type: 'cache', label: 'Redis' },
+        { id: 's', type: 'sql', label: 'Orders DB' },
+        { id: 'q', type: 'queue', label: 'Jobs Queue' },
+        { id: 'k', type: 'worker', label: 'Email Worker' },
+        { id: 'w', type: 'ws', label: 'Live Socket' },
+        { id: 'v', type: 'vector', label: 'Qdrant' },
+        { id: 'l', type: 'llm', label: 'LLM' },
+      ];
+      const richEs = [
+        { id: 'e1', from: 'a', to: 'c' }, { id: 'e2', from: 'a', to: 's' },
+        { id: 'e3', from: 'a', to: 'q' }, { id: 'e4', from: 'q', to: 'k' },
+        { id: 'e5', from: 'k', to: 's' }, { id: 'e6', from: 'a', to: 'v' },
+        { id: 'e7', from: 'a', to: 'l' }, { id: 'e8', from: 'w', to: 'c' },
+      ];
+      const proj = sc.generateProject(richNs, richEs);
+      const server = proj.find(f => f.path === 'services/api-server/server.js').content;
+      const worker = proj.find(f => f.path === 'services/email-worker/worker.js').content;
+      check('generated services shut down gracefully on SIGTERM with a forced-exit deadline',
+        server.includes("process.on('SIGTERM'") && server.includes('server.close') && server.includes('forcing exit')
+        && worker.includes("process.on('SIGTERM'") && worker.includes('while (inFlight > 0)'));
+      check('generated services expose readiness (/ready checking dependencies) beside liveness',
+        server.includes("app.get('/ready'") && server.includes('503') && server.includes("SELECT 1"));
+      check('every upstream call in generated code carries a timeout',
+        (server.match(/AbortSignal\.timeout\(/g) || []).length >= 3
+        && server.includes('statement_timeout') && server.includes('connectionTimeoutMillis'));
+      check('startup connections retry with backoff instead of crash-looping',
+        server.includes('withRetry(') && worker.includes('withRetry(') && server.includes('2 ** i'));
+      check('generated code validates input and bounds request bodies',
+        server.includes("limit: '1mb'") && server.includes('invalid id') && server.includes('non-empty JSON object'));
+      check('a broken cache degrades reads instead of failing them, and TTLs are jittered',
+        server.includes('cache read failed, falling through') && server.includes('jitteredTTL'));
+      check('generated code logs structured JSON and never leaks internals in a 500',
+        server.includes('JSON.stringify({ ts:') && server.includes("res.status(500).json({ error: 'internal error' })"));
+      check('redis and pg clients register error listeners (one blip must not kill the process)',
+        server.includes("cache.on('error'") && server.includes("db.on('error'"));
+      check('the compose file carries restart policies and healthchecks for stateful services',
+        (() => { const y = cg.generateCompose(richNs, richEs);
+          return y.includes('restart: unless-stopped') && y.includes('pg_isready') && y.includes('redis-cli ping') })());
+
+      // Layer 2: node --check every emitted JS file — for the rich fixture and
+      // for every shipped template — plus JSON.parse on every package.json.
+      const { execFileSync } = await import('node:child_process');
+      const os = await import('node:os');
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'archsim-codegen-'));
+      let checked = 0;
+      const syntaxFail = [];
+      const checkJs = (label, content) => {
+        const p = path.join(tmp, `f${checked++}.mjs`);   // .mjs so node parses it as the ESM it is
+        fs.writeFileSync(p, content);
+        try { execFileSync(process.execPath, ['--check', p], { stdio: 'pipe' }) }
+        catch (err) { syntaxFail.push(label + ': ' + String(err.stderr || err.message).split('\n')[0]) }
+      };
+      const tp2 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+      const genFail = [];
+      for (const t of tp2.TEMPLATES) {
+        try {
+          const files = sc.generateProject(t.nodes, t.edges);
+          const pkg = files.find(f => f.path === 'package.json');
+          if (pkg) JSON.parse(pkg.content);
+          for (const f of files) if (f.path.endsWith('.js')) checkJs(`${t.name} → ${f.path}`, f.content);
+          cg.generateCompose(t.nodes, t.edges);
+          cg.generateTerraform(t.nodes, 'aws');
+          cg.generateOpenAPI(t.nodes, t.edges);
+        } catch (err) { genFail.push(t.name + ': ' + err.message) }
+      }
+      for (const f of proj) if (f.path.endsWith('.js')) checkJs('fixture → ' + f.path, f.content);
+      fs.rmSync(tmp, { recursive: true, force: true });
+      check(`code generation runs clean across all ${tp2.TEMPLATES.length} templates` + (genFail.length ? ' — ' + genFail.slice(0, 3).join('; ') : ''), genFail.length === 0);
+      check(`every generated JS file parses under node --check (${checked} files)` + (syntaxFail.length ? ' — ' + syntaxFail.slice(0, 3).join('; ') : ''), syntaxFail.length === 0);
+    }
   }
 
   // ── nothing in the interface is too small to read ──────────────────────────
