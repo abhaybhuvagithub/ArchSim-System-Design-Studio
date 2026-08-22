@@ -1617,3 +1617,12 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 }
 .explain-voice:hover { background: rgba(127,140,160,.12); }
 .explain-voice.on { border-color: var(--accent); background: rgba(91,140,255,.14); }
+
+/* ── Code tab ──────────────────────────────────────────────────────────── */
+.code-subtabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.code-out {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px;
+  line-height: 1.55; background: var(--chip-bg, rgba(127,140,160,.08));
+  border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+  overflow: auto; max-height: 52vh; white-space: pre; margin: 0 0 8px;
+}

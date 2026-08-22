@@ -37,6 +37,7 @@ import { LADDER, ladderFor, signalsFor, nextBand } from './levels.js'
 import { LAND, WORLD_W, WORLD_H } from './world.js'
 import { QUESTION_BANK, QUESTION_LEVELS, questionsAt } from './questions.js'
 import { explainFlow, isBidir } from './explain.js'
+import { generateCode, CODE_VIEWS } from './codegen.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1115,6 +1116,7 @@ export default function App() {
               ['improve', 'Improve', sugs.length || null, 'Architecture advisor findings'],
               ['chaos', 'Chaos', faults.length || null, 'Inject faults and watch it degrade'],
               ['cost', 'Cost', money(cost.total), 'What this design costs to run'],
+              ['code', 'Code', null, 'docker-compose, Terraform and OpenAPI generated live from the canvas'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1151,6 +1153,8 @@ export default function App() {
               }} />
           ) : tab === 'about' ? (
             <About />
+          ) : tab === 'code' ? (
+            <CodeGen nodes={nodes} edges={edges} cloud={cloud} sugs={sugs} />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
           ) : tab === 'hld' ? (
@@ -1384,6 +1388,50 @@ function About() {
         </div>
       </div>
       </ReadAloud>
+    </section>
+  )
+}
+
+// The Code tab: three generated artifacts, re-derived from nodes and edges on
+// every change — which is what makes "the code evolves with Improve and Quick
+// Fix" true by construction rather than by bookkeeping.
+function CodeGen({ nodes, edges, cloud, sugs }) {
+  const [view, setView] = useState('compose')
+  const [copied, setCopied] = useState(false)
+  const meta = CODE_VIEWS.find(v => v.id === view) || CODE_VIEWS[0]
+  const code = useMemo(() => generateCode(view, nodes, edges, cloud), [view, nodes, edges, cloud])
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* clipboard denied */ }
+  }
+  const download = () => {
+    const blob = new Blob([code], { type: 'text/plain' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob); a.download = meta.file; a.click()
+  }
+  return (
+    <section>
+      <h3>Code — generated from the canvas</h3>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Derived live from the diagram: change a replica count, apply an ✨ Improve
+        suggestion or a chaos quick fix, and this code changes with it.
+        {sugs.length > 0 && <> There {sugs.length === 1 ? 'is 1 open finding' : `are ${sugs.length} open findings`} in Improve — apply one and watch this file follow.</>}
+      </p>
+      <div className="code-subtabs" role="tablist" aria-label="Generated artifact">
+        {CODE_VIEWS.map(v => (
+          <button key={v.id} role="tab" aria-selected={view === v.id}
+            className={`btn ${view === v.id ? 'active' : ''}`}
+            title={v.hint} onClick={() => setView(v.id)}>{v.label}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6, margin: '8px 0' }}>
+        <button className="btn" style={{ flex: 1 }} onClick={copy}>{copied ? '✓ Copied' : '⧉ Copy'}</button>
+        <button className="btn" onClick={download}>↓ {meta.file}</button>
+      </div>
+      <pre className="code-out" aria-label={`Generated ${meta.label}`}>{code}</pre>
+      <p className="muted" style={{ fontSize: 12 }}>
+        A skeleton for the shape of the design, not a production stack — capacity
+        numbers and service names are real, resource bodies are minimal.
+      </p>
     </section>
   )
 }

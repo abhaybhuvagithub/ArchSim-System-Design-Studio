@@ -2120,7 +2120,7 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all thirteen tabs are tabs', tabBtns.length === 13);
+    check('all fourteen tabs are tabs', tabBtns.length === 14);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',
@@ -2625,6 +2625,33 @@ try {
         /speechSupported\(\)\s*&&[\s\S]{0,200}explain-voice/.test(app));
       check('finishing a spoken hop advances the walkthrough',
         /explainVoice[\s\S]*setExplain\(cur\s*=>/.test(app));
+    }
+
+    // ── the Code tab: generated artifacts must track the canvas ─────────────
+    const cg = await import(pathToFileURL(path.join(root, 'src/codegen.js')).href);
+    {
+      const ns = [
+        { id: 'a', type: 'app', label: 'API Server', replicas: 3 },
+        { id: 'c', type: 'cache', label: 'Redis' },
+        { id: 's', type: 'sql', label: 'Orders DB' },
+      ];
+      const es = [{ id: 'e1', from: 'a', to: 'c' }, { id: 'e2', from: 'a', to: 's' }];
+      const compose = cg.generateCompose(ns, es);
+      check('compose names every runnable component and its replica count',
+        compose.includes('api-server') && compose.includes('redis:') && compose.includes('postgres') && compose.includes('replicas: 3'));
+      // The whole point: apply a quick fix (here, a cache spliced in by the
+      // advisor) and the generated code must change with the canvas.
+      const before = cg.generateCompose(ns.filter(n => n.id !== 'c'), es.filter(e => e.to !== 'c'));
+      check('adding a component changes the generated code (code follows the canvas)',
+        before !== compose && !before.includes('redis:'));
+      const tf = cg.generateTerraform(ns, 'aws');
+      check('terraform names the mapped managed service per component',
+        tf.includes('provider "aws"') && /ElastiCache/i.test(tf) && /module "orders_db"/.test(tf));
+      check('terraform on Generic explains itself instead of emitting junk',
+        /pick a specific cloud/i.test(cg.generateTerraform(ns, 'generic')));
+      const oa = cg.generateOpenAPI(ns, es);
+      check('openapi has a path per service/store pair with both verbs',
+        oa.includes('openapi: 3.0.3') && oa.includes('/api-server/orders-db:') && oa.includes('get:') && oa.includes('post:'));
     }
   }
 
