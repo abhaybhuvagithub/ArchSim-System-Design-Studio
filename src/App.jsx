@@ -36,6 +36,7 @@ import { AUTH, SESSION, ENTITLEMENT, revocationRisk } from './identity.js'
 import { LADDER, ladderFor, signalsFor, nextBand } from './levels.js'
 import { LAND, WORLD_W, WORLD_H } from './world.js'
 import { QUESTION_BANK, QUESTION_LEVELS, questionsAt } from './questions.js'
+import { explainFlow, isBidir } from './explain.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -684,7 +685,27 @@ export default function App() {
   const selEdgeObj = edges.find(e => e.id === selEdge)
   const hoverNode = nodes.find(n => n.id === hover)
   const dots = simOn ? edgeDots(edges, nodes, sim, tick) : []
-  const stepMap = useMemo(() => (steps ? flowSteps(nodes, edges) : {}), [steps, nodes, edges])
+  const stepMapAll = useMemo(() => flowSteps(nodes, edges), [nodes, edges])
+  const stepMap = steps ? stepMapAll : {}
+  // The walkthrough: null = off, otherwise an index into explainList.
+  const [explain, setExplain] = useState(null)
+  const explainList = useMemo(
+    () => explainFlow(nodes, edges, stepMapAll, sim, simOn, rps),
+    [nodes, edges, stepMapAll, sim, simOn, rps])
+  const explainCur = explain != null ? explainList[Math.min(explain, explainList.length - 1)] : null
+  useEffect(() => { if (explain != null && !explainList.length) setExplain(null) }, [explain, explainList.length])
+  useEffect(() => {
+    if (explain == null) return
+    const key = e => {
+      if (e.key === 'ArrowRight') setExplain(i => Math.min(explainList.length - 1, i + 1))
+      else if (e.key === 'ArrowLeft') setExplain(i => Math.max(0, i - 1))
+      else if (e.key === 'Escape') setExplain(null)
+    }
+    window.addEventListener('keydown', key)
+    return () => window.removeEventListener('keydown', key)
+  }, [explain, explainList.length])
+  const byIdMap = useMemo(() => Object.fromEntries(nodes.map(n => [n.id, n])), [nodes])
+  const bidirSet = useMemo(() => new Set(edges.filter(e => isBidir(e, edges, byIdMap)).map(e => e.id)), [edges, byIdMap])
 
   // neighbours of the hovered node — used to dim everything else
   const neighbours = useMemo(() => {
@@ -717,6 +738,11 @@ export default function App() {
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} data-tour="improve" onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
           title="Review the design and suggest components to add, wired in automatically">
           ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
+        </button>
+        <button className={`btn ${explain != null ? 'active' : ''}`} data-tour="explain"
+          onClick={() => setExplain(v => (v == null ? (explainList.length ? 0 : null) : null))}
+          title="Walk the design hop by hop, in the same ①②③ order as the step badges">
+          🧭 Explain
         </button>
         <div className="rps" data-tour="traffic">
           <span>Traffic</span>
@@ -903,9 +929,10 @@ export default function App() {
               {edges.map(e => (
                 <Edge key={e.id} e={e} nodes={nodes} sim={sim} simOn={simOn} t={T}
                   selected={selEdge === e.id}
-                  step={steps ? stepMap[e.id] : null}
-                  hot={hover ? e.from === hover || e.to === hover : false}
-                  dimmed={(hover ? !(e.from === hover || e.to === hover) : false) || !flowSet.edges.has(e.id)}
+                  step={(steps || explain != null) ? stepMapAll[e.id] : null}
+                  bidir={bidirSet.has(e.id)}
+                  hot={(hover ? e.from === hover || e.to === hover : false) || explainCur?.edgeId === e.id}
+                  dimmed={(hover ? !(e.from === hover || e.to === hover) : false) || !flowSet.edges.has(e.id) || (explainCur ? explainCur.edgeId !== e.id : false)}
                   onSelect={() => { setSelEdge(e.id); setSel(null); setTab('capacity') }} />
               ))}
               {drag.current?.kind === 'wire' && (() => {
@@ -917,7 +944,7 @@ export default function App() {
                 <Node key={n.id} n={n} sim={sim} simOn={simOn} t={T} cloud={cloud}
                   selected={sel === n.id}
                   hovered={hover === n.id}
-                  dimmed={(neighbours ? !neighbours.has(n.id) : false) || !flowSet.nodes.has(n.id)}
+                  dimmed={(neighbours ? !neighbours.has(n.id) : false) || !flowSet.nodes.has(n.id) || (explainCur ? (n.id !== explainCur.fromId && n.id !== explainCur.toId) : false)}
                   onDown={onNodeDown} onPortDown={onPortDown}
                   onEnter={() => setHover(n.id)} onLeave={() => setHover(h => (h === n.id ? null : h))} />
               ))}
@@ -927,6 +954,26 @@ export default function App() {
           {hoverNode && !selNode && (
             <HoverCard n={hoverNode} sim={sim} simOn={simOn} cloud={cloud} cloudName={cloudInfo.name}
               diag={health.find(h => h.id === hoverNode.id) || null} />
+          )}
+
+          {explainCur && (
+            <div className="explain-card" role="dialog" aria-label="Flow walkthrough">
+              <div className="explain-head">
+                <span className="explain-badge">{explainCur.step}</span>
+                <b className="explain-title">{explainCur.title}</b>
+                <span className="explain-count">step {explain + 1} of {explainList.length}</span>
+                <button className="explain-x" title="Close (Esc)" onClick={() => setExplain(null)}>×</button>
+              </div>
+              <div className="explain-body">
+                {explainCur.text.map((l, i) => <p key={i}><RichLine text={l} /></p>)}
+              </div>
+              <div className="explain-nav">
+                <button className="btn" disabled={explain === 0} onClick={() => setExplain(i => i - 1)}>← Prev</button>
+                <button className="btn" onClick={() => explain >= explainList.length - 1 ? setExplain(null) : setExplain(i => i + 1)}>
+                  {explain >= explainList.length - 1 ? '✓ Done' : 'Next →'}
+                </button>
+              </div>
+            </div>
           )}
 
           {simOn && (
@@ -1210,7 +1257,7 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
   )
 }
 
-function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }) {
+function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, bidir, onSelect }) {
   const f = nodes.find(n => n.id === e.from), tgt = nodes.find(n => n.id === e.to)
   if (!f || !tgt) return null
   const x1 = f.x + NODE_W, y1 = f.y + NODE_H / 2, x2 = tgt.x, y2 = tgt.y + NODE_H / 2
@@ -1223,7 +1270,9 @@ function Edge({ e, nodes, sim, simOn, t, selected, hot, dimmed, step, onSelect }
     <g className="edge" onPointerDown={ev => { ev.stopPropagation(); onSelect() }}
       style={{ cursor: 'pointer', opacity: dimmed ? 0.18 : 1, transition: 'opacity .12s' }}>
       <path d={d} stroke={stroke} strokeWidth={selected ? 3 : hot ? Math.max(2.5, w) : w}
-        markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'} opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85} />
+        markerEnd={hot ? 'url(#arrow-hot)' : 'url(#arrow)'}
+        markerStart={bidir ? (hot ? 'url(#arrow-hot)' : 'url(#arrow)') : undefined}
+        opacity={simOn && flow === 0 && !hot ? 0.4 : 0.85} />
       <path d={d} stroke="transparent" strokeWidth="12" />
       {e.label && <text x={mx} y={my + (simOn && flow > 0 ? 14 : 4)} fontSize="9.5" fill={t.nodeText} textAnchor="middle" fontWeight="600">{e.label}</text>}
       {simOn && flow > 0 && <text x={mx} y={my - 6} fontSize="9" fill={hot ? t.hotText : t.nodeSub} textAnchor="middle">{fmt(flow)}/s</text>}
@@ -1778,6 +1827,16 @@ function EdgeInspector({ e, nodes, sim, step, setEdges, onDelete }) {
         </select>
       </div>
       {e.encoding && <div className="ddia-blurb">{ENCODINGS[e.encoding].blurb}</div>}
+      <div className="field">
+        <label>Arrow</label>
+        <select value={e.bidir === true ? 'two' : e.bidir === false ? 'one' : 'auto'}
+          onChange={ev => setEdges(es => es.map(x => x.id === e.id
+            ? { ...x, bidir: ev.target.value === 'two' ? true : ev.target.value === 'one' ? false : undefined } : x))}>
+          <option value="auto">Auto — two-way for sockets, replication and reverse pairs</option>
+          <option value="two">⇆ Two-way</option>
+          <option value="one">→ One-way</option>
+        </select>
+      </div>
       <div className="row"><span>Flow</span><span className="v">{fmt(flow)}/s</span></div>
       {step != null && <div className="row"><span>Step</span><span className="v">#{step}</span></div>}
       <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
