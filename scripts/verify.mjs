@@ -2615,6 +2615,17 @@ try {
       const rev = [...es, { id: 'e6', from: 'l', to: 'c' }];
       check('a reverse pair makes both directions two-way', ex.isBidir(rev[0], rev, byId) && ex.isBidir(rev[5], rev, byId));
     }
+    // The walkthrough's voice mode: the toggle only renders when the browser
+    // has speechSynthesis, so the DOM run (happy-dom has none) can't see it —
+    // guard the wiring at source level instead: the toggle exists, it is
+    // gated on support, and finishing a hop advances to the next one.
+    {
+      const app = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      check('the explain card has a read-aloud toggle gated on speech support',
+        /speechSupported\(\)\s*&&[\s\S]{0,200}explain-voice/.test(app));
+      check('finishing a spoken hop advances the walkthrough',
+        /explainVoice[\s\S]*setExplain\(cur\s*=>/.test(app));
+    }
   }
 
   // ── nothing in the interface is too small to read ──────────────────────────

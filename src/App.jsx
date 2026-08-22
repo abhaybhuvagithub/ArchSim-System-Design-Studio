@@ -17,7 +17,7 @@ import { buildReport } from './report.js'
 import { diagnoseAll, diagnose, healthChip } from './health.js'
 import { prepareSvgForExport } from './svgexport.js'
 import { speechSupported, extractSpeech, chunkText, RATES, readRate, saveRate, pickVoice, listVoices,
-  voicesByLanguage, readVoiceName, saveVoiceName, PROSODY, BLOCK_PAUSE_MS } from './speech.js'
+  voicesByLanguage, readVoiceName, saveVoiceName, PROSODY, BLOCK_PAUSE_MS, speakableText } from './speech.js'
 import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
 import { REPLICATION, ISOLATION, PARTITIONING, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
@@ -707,6 +707,59 @@ export default function App() {
   const byIdMap = useMemo(() => Object.fromEntries(nodes.map(n => [n.id, n])), [nodes])
   const bidirSet = useMemo(() => new Set(edges.filter(e => isBidir(e, edges, byIdMap)).map(e => e.id)), [edges, byIdMap])
 
+  // Voice for the walkthrough: reads the current hop aloud and auto-advances
+  // to the next when it finishes — a guided audio tour of the architecture.
+  // Uses the same saved rate and voice as every other Read-aloud in the app.
+  const [explainVoice, setExplainVoice] = useState(false)
+  const explainVoiceGen = useRef(0)
+  useEffect(() => { if (explain == null && explainVoice) setExplainVoice(false) }, [explain, explainVoice])
+  useEffect(() => {
+    if (!explainVoice || !explainCur || !speechSupported()) return
+    const synth = window.speechSynthesis
+    const gen = ++explainVoiceGen.current
+    try { synth.cancel() } catch { /* nothing queued */ }
+    // Chrome silently pauses long sessions unless nudged. Harmless elsewhere.
+    const keepAlive = setInterval(() => {
+      if (synth.speaking && !synth.paused) { synth.pause(); synth.resume() }
+    }, 10000)
+    const parts = chunkText(speakableText(
+      `Step ${explain + 1} of ${explainList.length}. ${explainCur.title}. ` + explainCur.text.join(' ')))
+    let i = 0
+    const next = () => {
+      if (gen !== explainVoiceGen.current) return
+      if (i >= parts.length) {
+        // This hop is read — move on after a beat, or fall silent at the end.
+        setTimeout(() => {
+          if (gen !== explainVoiceGen.current) return
+          setExplain(cur => {
+            if (cur == null) return cur
+            if (cur >= explainList.length - 1) { setExplainVoice(false); return cur }
+            return cur + 1
+          })
+        }, BLOCK_PAUSE_MS * 3)
+        return
+      }
+      const u = new window.SpeechSynthesisUtterance(parts[i++])
+      u.rate = readRate()
+      u.pitch = PROSODY.pitch
+      u.volume = PROSODY.volume
+      const v = pickVoice(synth, readVoiceName())
+      if (v) { u.voice = v; if (v.lang) u.lang = v.lang }
+      u.onend = next
+      u.onerror = e => {
+        if (e?.error === 'interrupted' || e?.error === 'canceled') return
+        next()
+      }
+      synth.speak(u)
+    }
+    next()
+    return () => {
+      explainVoiceGen.current++
+      clearInterval(keepAlive)
+      try { synth.cancel() } catch { /* nothing queued */ }
+    }
+  }, [explainVoice, explain, explainCur, explainList.length])
+
   // neighbours of the hovered node — used to dim everything else
   const neighbours = useMemo(() => {
     // spotlight from the Breakdown tab wins over hover
@@ -962,6 +1015,14 @@ export default function App() {
                 <span className="explain-badge">{explainCur.step}</span>
                 <b className="explain-title">{explainCur.title}</b>
                 <span className="explain-count">step {explain + 1} of {explainList.length}</span>
+                {speechSupported() && (
+                  <button className={`explain-voice ${explainVoice ? 'on' : ''}`}
+                    title={explainVoice ? 'Stop reading aloud' : 'Read the walkthrough aloud — it advances by itself'}
+                    aria-label={explainVoice ? 'Stop reading aloud' : 'Read aloud'}
+                    onClick={() => setExplainVoice(v => !v)}>
+                    {explainVoice ? '🔊' : '🔈'}
+                  </button>
+                )}
                 <button className="explain-x" title="Close (Esc)" onClick={() => setExplain(null)}>×</button>
               </div>
               <div className="explain-body">
