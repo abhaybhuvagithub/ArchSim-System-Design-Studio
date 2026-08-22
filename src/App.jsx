@@ -49,7 +49,7 @@ const PANEL_DEFAULT = { left: 220, right: 280 }
 // the title gets the full width.
 const TITLE_W = NODE_W - 30 - 6
 const SUB_W = NODE_W - 30 - 8
-const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
+const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
 const utilColor = u => u > 1 ? '#ef4444' : u > 0.8 ? '#f59e0b' : u > 0.5 ? '#eab308' : '#22c55e'
 let idc = 0
 const nid = t => `${t}_${Date.now().toString(36)}_${idc++}`
@@ -802,7 +802,7 @@ export default function App() {
         </button>
         <div className="rps" data-tour="traffic">
           <span>Traffic</span>
-          <input type="range" min={2} max={6} step={0.05} value={Math.log10(rps)} onChange={e => setRps(Math.round(10 ** +e.target.value))} />
+          <input type="range" min={2} max={8} step={0.05} value={Math.log10(rps)} onChange={e => setRps(Math.round(10 ** +e.target.value))} />
           <b>{fmt(rps)} rps</b>
         </div>
         <div className="spacer" />
@@ -964,7 +964,7 @@ export default function App() {
               <span className="tpl-header-name">{template.name}</span>
               {template.tagline && <span className="tpl-header-tag">{template.tagline}</span>}
               <span className="tpl-header-meta">
-                {nodes.length} components · {rps >= 1000 ? (rps / 1000).toFixed(rps >= 10000 ? 0 : 1) + 'k' : rps} rps
+                {nodes.length} components · {fmt(rps)} rps
               </span>
               <button className="tpl-header-x" title="Clear the canvas" onClick={blank}>✕</button>
             </div>
@@ -1042,7 +1042,7 @@ export default function App() {
 
           {simOn && (
             <div className="statbar">
-              <div className="chip">QPS <b>{rps >= 1000 ? (rps / 1000).toFixed(rps >= 10000 ? 0 : 1) + 'k' : rps}</b></div>
+              <div className="chip">QPS <b>{fmt(rps)}</b></div>
               <div className="chip">p50 <b>{Math.round(sim.p50)} ms</b></div>
               <div className="chip">p95 <b>{Math.round(sim.p95)} ms</b></div>
               <div className="chip">p99 <b>{Math.round(sim.p99)} ms</b></div>
