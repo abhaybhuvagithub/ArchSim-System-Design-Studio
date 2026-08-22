@@ -2570,6 +2570,19 @@ try {
     check('no two components share a name',
       new Set(ks.map(k => cat2.CATALOG[k].name)).size === ks.length);
     check('no palette group is left empty', cat2.PALETTE_GROUPS.every(g => g.types.length > 0));
+    // The internals modal and the comparison matrix render four fields for any
+    // type the user selects. A raw COMPONENT_INTERNALS[type] lookup crashes on
+    // the ~20 types without an entry — the fallback in getComponentInternals is
+    // the only thing standing between an undocumented type and a white screen.
+    const int2 = await import(pathToFileURL(path.join(root, 'src/component-internals.js')).href);
+    const incomplete = ks.filter(k => {
+      const i = int2.getComponentInternals(k);
+      return !(i && i.algorithm && i.dataStructure && i.internal && i.mechanism);
+    });
+    check('getComponentInternals returns all four fields for every component' + (incomplete.length ? ' — ' + incomplete.join(', ') : ''), incomplete.length === 0);
+    const uiFiles = ['src/component-comparison.jsx', 'src/component-details.jsx'];
+    const rawLookup = uiFiles.filter(f => /COMPONENT_INTERNALS\[/.test(fs.readFileSync(path.join(root, f), 'utf8')));
+    check('no UI file indexes COMPONENT_INTERNALS directly (use getComponentInternals)' + (rawLookup.length ? ' — ' + rawLookup.join(', ') : ''), rawLookup.length === 0);
   }
 
   // ── nothing in the interface is too small to read ──────────────────────────
