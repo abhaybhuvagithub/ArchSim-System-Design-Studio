@@ -95,6 +95,55 @@ export const LESSON = [
     why: 'Past the wall, throwing more money or capacity does not help. The wall is where design ends and business decisions (pricing, scope, admission control) begin. Every design here has a wall, and naming it is the senior move.',
     check: c => c.wallUnerstood,
   },
+  // ── Pending: AI Ecosystem Exploration ────────────────────────────────────
+  {
+    title: '🚀 Integrate an LLM provider',
+    do: 'Add a decision point in your design: which LLM? (OpenAI GPT, Claude, Gemini, Llama, Mistral, Cohere, Hugging Face, Ollama, vLLM)',
+    why: 'LLM choice drives latency, cost, and capability. Some apps need local (Ollama, vLLM) for compliance; others lean on API providers. Understand token limits, context windows, and model sizes.',
+    check: c => false,
+  },
+  {
+    title: '🔗 Add embeddings and a vector store',
+    do: 'Design semantic search: embeddings (OpenAI Embeddings, Voyage AI, Sentence Transformers, BGE) + vector DB (Pinecone, Weaviate, Qdrant, Chroma, pgvector, Elasticsearch, Redis, MongoDB Atlas).',
+    why: 'RAG systems need embeddings to vectorize text and a store for fast similarity search. Hybrid search (keyword + semantic) often beats pure semantic.',
+    check: c => false,
+  },
+  {
+    title: '🎯 Choose a RAG framework',
+    do: 'Explore LangChain, LlamaIndex, or Haystack for orchestrating retrieval + LLM chains.',
+    why: 'RAG is a pattern, not a component. You orchestrate: fetch → augment → prompt → parse. Frameworks handle retries, caching, and token counting.',
+    check: c => false,
+  },
+  {
+    title: '🤖 Plan for agentic behavior',
+    do: 'For reasoning loops: LangGraph, CrewAI, Microsoft AutoGen, or Semantic Kernel. Map out tool use and reward loops.',
+    why: 'Agents are agentic because they call tools (search, API, code, exec) iteratively. Adds latency and cost but unlocks tasks pure completion cannot solve.',
+    check: c => false,
+  },
+  {
+    title: '📊 Add observability for LLM chains',
+    do: 'Integrate LangSmith, Langfuse, Arize, or Weights & Biases to trace calls, prompt versions, latency, and cost.',
+    why: 'LLM apps are opaque without observability. Traces show token usage, latency per hop, cache hits, and model hallucinations.',
+    check: c => false,
+  },
+  {
+    title: '🔐 Secure your prompts and APIs',
+    do: 'Review prompt injection risks, API key management, output filtering (Guardrails AI, Microsoft Presidio), and PII detection.',
+    why: 'LLMs can be tricked to ignore instructions, leak data, or be jailbroken. Treat prompts like SQL queries — sanitize, validate, and audit.',
+    check: c => false,
+  },
+  {
+    title: '💾 Design your LLM memory layers',
+    do: 'Short-term: context window. Medium-term: Redis/cache. Long-term: vector DB for semantic memory or SQL for facts.',
+    why: 'LLMs have fixed context windows. Everything outside — user history, preferences, learned facts — must live in backing stores.',
+    check: c => false,
+  },
+  {
+    title: '🏗️ Add model context protocol (MCP)',
+    do: 'Consider MCP servers (FastMCP, MCP Registry) for standardizing tool use across LLM apps.',
+    why: 'MCP is an open standard for connecting LLMs to data sources and tools. Reduces fragmentation and vendor lock-in.',
+    check: c => false,
+  },
 ]
 
 export const COMPARISONS = [
