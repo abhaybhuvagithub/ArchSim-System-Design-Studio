@@ -1585,3 +1585,29 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .spec-value {
   font-size: 15px; font-weight: 600; color: var(--accent);
 }
+
+/* ── Explain-flow walkthrough card ─────────────────────────────────────── */
+.explain-card {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  width: min(520px, calc(100% - 32px)); z-index: 30;
+  background: var(--panel, #171b22); color: var(--text, #dbe2ea);
+  border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 10px 32px rgba(0,0,0,.45); padding: 12px 14px;
+}
+.explain-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.explain-badge {
+  flex: none; width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent, #5b8cff); color: #fff; font-size: 12px; font-weight: 700;
+}
+.explain-title { font-size: 13.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.explain-count { font-size: 12px; opacity: .65; flex: none; }
+.explain-x {
+  flex: none; width: 26px; height: 26px; border: 0; border-radius: 4px;
+  background: transparent; color: inherit; font-size: 20px; line-height: 1; cursor: pointer;
+}
+.explain-x:hover { background: rgba(127,140,160,.12); }
+.explain-body { font-size: 12.5px; line-height: 1.5; max-height: 30vh; overflow: auto; }
+.explain-body p { margin: 0 0 6px; }
+.explain-nav { display: flex; gap: 8px; margin-top: 8px; }
+.explain-nav .btn { flex: 1; }

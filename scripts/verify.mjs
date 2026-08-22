@@ -2583,6 +2583,38 @@ try {
     const uiFiles = ['src/component-comparison.jsx', 'src/component-details.jsx'];
     const rawLookup = uiFiles.filter(f => /COMPONENT_INTERNALS\[/.test(fs.readFileSync(path.join(root, f), 'utf8')));
     check('no UI file indexes COMPONENT_INTERNALS directly (use getComponentInternals)' + (rawLookup.length ? ' — ' + rawLookup.join(', ') : ''), rawLookup.length === 0);
+
+    // ── the explain-flow walkthrough and two-way arrows ──────────────────────
+    const ex = await import(pathToFileURL(path.join(root, 'src/explain.js')).href);
+    {
+      const ns = [
+        { id: 'c', type: 'client', label: 'Client' },
+        { id: 'l', type: 'lb', label: 'LB' },
+        { id: 'a', type: 'app', label: 'App' },
+        { id: 's1', type: 'sql', label: 'DB primary' },
+        { id: 's2', type: 'sql', label: 'DB replica' },
+        { id: 'w', type: 'ws', label: 'Socket' },
+      ];
+      const es = [
+        { id: 'e1', from: 'c', to: 'l' },
+        { id: 'e2', from: 'l', to: 'a' },
+        { id: 'e3', from: 'a', to: 's1' },
+        { id: 'e4', from: 's1', to: 's2' },
+        { id: 'e5', from: 'a', to: 'w' },
+      ];
+      const byId = Object.fromEntries(ns.map(n => [n.id, n]));
+      const smap = { e1: 1, e2: 2, e3: 3, e4: 4, e5: 5 };
+      const walk = ex.explainFlow(ns, es, smap, { flowOnEdge: {} }, false, 1000);
+      check('explainFlow narrates every connection, in step order',
+        walk.length === es.length && walk.every((h, i) => h.step === i + 1 && h.title && h.text.length > 0));
+      check('replication between same-family stores is two-way', ex.isBidir(es[3], es, byId));
+      check('a WebSocket hop is two-way', ex.isBidir(es[4], es, byId));
+      check('an ordinary app→db hop is one-way', !ex.isBidir(es[2], es, byId));
+      check('an explicit one-way override beats auto detection',
+        !ex.isBidir({ ...es[3], bidir: false }, es, byId));
+      const rev = [...es, { id: 'e6', from: 'l', to: 'c' }];
+      check('a reverse pair makes both directions two-way', ex.isBidir(rev[0], rev, byId) && ex.isBidir(rev[5], rev, byId));
+    }
   }
 
   // ── nothing in the interface is too small to read ──────────────────────────
