@@ -29,6 +29,7 @@ import * as LLM from './interview-llm.js'
 import { matchConcepts, pickProbe, respond as interviewRespond } from './interview.js'
 import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
 import { HLD, LLD } from './hld-lld.jsx'
+import { ComponentDetails, componentDetailsStyles } from './component-details.jsx'
 import { REGIONS, SITE_ROLES, project, sitesFor, siteLinks, regionById } from './geo.js'
 import { AUTH, SESSION, ENTITLEMENT, revocationRisk } from './identity.js'
 import { LADDER, ladderFor, signalsFor, nextBand } from './levels.js'
@@ -100,6 +101,9 @@ export default function App() {
   const toastId = useRef(0)
   const alerted = useRef({ drop: false, hot: false })
   const [drawer, setDrawer] = useState(null)     // 'left' | 'right' | null on small screens
+  const [detailsNode, setDetailsNode] = useState(null)  // node to show internals for
+  const [internalsViewed, setInternalsViewed] = useState(false)  // whether user has viewed component internals
+  const [wallUnderstood, setWallUnderstood] = useState(false)    // whether user has scrolled to wall section
   const compact = vw < 1100        // tablet and below: panels become drawers
   const mobile = vw < 700
   const resizeRef = useRef(null)
@@ -361,7 +365,8 @@ export default function App() {
     maxUtil: Math.max(0, ...cap.rows.map(r => r.util)),
     has: t => nodes.some(n => n.type === t),
     any: ts => nodes.some(n => ts.includes(n.type)),
-  }), [nodes, edges, rps, simOn, steps, chaosUsed, sim, cap])
+    internalsViewed, wallUnderstood,
+  }), [nodes, edges, rps, simOn, steps, chaosUsed, sim, cap, internalsViewed, wallUnderstood])
   const doneSteps = useMemo(() => LESSON.map(s => { try { return !!s.check(lessonCtx) } catch { return false } }), [lessonCtx])
 
   const fitView = useCallback(ns => {
@@ -1023,6 +1028,7 @@ export default function App() {
           {tab === 'scale' ? (
             <Scale template={template} focused={spotlight?.id || null}
               onFocus={setSpotlight} rps={rps} onSetRps={setRps}
+              onWallSeen={() => setWallUnderstood(true)}
               onLoadTemplate={name => {
                 const i = TEMPLATES.findIndex(t => t.name === name)
                 if (i >= 0) loadTemplate(String(i))
@@ -1058,7 +1064,7 @@ export default function App() {
           ) : tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
               onHover={setHover} empty={nodes.length === 0} />
-          ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} cloud={cloud} cloudMult={cloudInfo.mult} />
+          ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} cloud={cloud} cloudMult={cloudInfo.mult} onShowDetails={setDetailsNode} />
             : selEdgeObj ? (
               <EdgeInspector e={selEdgeObj} nodes={nodes} sim={sim} step={stepMap[selEdgeObj.id]}
                 setEdges={setEdges} onDelete={() => { setEdges(es => es.filter(x => x.id !== selEdgeObj.id)); setSelEdge(null) }} />
@@ -1147,6 +1153,8 @@ export default function App() {
       <div className="toasts">
         {toasts.map(t => <div key={t.id} className={`toast ${t.kind}`}>{t.msg}</div>)}
       </div>
+
+      {detailsNode && <ComponentDetails nodeId={detailsNode.id} node={detailsNode} onClose={() => { setDetailsNode(null); setInternalsViewed(true) }} />}
 
       <footer className="foot">
         <span>Curated &amp; built by <a href="https://www.linkedin.com/in/abhaybhuva/" target="_blank" rel="noopener noreferrer">Abhaykumar Bhuva ↗</a></span>
@@ -1821,14 +1829,20 @@ function HoverCard({ n, sim, simOn, cloud, cloudName, diag = null }) {
   )
 }
 
-function Inspector({ n, sim, setNodes, cloud, cloudMult = 1 }) {
+function Inspector({ n, sim, setNodes, cloud, cloudMult = 1, onShowDetails }) {
   const spec = CATALOG[n.type]
   const s = sim.stats[n.id]
   const map = CLOUD_MAP[n.type]
   const setRepl = d => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, replicas: Math.max(1, Math.min(64, (x.replicas || 1) + d)) } : x))
+  const showInternals = (node) => {
+    onShowDetails?.(node)
+  }
   return (
     <section>
-      <h3>{spec.glyph} {spec.name}</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <h3 style={{ margin: 0 }}>{spec.glyph} {spec.name}</h3>
+        {onShowDetails && <button className="btn" style={{ fontSize: 12 }} onClick={() => showInternals(n)}>🔍 Internals</button>}
+      </div>
       <div className="muted" style={{ marginBottom: 10 }}>{spec.desc}</div>
       {map && (
         <div className="cloudmap">
@@ -3549,9 +3563,25 @@ function Breakdown({ template, onLoadTemplate, onFocus, focused }) {
 // binding constraint, a rung-by-rung ladder, the specific levers (each able to
 // spotlight the components it touches), and the wall you cannot scale past.
 
-function Scale({ template, onLoadTemplate, onFocus, focused, rps, onSetRps }) {
+function Scale({ template, onLoadTemplate, onFocus, focused, rps, onSetRps, onWallSeen }) {
   const sc = scalingFor(template)
   const [tab, setTab] = useState('ladder')
+  const wallRef = useRef(null)
+
+  useEffect(() => {
+    if (!wallRef.current || !onWallSeen) return
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          onWallSeen()
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(wallRef.current)
+    return () => observer.disconnect()
+  }, [onWallSeen])
 
   if (!sc) {
     return (
@@ -3646,7 +3676,7 @@ function Scale({ template, onLoadTemplate, onFocus, focused, rps, onSetRps }) {
       )}
 
       {tab === 'wall' && (
-        <div className="sc-wall">
+        <div className="sc-wall" ref={wallRef}>
           <div className="sc-wall-t">🧱 {sc.wall.t}</div>
           <p>{sc.wall.d}</p>
           <div className="muted" style={{ marginTop: 12, lineHeight: 1.6 }}>
