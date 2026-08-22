@@ -2800,6 +2800,25 @@ try {
         !jd[6].check(mk([])) && jd[6].check({ ...mk([]), cloud: 'aws' }));
       check('the wall step reads the field App.jsx actually sets (typo regression)',
         !/wallUnerstood/.test(fs.readFileSync(path.join(root, 'src/learn.js'), 'utf8')));
+      // No lesson step may be permanently impossible: a checkbox that can never
+      // tick is a dispute waiting to be filed, not a feature.
+      const dead = ln.LESSON.filter(s => /=>\s*false/.test(String(s.check)));
+      check('no lesson step is permanently impossible (c => false)' + (dead.length ? ' — ' + dead.map(s => s.title).slice(0, 3).join('; ') : ''), dead.length === 0);
+      // Every palette type shows real internals in the 🔍 modal — the generic
+      // 'Custom component' placeholder is reserved for genuinely custom nodes.
+      const withPlaceholder = Object.keys(cat2.CATALOG)
+        .filter(k => !cat2.CATALOG[k].source)
+        .filter(k => int2.getComponentInternals(k).algorithm === 'Custom component');
+      check('every palette component has authored internals (no placeholders)' + (withPlaceholder.length ? ' — ' + withPlaceholder.slice(0, 6).join(', ') : ''), withPlaceholder.length === 0);
+      // Dead external services must not linger in the source: countapi.xyz shut
+      // down in 2023 and every page load paid a timeout to it until removed.
+      const srcFiles = fs.readdirSync(path.join(root, 'src')).filter(f => /\.(js|jsx)$/.test(f));
+      const deadHosts = ['countapi.xyz'];
+      const lingering = srcFiles.filter(f => {
+        const t = fs.readFileSync(path.join(root, 'src', f), 'utf8');
+        return deadHosts.some(h => t.includes(h));
+      });
+      check('no dead external service host remains in the source' + (lingering.length ? ' — ' + lingering.join(', ') : ''), lingering.length === 0);
     }
   }
 

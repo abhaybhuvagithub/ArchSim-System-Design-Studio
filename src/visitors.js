@@ -5,13 +5,14 @@ const NS = 'archsim-system-design-studio'
 const SESSION_KEY = 'archsim.counted'
 const CACHE_KEY = 'archsim.visitors'
 
+// A second "free counter" service used to sit in this list; it shut down in
+// 2023 and every page load paid a timeout to a corpse until it was removed.
+// One live service, or the chip hides.
 const ENDPOINTS = [
   { url: `https://api.counterapi.dev/v1/${NS}/visits/up`, read: d => d?.count },
-  { url: `https://api.countapi.xyz/hit/${NS}/visits`, read: d => d?.value },
 ]
 const READ_ONLY = [
   { url: `https://api.counterapi.dev/v1/${NS}/visits/`, read: d => d?.count },
-  { url: `https://api.countapi.xyz/get/${NS}/visits`, read: d => d?.value },
 ]
 
 const cached = () => {
