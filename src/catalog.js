@@ -74,6 +74,9 @@ export const CATALOG = {
   gemmaos:     { name: 'Gemma (Open)',   glyph: '🌱', color: '#34a853', cap: 2000,    lat: 400, avail: 0.9995, desc: 'Google\'s open-source LLM family (2B, 7B, 27B). Runs on-device, no external API needed.' },
   duetai:      { name: 'Duet AI (Cloud)', glyph: '⚙️', color: '#4285f4', cap: 4000,    lat: 200, avail: 0.9995, desc: 'AI co-pilot embedded in Google Cloud services. Code generation, SQL, infrastructure automation.' },
   aiagent:     { name: 'Vertex AI Agents', glyph: '🤖', color: '#4285f4', cap: 1000,   lat: 800, avail: 0.995,  desc: 'Build custom AI agents on Vertex. Tool calling, memory, multi-turn reasoning with safety guardrails.' },
+  agentgraph:  { name: 'Agent Orchestrator', glyph: '🕸️', color: '#8b5cf6', cap: 800,  lat: 900, avail: 0.995,  desc: 'LangGraph/CrewAI-style multi-agent graph: planner, tools, memory, checkpoints — cycles allowed, state persisted per step.' },
+  finetune:    { name: 'Fine-tuning (LoRA)', glyph: '🎛️', color: '#8b5cf6', cap: 20,   lat: 60000, avail: 0.99, desc: 'LoRA/QLoRA training jobs: base model frozen, small adapter matrices trained, merged or hot-swapped at inference.' },
+  llmobs:      { name: 'LLM Observability', glyph: '🔬', color: '#8b5cf6', cap: 30000, lat: 3,   avail: 0.999,  desc: 'Langfuse/LangSmith-style tracing: every chain step, prompt, token count and cost captured; evals scored against datasets.' },
 
   // ─── observability ───
   otel:        { name: 'OTel Collector', glyph: '📥', color: '#64748b', cap: 120000,  lat: 1,   avail: 0.9995, desc: 'OpenTelemetry collector — one pipeline for metrics, logs and traces; batching, sampling, redaction.' },
@@ -147,7 +150,7 @@ export const PALETTE_GROUPS = [
   { label: 'Storage',       types: ['geoidx', 'graph', 'cache', 'sql', 'nosql', 'search', 'blob', 'backup'] },
   { label: 'Async',         types: ['push', 'queue', 'kafka', 'mq', 'esb', 'saga'] },
   { label: 'Data',          types: ['batch', 'stream', 'cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
-  { label: 'AI / ML',       types: ['featurestore', 'ml', 'embed', 'vector', 'llm', 'guard', 'gemini3', 'gemini2', 'notebooklm', 'imagen', 'veo', 'astra', 'mariner', 'gemmaos', 'aiagent'] },
+  { label: 'AI / ML',       types: ['featurestore', 'ml', 'embed', 'vector', 'llm', 'guard', 'agentgraph', 'finetune', 'llmobs', 'gemini3', 'gemini2', 'notebooklm', 'imagen', 'veo', 'astra', 'mariner', 'gemmaos', 'aiagent'] },
   { label: 'Google Cloud',  types: ['vertexai', 'duetai', 'beam', 'antigravity'] },
   { label: 'Observability', types: ['tsdb', 'otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
   { label: 'Security',      types: ['bastion', 'iam', 'secrets', 'hsm', 'pii', 'audit', 'siem'] },

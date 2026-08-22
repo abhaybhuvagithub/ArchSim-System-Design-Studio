@@ -135,6 +135,9 @@ export const CLOUD_MAP = {
   gemmaos:    ['no equivalent', 'Gemma (native open-source)', 'Phi on-device', 'no equivalent', 'no public equivalent'],
   duetai:     ['CodeWhisperer in console', 'Duet AI in Console (native)', 'GitHub Copilot in Azure Portal', 'no equivalent', 'no public equivalent'],
   aiagent:    ['SageMaker Agent', 'Vertex AI Agent Builder (native)', 'Azure AI Orchestration', 'OCI Generative AI Agents', 'no public equivalent'],
+  agentgraph: ['Bedrock Agents / LangGraph on ECS', 'Vertex Agent Builder / LangGraph on GKE', 'Azure AI Agent Service', 'LangGraph on OKE', 'no public equivalent'],
+  finetune:   ['SageMaker Training (LoRA)', 'Vertex AI Tuning', 'Azure ML Fine-tuning', 'OCI Data Science Jobs', 'MLX fine-tuning on Apple silicon'],
+  llmobs:     ['Langfuse on ECS / Bedrock traces', 'Langfuse on GKE / Vertex eval', 'Azure AI Foundry tracing', 'Langfuse on OKE', 'no public equivalent'],
 }
 
 const IDX = { aws: 0, gcp: 1, azure: 2, oci: 3, apple: 4 }

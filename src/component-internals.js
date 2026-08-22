@@ -267,6 +267,24 @@ export const COMPONENT_INTERNALS = {
     internal: 'User types "/" in Cloud Console (Docs, SQL, Terraform) → Context captured → Routed to Gemini with service-specific prompt → Generated completion (code, config, schema).',
     mechanism: 'Context-aware: understands existing code/config files. Suggests fixes, generates YAML, builds SQL queries. Quality: trained on Google Cloud docs + customer code patterns.',
   },
+  agentgraph: {
+    algorithm: 'Stateful graph execution with cycles + checkpoints',
+    dataStructure: 'Directed graph of agent nodes, shared state object, checkpoint store (per-thread), tool registry',
+    internal: 'State enters the graph -> current node (planner/agent/tool) runs -> returns state delta + next-edge decision -> checkpoint persisted -> repeat until END node. Cycles are legal: reflect, retry, re-plan.',
+    mechanism: 'Checkpointing makes runs resumable and debuggable: crash mid-graph, resume from the last node. Human-in-the-loop = a node that pauses the thread until input arrives. Parallel branches fan out and join on state merge.',
+  },
+  finetune: {
+    algorithm: 'LoRA: low-rank adapter training on a frozen base',
+    dataStructure: 'Frozen base weights, small rank-r adapter matrices (A x B) per attention layer, training dataset shards, optimizer state',
+    internal: 'Base model loads frozen (optionally 4-bit quantized = QLoRA) -> only adapter matrices receive gradients -> train on task pairs -> save the adapter (MBs, not GBs).',
+    mechanism: 'Serving: merge the adapter into the base, or hot-swap adapters per tenant on one shared base. Rank r trades quality vs size. QLoRA fits 70B-class training on a single GPU by quantizing the frozen weights.',
+  },
+  llmobs: {
+    algorithm: 'Trace tree ingestion + eval scoring',
+    dataStructure: 'Trace tree (root span -> chain steps -> LLM calls), token/cost counters per span, eval datasets, score tables',
+    internal: 'SDK wraps each chain step -> emits spans with prompt, completion, tokens, latency, cost -> ingested async -> trace tree reassembled by id for the UI.',
+    mechanism: 'Evals: run a dataset through the chain, score outputs (exact, LLM-as-judge, human) and diff across versions. Cost attribution rolls tokens up per user, feature and prompt version -- the bill finally has names.',
+  },
   aiagent: {
     algorithm: 'Agentic loop with tool calling + RAG',
     dataStructure: 'Tool registry, execution graph, conversation memory, confidence scores',
