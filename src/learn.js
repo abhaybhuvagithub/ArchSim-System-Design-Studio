@@ -83,6 +83,18 @@ export const LESSON = [
     why: 'In an interview you talk through one request end to end. Numbered hops and labelled edges ("cache miss", "async") turn a static picture into a story you can walk someone through.',
     check: c => c.steps || c.edges.some(e => e.label),
   },
+  {
+    title: 'Understand the component internals',
+    do: 'Click 🔍 Internals on any component in the Inspector panel to see its algorithm, data structures, and failure modes.',
+    why: 'Every component is a black box until you know its internals: LRU vs ARC for caches, B-tree vs LSM for databases, token bucket vs sliding window for rate limiting. Knowing the mechanism teaches you when it fails and how to recover.',
+    check: c => c.internalsViewed,
+  },
+  {
+    title: 'Know your wall',
+    do: 'Open the Scale tab and scroll to "The Wall" section — this is the fundamental limit of your design.',
+    why: 'Past the wall, throwing more money or capacity does not help. The wall is where design ends and business decisions (pricing, scope, admission control) begin. Every design here has a wall, and naming it is the senior move.',
+    check: c => c.wallUnerstood,
+  },
 ]
 
 export const COMPARISONS = [
