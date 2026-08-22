@@ -2856,6 +2856,19 @@ try {
       check('the LLM system prompt carries the live design snapshot',
         as.assistantSystemPrompt(as.buildContext(ctx)).includes('API Server') && as.buildContext(ctx).includes('p99 140ms'));
     }
+
+    // ── traffic slider reaches internet scale and stays readable ─────────────
+    {
+      const app = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      check('the traffic slider goes to 100M rps (log10 max = 8)',
+        /type="range" min=\{2\} max=\{8\}[^/]*Math\.log10\(rps\)/.test(app));
+      // The k-only inline formatter printed "100000k rps" at that scale —
+      // every rps readout must go through fmt(), which speaks in M.
+      check('no rps readout is stuck in thousands (all use fmt())',
+        !app.includes("(rps / 1000).toFixed(rps >= 10000 ? 0 : 1) + 'k'"));
+      check('fmt drops the trailing .0 above ten million',
+        app.includes("toFixed(n >= 1e7 ? 0 : 1) + 'M'"));
+    }
   }
 
   // ── nothing in the interface is too small to read ──────────────────────────
