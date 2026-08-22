@@ -117,6 +117,34 @@ const COMPONENT_DIAGRAMS = {
     
     ACK/RETRY: Success → Remove from queue. Fail → Retry counter ↑
   `,
+  llm: `
+    TOKEN N: Input (context window check) → Embedding lookup → Self-attention → FFN layer
+    
+    KV CACHE: Store K,V matrices for tokens 1..N → Token N+1 only computes attention on new token
+    
+    BATCH: Collect requests → Pad to same length → Forward on GPU → Softmax → Sample next token
+  `,
+  embed: `
+    TEXT → Tokenize (subword BPE) → Token embeddings + position embeddings → Transformer layers
+    
+    OUTPUT: Extract [CLS] token (or mean pooling) → 768-dim vector → L2 normalize
+    
+    CACHE: Store (text_hash → vector) for repeated queries (e.g., product descriptions)
+  `,
+  vector: `
+    INDEX: HNSW graph — every node connects to M neighbors (small-world network)
+    
+    QUERY: Start at entry point → Navigate via nearest neighbors → epsilon-search in local region
+    
+    RECALL: Adjust beam width (20-100) vs search speed trade-off. ANN ≈ 98% exact NN distance.
+  `,
+  guard: `
+    INPUT: Prompt → Tokenize → Scan for prompt injection patterns → Check PII regex → Score risk
+    
+    OUTPUT: Model response → Redact PII (mask email/SSN) → Filter for safety violations → Return or flag
+    
+    ALLOWLIST: Use semantic similarity to approved outputs or hard rules (no SQL keywords, no exec())
+  `,
 }
 
 export function ComponentDetails({ nodeId, node, onClose }) {
