@@ -1611,3 +1611,9 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .explain-body p { margin: 0 0 6px; }
 .explain-nav { display: flex; gap: 8px; margin-top: 8px; }
 .explain-nav .btn { flex: 1; }
+.explain-voice {
+  flex: none; width: 28px; height: 26px; border: 1px solid transparent; border-radius: 4px;
+  background: transparent; font-size: 14px; line-height: 1; cursor: pointer;
+}
+.explain-voice:hover { background: rgba(127,140,160,.12); }
+.explain-voice.on { border-color: var(--accent); background: rgba(91,140,255,.14); }
