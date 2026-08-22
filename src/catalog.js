@@ -60,6 +60,21 @@ export const CATALOG = {
   llm:         { name: 'LLM Inference',  glyph: '🧠', color: '#ec4899', cap: 60,      lat: 900, avail: 0.999,  desc: 'GPU-served generation. Expensive, slow, and the usual bottleneck — batch and stream.' },
   guard:       { name: 'Guardrails',     glyph: '🛟', color: '#ef4444', cap: 5000,    lat: 20,  avail: 0.999,  desc: 'Prompt-injection, PII and safety filtering on input and output.' },
 
+  // ─── Google AI & LLMs ───
+  gemini3:     { name: 'Gemini 3 Pro',   glyph: '✨', color: '#4285f4', cap: 500,     lat: 800, avail: 0.999,  desc: 'Google\'s latest flagship LLM (Nov 2025). Multimodal, advanced reasoning, agentic coding via native Gemini integration.' },
+  gemini2:     { name: 'Gemini 2.5',     glyph: '💫', color: '#4285f4', cap: 600,     lat: 750, avail: 0.999,  desc: 'Google\'s reasoning model. Deep Think feature, structured outputs, vision-language tasks.' },
+  notebooklm: { name: 'NotebookLM',     glyph: '📖', color: '#4285f4', cap: 1000,    lat: 500, avail: 0.999,  desc: 'AI research assistant for document understanding. Upload PDFs/Docs → ask questions with citations.' },
+  antigravity: { name: 'Antigravity IDE', glyph: '🚀', color: '#4285f4', cap: 200,    lat: 1200, avail: 0.995, desc: 'Agent-first IDE (Nov 2025). AI agents control editor, terminal, browser. Plan → execute → verify autonomously. Free preview.' },
+  vertexai:    { name: 'Vertex AI',      glyph: '🧠', color: '#4285f4', cap: 800,    lat: 600, avail: 0.9995, desc: 'Google Cloud managed ML platform. Model garden, agent builder, Duet AI co-pilot for enterprises.' },
+  imagen:      { name: 'Imagen 4',       glyph: '🎨', color: '#ea4335', cap: 200,    lat: 2000, avail: 0.999, desc: 'Google\'s image generation model. Text→image, edit, inpainting. Integrated with Workspace.' },
+  veo:         { name: 'Veo 3',          glyph: '🎬', color: '#ea4335', cap: 50,     lat: 10000, avail: 0.998, desc: 'Google\'s video generation. Text→video, 1080p, temporal consistency. Filmmaking-grade quality.' },
+  astra:       { name: 'Project Astra',  glyph: '👁️', color: '#4285f4', cap: 1000,    lat: 100, avail: 0.998,  desc: 'Gemini Live: real-time camera & screen understanding. See what the AI sees, multimodal reasoning on demand.' },
+  mariner:     { name: 'Project Mariner', glyph: '🌐', color: '#4285f4', cap: 500,    lat: 1500, avail: 0.996, desc: 'Agent Mode: autonomous web task automation. AI browses, clicks, fills forms. Useful for data scraping, account ops.' },
+  beam:        { name: 'Google Beam',    glyph: '📹', color: '#4285f4', cap: 5000,    lat: 50,  avail: 0.998,  desc: '3D video calling with spatial audio. Immersive communication layer beyond Zoom/Meet.' },
+  gemmaos:     { name: 'Gemma (Open)',   glyph: '🌱', color: '#34a853', cap: 2000,    lat: 400, avail: 0.9995, desc: 'Google\'s open-source LLM family (2B, 7B, 27B). Runs on-device, no external API needed.' },
+  duetai:      { name: 'Duet AI (Cloud)', glyph: '⚙️', color: '#4285f4', cap: 4000,    lat: 200, avail: 0.9995, desc: 'AI co-pilot embedded in Google Cloud services. Code generation, SQL, infrastructure automation.' },
+  aiagent:     { name: 'Vertex AI Agents', glyph: '🤖', color: '#4285f4', cap: 1000,   lat: 800, avail: 0.995,  desc: 'Build custom AI agents on Vertex. Tool calling, memory, multi-turn reasoning with safety guardrails.' },
+
   // ─── observability ───
   otel:        { name: 'OTel Collector', glyph: '📥', color: '#64748b', cap: 120000,  lat: 1,   avail: 0.9995, desc: 'OpenTelemetry collector — one pipeline for metrics, logs and traces; batching, sampling, redaction.' },
   logs:        { name: 'Log Pipeline',   glyph: '🧾', color: '#64748b', cap: 60000,   lat: 2,   avail: 0.999,  desc: 'ELK/Loki/Splunk — structured logs, retention tiers, correlation by trace id.' },
@@ -132,7 +147,8 @@ export const PALETTE_GROUPS = [
   { label: 'Storage',       types: ['geoidx', 'graph', 'cache', 'sql', 'nosql', 'search', 'blob', 'backup'] },
   { label: 'Async',         types: ['push', 'queue', 'kafka', 'mq', 'esb', 'saga'] },
   { label: 'Data',          types: ['batch', 'stream', 'cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
-  { label: 'AI / ML',       types: ['featurestore', 'ml', 'embed', 'vector', 'llm', 'guard'] },
+  { label: 'AI / ML',       types: ['featurestore', 'ml', 'embed', 'vector', 'llm', 'guard', 'gemini3', 'gemini2', 'notebooklm', 'imagen', 'veo', 'astra', 'mariner', 'gemmaos', 'aiagent'] },
+  { label: 'Google Cloud',  types: ['vertexai', 'duetai', 'beam', 'antigravity'] },
   { label: 'Observability', types: ['tsdb', 'otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
   { label: 'Security',      types: ['bastion', 'iam', 'secrets', 'hsm', 'pii', 'audit', 'siem'] },
   { label: 'Cryptography',  types: ['tls', 'crypto', 'hash', 'digest', 'sign', 'e2ee'] },

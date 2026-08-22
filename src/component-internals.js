@@ -194,6 +194,86 @@ export const COMPONENT_INTERNALS = {
     mechanism: 'Real-time feedback loop: flagged content reviewed by human, label fed back to training pipeline (retraining weekly).',
   },
 
+  // Google AI & LLMs
+  gemini3: {
+    algorithm: 'Mixture of Experts (MoE) + multimodal attention',
+    dataStructure: 'Model weights (Mixture of Experts layers), context cache per session, KV cache for tokens',
+    internal: 'Process text/image/audio/video input → Tokenize each modality → Expert routing (select 5-10 experts per token) → FFN layers → Logits.',
+    mechanism: 'Context caching: store first N tokens\' KV cache in GPU memory (reuse for follow-up queries). Batch multiple users\' requests (20-100) on same GPU. Dynamic quantization (fp8).',
+  },
+  gemini2: {
+    algorithm: 'Transformer with deep reasoning layers',
+    dataStructure: 'Model weights, reasoning traces, token embeddings, attention heads',
+    internal: 'Input → Encoder stack → Reasoning module (multiple passes) → Decoder → Output. Reasoning adds chain-of-thought reasoning before output.',
+    mechanism: 'Deep Think: user marks questions as "think hard" → allocates more compute (10-60s latency instead of 2s). Structured outputs: JSON schema provided, model respects shape.',
+  },
+  notebooklm: {
+    algorithm: 'RAG with citation grounding',
+    dataStructure: 'Document embeddings, citation index, memory store for session context',
+    internal: 'User uploads PDF/Doc → Chunk into paragraphs → Embed each chunk → Store in vector index. Query: embed question → retrieve top-5 chunks → augment prompt → call Gemini → cite source.',
+    mechanism: 'Multi-modal source support: PDFs, Google Docs, YouTube transcripts, web links. Audio notebook: generate podcast-style overview (text-to-speech). One-click study guide generation.',
+  },
+  antigravity: {
+    algorithm: 'Agentic loop: plan → execute → verify',
+    dataStructure: 'Task queue, action log, file system state, VSCode diff state, terminal output buffer',
+    internal: 'User sets goal (e.g., "Add pagination to User list") → AI plans steps → Agent executes (writes code, runs tests, updates git) → Verifies output → Shows artifacts (screenshots, test results).',
+    mechanism: 'Two interfaces: Editor (familiar VSCode + sidebar agent) and Manager (mission control for orchestration). Multi-agent parallelism: fetch data, write code, run tests concurrently. Requires confirmation for destructive ops (git push, rm -rf).',
+  },
+  vertexai: {
+    algorithm: 'Orchestration platform for ML workflows',
+    dataStructure: 'Model registry, pipeline DAG, experiment tracking, deployment configs',
+    internal: 'Define pipeline (stages: preprocess → train → eval → deploy). Vertex runs each stage on GCP infrastructure. Logs metrics, model artifacts, predictions. Auto-scales compute.',
+    mechanism: 'Model garden: one-click fine-tuning (upload dataset, select model, train, deploy). Duet AI: code generation suggestions. Agent builder: drag-drop no-code agent builder.',
+  },
+  imagen: {
+    algorithm: 'Diffusion model with text-to-image guidance',
+    dataStructure: 'UNet denoiser, CLIP text encoder, noise scheduler, latent diffusion space',
+    internal: 'Start with Gaussian noise → Text prompt embedded with CLIP → Iterative denoising (50-100 steps) → Classifier-free guidance → RGB output.',
+    mechanism: 'Image editing: inpainting (mask region, describe changes). Style control: style modifiers (oil painting, 3D render, cartoon). Prompt optimizer: rewrites prompts for better results.',
+  },
+  veo: {
+    algorithm: 'Diffusion model over video tokens',
+    dataStructure: 'Temporal attention layers, video token embeddings, keyframe predictions',
+    internal: 'Encode video as sequence of tokens → Diffusion over temporal dimension → Generate one frame at a time while maintaining consistency with previous frames.',
+    mechanism: 'Variable length (up to 5min). Frame consistency: uses optical flow to constrain motion between frames. Style preservation: apply same style to all frames. Runs on Google Cloud (high latency, high cost).',
+  },
+  astra: {
+    algorithm: 'Real-time multimodal perception',
+    dataStructure: 'Video stream buffer, frame encoder, tokenizer, working memory',
+    internal: 'Capture camera/screen 10 fps → Extract key frames → Embed into vision tokens → Multimodal attention → Output (text, actions). Real-time streaming over WebRTC.',
+    mechanism: 'Latency: 100-500ms (goal: <200ms). Runs on Gemini 3 on Google Cloud. Limited simultaneous sessions per quota. Works with device camera, desktop screen share, or uploaded images.',
+  },
+  mariner: {
+    algorithm: 'Web automation via LLM plan + executor',
+    dataStructure: 'Browser state snapshot, DOM tree cache, action sequence, memory of page structure',
+    internal: 'User provides goal (e.g., "Log in and fetch email count") → LLM analyzes current page → Plans sequence of clicks/inputs → Executor fires actions → Screenshot/verify.',
+    mechanism: 'Runs in headless Chrome on GCP. Supports: login automation, form filling, data extraction, multi-page workflows. Requires human approval before real-world execution on customer accounts.',
+  },
+  beam: {
+    algorithm: 'Low-latency video codec + spatial audio mixing',
+    dataStructure: 'Video frame buffer, audio sample queue, spatial position map, bitrate controller',
+    internal: 'Capture participant video → Encode (AV1 or VP9) → 3D position mapping → Render spatial audio → Stream over WebRTC. Decode on receiver, render in 3D space.',
+    mechanism: 'Latency: <100ms target. Spatial awareness: mute participants who are "behind" you. Screen sharing: transmit at 60fps, up to 1440p.',
+  },
+  gemmaos: {
+    algorithm: 'Transformer LLM (2B, 7B, 27B variants)',
+    dataStructure: 'Model weights (quantized int8), attention heads, feed-forward layers',
+    internal: 'Standard decoder-only transformer. Smaller than Gemini (7B = 7 billion params). Runs on laptop (7B) or phone (2B). No external API call needed.',
+    mechanism: 'On-device inference: uses quantization (int8), distillation, pruning. Latency: 100-500ms per token on M1 Mac. Perfect for privacy-sensitive tasks (no data leaves device).',
+  },
+  duetai: {
+    algorithm: 'Prompt routing + service-specific adapters',
+    dataStructure: 'Prompt templates per GCP service, model selection rules, context injection',
+    internal: 'User types "/" in Cloud Console (Docs, SQL, Terraform) → Context captured → Routed to Gemini with service-specific prompt → Generated completion (code, config, schema).',
+    mechanism: 'Context-aware: understands existing code/config files. Suggests fixes, generates YAML, builds SQL queries. Quality: trained on Google Cloud docs + customer code patterns.',
+  },
+  aiagent: {
+    algorithm: 'Agentic loop with tool calling + RAG',
+    dataStructure: 'Tool registry, execution graph, conversation memory, confidence scores',
+    internal: 'User defines tools (API calls, data queries, external services) → Vertex Agent Builder chains them → Agent decides tool sequence via LLM reasoning → Executes with safety gates.',
+    mechanism: 'Safety: tool definitions include preconditions/postconditions. Memory: retrieval-augmented context for each step. Multi-turn: maintains conversation state across steps. Monitoring: all tool calls logged for audit.',
+  },
+
   // Observability
   otel: {
     algorithm: 'Span batching + sampling',
