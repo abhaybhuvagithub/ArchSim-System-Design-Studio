@@ -144,6 +144,67 @@ export const LESSON = [
     why: 'MCP is an open standard for connecting LLMs to data sources and tools. Reduces fragmentation and vendor lock-in.',
     check: c => false,
   },
+  // ── Google AI Ecosystem (Nov 2025+) ────────────────────────────────────
+  {
+    title: '🚀 Choose your Google LLM: Gemini 3 vs Gemini 2.5',
+    do: 'Evaluate Gemini 3 Pro (latest MoE, multimodal, agentic) vs Gemini 2.5 (reasoning, structured outputs).',
+    why: 'Gemini 3 launched Nov 2025. It is faster and supports autonomous agents. Gemini 2.5 is better for step-by-step reasoning. Pick based on latency budget and reasoning needs.',
+    check: c => false,
+  },
+  {
+    title: '📖 Add NotebookLM for document understanding',
+    do: 'Use NotebookLM alongside your LLM for RAG: upload PDFs/Docs, let Gemini answer questions with citations.',
+    why: 'NotebookLM is Gemini\'s sibling for document understanding. Saves you from building embeddings + vector DB yourself. One-click study guides and podcast generation.',
+    check: c => false,
+  },
+  {
+    title: '🎨 Integrate Imagen 4 for image generation',
+    do: 'For image-heavy features: use Imagen 4 (text→image, inpainting, style transfer) instead of DALL-E or Stable Diffusion.',
+    why: 'Imagen 4 is Google\'s flagship image model (Nov 2025). Integrated into Workspace (Docs, Slides). Photorealistic quality, fast iteration. API or web UI.',
+    check: c => false,
+  },
+  {
+    title: '🎬 Add Veo 3 for video generation',
+    do: 'For video content: Veo 3 (text→video, up to 5min, 1080p). Useful for tutorials, demos, marketing content.',
+    why: 'Veo 3 is Google\'s video diffusion model. High quality but expensive and slow (minutes per generation). Plan workflow around async generation.',
+    check: c => false,
+  },
+  {
+    title: '👁️ Deploy Gemini Live (Project Astra) for real-time multimodal AI',
+    do: 'Stream camera/screen to Gemini 3 Pro. Get real-time understanding and guidance (coding, debugging, tutoring).',
+    why: 'Project Astra brings "see what I see" AI. 100-500ms latency. Works on device camera or screen share. Powerful for hands-on learning and support.',
+    check: c => false,
+  },
+  {
+    title: '🌐 Automate web tasks with Project Mariner (Agent Mode)',
+    do: 'For data scraping or form automation: Mariner reads DOM, plans clicks, executes in headless Chrome. No code needed.',
+    why: 'Mariner is Gemini controlling a browser. Useful for: login automation, data extraction, multi-page workflows. Requires human approval for real systems.',
+    check: c => false,
+  },
+  {
+    title: '🚀 Try Antigravity IDE for AI-native development',
+    do: 'Download Antigravity (agent-first IDE, free preview). Let AI agents write code, run tests, commit changes. You review artifacts.',
+    why: 'Antigravity (Nov 2025) flips the model: AI as executor, you as reviewer. Editor view (VS Code style) + Manager view (mission control). Risky on live systems but amazing for prototypes.',
+    check: c => false,
+  },
+  {
+    title: '🧠 Deploy on Vertex AI for managed ML at scale',
+    do: 'Use Vertex AI Agent Builder to define tools + orchestration. Duet AI for code generation within GCP Console.',
+    why: 'Vertex is Google\'s MLOps platform. Model garden (fine-tune any Gemini variant), pipelines (DAG workflows), canary deployments with auto-rollback. Enterprise safe.',
+    check: c => false,
+  },
+  {
+    title: '🌱 Use Gemma (open-source) for privacy-sensitive on-device AI',
+    do: 'Gemma 2B/7B/27B runs on laptop or phone. No API calls, data stays local. Quantized and optimized.',
+    why: 'Not every feature needs cloud AI. On-device inference + privacy + latency predictability. Perfect for embedded features, local RAG, offline support.',
+    check: c => false,
+  },
+  {
+    title: '⚙️ Add Duet AI for smart coding in Google Cloud Console',
+    do: 'Type "/" in Cloud SQL console or Terraform editor. Duet suggests queries, infrastructure code, debugging steps.',
+    why: 'Duet is Gemini embedded in GCP tools. Context-aware (reads your existing code/config). Saves time on boilerplate and catches mistakes.',
+    check: c => false,
+  },
 ]
 
 export const COMPARISONS = [

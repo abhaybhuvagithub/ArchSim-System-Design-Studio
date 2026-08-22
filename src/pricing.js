@@ -181,6 +181,20 @@ export const RATES = {
   dast:        { hourly: 0,     base: 250,  perM: 0,    note: 'dynamic scanning platform licence' },
   devicefarm:  { hourly: 0,     base: 200,  perM: 0,    note: 'real-device / browser grid seats' },
   testops:     { hourly: 0,     base: 90,   perM: 0,    note: 'test management seats' },
+  // Google AI & LLMs
+  gemini3:     { hourly: 0,     base: 0,    perM: 2000, note: '≈ $2.00 per generation (input + output tokens)' },
+  gemini2:     { hourly: 0,     base: 0,    perM: 800,  note: '≈ $0.80 per generation (cheaper than Gemini 3)' },
+  notebooklm:  { hourly: 0,     base: 0,    perM: 100,  note: 'per-chat query + generation cost' },
+  antigravity: { hourly: 0,     base: 0,    perM: 0,    note: 'free preview (agent IDE runs on Gemini 3 compute)' },
+  vertexai:    { hourly: 0.15,  base: 0,    perM: 0.05, note: 'managed ML platform overhead + inference' },
+  imagen:      { hourly: 0,     base: 0,    perM: 500,  note: '≈ $0.50 per image generation' },
+  veo:         { hourly: 0,     base: 0,    perM: 5000, note: '≈ $5.00 per video generation (expensive!)' },
+  astra:       { hourly: 0,     base: 0,    perM: 100,  note: 'Gemini Live streaming + vision processing' },
+  mariner:     { hourly: 0,     base: 0,    perM: 50,   note: 'web automation agent per browser session' },
+  beam:        { hourly: 0.08,  base: 0,    perM: 0,    note: 'video calling infrastructure per participant' },
+  gemmaos:     { hourly: 0,     base: 0,    perM: 0,    note: 'on-device (free), no cloud cost' },
+  duetai:      { hourly: 0,     base: 0,    perM: 0.50, note: 'suggestions in GCP console (part of Cloud bill)' },
+  aiagent:     { hourly: 0.10,  base: 0,    perM: 50,   note: 'Vertex agent orchestration + tool calls' },
 }
 
 const FALLBACK = { hourly: 0.08, base: 0, perM: 0, note: 'generic compute estimate' }

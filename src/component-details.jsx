@@ -145,6 +145,122 @@ const COMPONENT_DIAGRAMS = {
     
     ALLOWLIST: Use semantic similarity to approved outputs or hard rules (no SQL keywords, no exec())
   `,
+  // Google AI & Tools
+  gemini3: `
+    INPUT (text/image/audio/video) → Tokenize each modality → Embed
+    
+    → Expert Router (select 5-10 experts per token) → FFN → Attention
+    
+    → Context Cache (reuse KV for follow-up queries) → Batch 20-100 users/GPU
+    
+    OUTPUT: Multimodal response (text, images, JSON)
+  `,
+  gemini2: `
+    INPUT → Embedding → Encoder (24 layers) → REASONING MODULE (chain-of-thought)
+    
+    → Decoder stack → Structured output (JSON schema if specified)
+    
+    DEEP THINK (optional): 10-60s compute for complex reasoning problems
+  `,
+  notebooklm: `
+    UPLOAD: PDF/Doc/YouTube → Chunk → Embed each chunk
+    
+    QUERY: Embed question → Retrieve top-5 chunks → Augment prompt → Call Gemini
+    
+    → Extract citations → Return answer with sources
+    
+    STUDIO: One-click study guide / podcast generation
+  `,
+  antigravity: `
+    USER GOAL → AI planner (break into steps) → Show plan for approval
+    
+    EXECUTE: Editor (code) + Terminal (tests) + Browser (debug) in parallel agents
+    
+    VERIFY: Test results → Screenshots → Git diff → Artifacts (visuals + logs)
+    
+    SAFETY: Confirm for push/rm/destructive ops. Throwaway branch recommended.
+  `,
+  vertexai: `
+    DEFINE: Pipeline DAG (Data → Preprocess → Train → Eval → Deploy)
+    
+    EXECUTE: Each stage runs on GCP (auto-scaled) → Logs metrics, artifacts
+    
+    MODEL REGISTRY: Version management, shadow traffic (10% new / 90% old)
+    
+    DEPLOY: Canary rollout → Monitor → Auto-rollback if metrics degrade
+  `,
+  imagen: `
+    TEXT PROMPT → CLIP encoder (embed semantics)
+    
+    → Diffusion: Start noise → Iterative denoising (50-100 steps)
+    
+    → Classifier-free guidance: balance prompt adherence vs quality
+    
+    OUTPUT: RGB image (1024×1024+). Optional: inpainting, style transfer.
+  `,
+  veo: `
+    TEXT/IMAGE → Video tokens (frames at 24fps)
+    
+    → Diffusion over temporal dimension → Optical flow constraints (smooth motion)
+    
+    → Frame-to-frame consistency check
+    
+    OUTPUT: 1080p video up to 5min. High latency (minutes). Filmmaking quality.
+  `,
+  astra: `
+    CAMERA/SCREEN (10 fps) → Extract key frames → Vision tokenize
+    
+    → Multimodal attention + reasoning
+    
+    OUTPUT: Text understanding + action suggestions
+    
+    LATENCY: 100-500ms (goal: <200ms). Real-time streaming.
+  `,
+  mariner: `
+    USER GOAL (e.g., "Log in and fetch balance") → LLM reads DOM tree
+    
+    → Plans sequence: Click username → Type cred → Click login → Wait → Extract
+    
+    EXECUTE: Runs in headless Chrome → Screenshot after each step
+    
+    VERIFY: Output matches goal (data extracted or state changed)
+  `,
+  beam: `
+    CAPTURE: Participant video + spatial audio (3D position)
+    
+    → Encode (AV1/VP9) → Low-bitrate transmission
+    
+    RENDER: Spatial audio (mute if participant is "behind" you)
+    
+    SCREEN: 60fps, 1440p, <100ms latency for immersion
+  `,
+  gemmaos: `
+    LOAD: 2B/7B/27B weights (int8 quantized) → On-device (no API)
+    
+    INFER: Text → Token generation (100-500ms per token on M1)
+    
+    OFFLINE: No internet. Data never leaves device.
+    
+    USE: Local chatbots, on-device summarization, embedded AI
+  `,
+  duetai: `
+    TYPE "/": In Cloud Console (SQL, Terraform, Docs) → Capture context
+    
+    → Route to Gemini with service-specific prompt
+    
+    OUTPUT: SQL query, YAML config, schema, bug fixes
+    
+    QUALITY: Trained on Google Cloud docs + customer patterns
+  `,
+  aiagent: `
+    DEFINE TOOLS: API endpoints + preconditions/postconditions in Vertex builder
+    
+    REQUEST → Agent decides tool sequence (LLM reasoning)
+    
+    EXECUTE: Each tool → Result fed back → Next step
+    
+    MEMORY: Conversation state + RAG context. Audit log of all actions.
+  `,
 }
 
 export function ComponentDetails({ nodeId, node, onClose }) {

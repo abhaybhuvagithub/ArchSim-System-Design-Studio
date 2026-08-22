@@ -121,6 +121,20 @@ export const CLOUD_MAP = {
   dast:       ['Inspector + OWASP ZAP', 'Web Security Scanner', 'Defender for Cloud DAST', 'OCI Vulnerability Scanning', 'no public equivalent'],
   devicefarm: ['AWS Device Farm', 'Firebase Test Lab', 'Azure Test Plans + BrowserStack', 'BrowserStack on OCI', 'Xcode Cloud test devices'],
   testops:    ['CodeBuild test reports', 'Cloud Build + Looker', 'Azure Test Plans', 'OCI DevOps reports', 'Xcode Cloud test reports'],
+  // Google AI & LLMs
+  gemini3:    ['Bedrock / Claude API', 'Gemini 3 Pro (native)', 'OpenAI API / Azure OpenAI', 'Bedrock Claude on OCI', 'no public equivalent'],
+  gemini2:    ['Bedrock / Claude API', 'Gemini 2.5 (native)', 'OpenAI GPT-4 / Azure OpenAI', 'Bedrock on OCI', 'no public equivalent'],
+  notebooklm: ['no equivalent', 'NotebookLM (native)', 'Azure AI Document Intelligence', 'no equivalent', 'no public equivalent'],
+  antigravity:['no equivalent', 'Antigravity IDE (native, Nov 2025)', 'GitHub Copilot Workspace', 'no equivalent', 'no public equivalent'],
+  vertexai:   ['SageMaker', 'Vertex AI (native)', 'Azure ML', 'OCI Data Science', 'no public equivalent'],
+  imagen:     ['Bedrock Titan Image', 'Imagen 4 (native)', 'Azure OpenAI DALL-E-3', 'no equivalent', 'no public equivalent'],
+  veo:        ['Bedrock (limited)', 'Veo 3 (native)', 'no equivalent', 'no equivalent', 'no public equivalent'],
+  astra:      ['no equivalent', 'Project Astra / Gemini Live (native)', 'no equivalent', 'no equivalent', 'no public equivalent'],
+  mariner:    ['no equivalent', 'Project Mariner / Agent Mode (native)', 'no equivalent', 'no equivalent', 'no public equivalent'],
+  beam:       ['no equivalent', 'Google Beam (native)', 'Azure Spaces / Teams Premium', 'no equivalent', 'no public equivalent'],
+  gemmaos:    ['no equivalent', 'Gemma (native open-source)', 'Phi on-device', 'no equivalent', 'no public equivalent'],
+  duetai:     ['CodeWhisperer in console', 'Duet AI in Console (native)', 'GitHub Copilot in Azure Portal', 'no equivalent', 'no public equivalent'],
+  aiagent:    ['SageMaker Agent', 'Vertex AI Agent Builder (native)', 'Azure AI Orchestration', 'OCI Generative AI Agents', 'no public equivalent'],
 }
 
 const IDX = { aws: 0, gcp: 1, azure: 2, oci: 3, apple: 4 }
