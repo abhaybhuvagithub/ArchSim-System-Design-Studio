@@ -38,6 +38,7 @@ import { LAND, WORLD_W, WORLD_H } from './world.js'
 import { QUESTION_BANK, QUESTION_LEVELS, questionsAt } from './questions.js'
 import { explainFlow, isBidir } from './explain.js'
 import { generateCode, CODE_VIEWS } from './codegen.js'
+import { generateProject } from './syscode.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1396,17 +1397,33 @@ function About() {
 // every change — which is what makes "the code evolves with Improve and Quick
 // Fix" true by construction rather than by bookkeeping.
 function CodeGen({ nodes, edges, cloud, sugs }) {
-  const [view, setView] = useState('compose')
+  const [view, setView] = useState('project')
   const [copied, setCopied] = useState(false)
+  const [file, setFile] = useState(null)
+  const project = useMemo(() => generateProject(nodes, edges), [nodes, edges])
+  const isProject = view === 'project'
   const meta = CODE_VIEWS.find(v => v.id === view) || CODE_VIEWS[0]
-  const code = useMemo(() => generateCode(view, nodes, edges, cloud), [view, nodes, edges, cloud])
+  const curFile = isProject ? (project.find(f => f.path === file) || project[0]) : null
+  const code = useMemo(
+    () => isProject ? (curFile?.content || '') : generateCode(view, nodes, edges, cloud),
+    [isProject, curFile, view, nodes, edges, cloud])
   const copy = async () => {
     try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* clipboard denied */ }
   }
   const download = () => {
     const blob = new Blob([code], { type: 'text/plain' })
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob); a.download = meta.file; a.click()
+    a.href = URL.createObjectURL(blob); a.download = isProject ? (curFile?.path.split('/').pop() || 'file.txt') : meta.file; a.click()
+  }
+  const downloadZip = async () => {
+    // jszip is only needed here, so it stays out of the main bundle.
+    const { default: JSZip } = await import('jszip')
+    const zip = new JSZip()
+    for (const f of project) zip.file(f.path, f.content)
+    zip.file('docker-compose.yml', generateCode('compose', nodes, edges, cloud))
+    const blob = await zip.generateAsync({ type: 'blob' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob); a.download = 'archsim-system.zip'; a.click()
   }
   return (
     <section>
@@ -1417,20 +1434,35 @@ function CodeGen({ nodes, edges, cloud, sugs }) {
         {sugs.length > 0 && <> There {sugs.length === 1 ? 'is 1 open finding' : `are ${sugs.length} open findings`} in Improve — apply one and watch this file follow.</>}
       </p>
       <div className="code-subtabs" role="tablist" aria-label="Generated artifact">
+        <button role="tab" aria-selected={isProject}
+          className={`btn ${isProject ? 'active' : ''}`}
+          title="The full runnable system: an Express server per service, workers, schema, env — routes and data access derived from the edges"
+          onClick={() => setView('project')}>System code</button>
         {CODE_VIEWS.map(v => (
           <button key={v.id} role="tab" aria-selected={view === v.id}
             className={`btn ${view === v.id ? 'active' : ''}`}
             title={v.hint} onClick={() => setView(v.id)}>{v.label}</button>
         ))}
       </div>
+      {isProject && (
+        <div className="code-files" role="tablist" aria-label="Project files">
+          {project.map(f => (
+            <button key={f.path} role="tab" aria-selected={curFile?.path === f.path}
+              className={`code-file ${curFile?.path === f.path ? 'active' : ''}`}
+              onClick={() => setFile(f.path)}>{f.path}</button>
+          ))}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 6, margin: '8px 0' }}>
         <button className="btn" style={{ flex: 1 }} onClick={copy}>{copied ? '✓ Copied' : '⧉ Copy'}</button>
-        <button className="btn" onClick={download}>↓ {meta.file}</button>
+        <button className="btn" onClick={download}>↓ {isProject ? (curFile?.path.split('/').pop() || 'file') : meta.file}</button>
+        {isProject && <button className="btn" onClick={downloadZip} title="Every generated file plus docker-compose.yml, zipped">📦 project .zip</button>}
       </div>
-      <pre className="code-out" aria-label={`Generated ${meta.label}`}>{code}</pre>
+      <pre className="code-out" aria-label={isProject ? `Generated ${curFile?.path}` : `Generated ${meta.label}`}>{code}</pre>
       <p className="muted" style={{ fontSize: 12 }}>
-        A skeleton for the shape of the design, not a production stack — capacity
-        numbers and service names are real, resource bodies are minimal.
+        {isProject
+          ? 'Real code with the design decisions in it: cache-aside where a cache fronts a store, producers where a queue is wired, a consumer loop in each worker, RAG where embeddings meet a vector store. A starting point, not a finished product.'
+          : 'A skeleton for the shape of the design, not a production stack — capacity numbers and service names are real, resource bodies are minimal.'}
       </p>
     </section>
   )

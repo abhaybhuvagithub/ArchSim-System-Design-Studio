@@ -1626,3 +1626,11 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
   border: 1px solid var(--border); border-radius: 8px; padding: 12px;
   overflow: auto; max-height: 52vh; white-space: pre; margin: 0 0 8px;
 }
+.code-files { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.code-file {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px;
+  padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; color: var(--text); cursor: pointer;
+}
+.code-file:hover { background: rgba(127,140,160,.1); }
+.code-file.active { border-color: var(--accent); background: rgba(91,140,255,.14); }

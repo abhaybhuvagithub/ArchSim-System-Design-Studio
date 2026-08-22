@@ -2653,6 +2653,51 @@ try {
       check('openapi has a path per service/store pair with both verbs',
         oa.includes('openapi: 3.0.3') && oa.includes('/api-server/orders-db:') && oa.includes('get:') && oa.includes('post:'));
     }
+
+    // ── full system code: real services whose logic tracks the graph ─────────
+    const sc = await import(pathToFileURL(path.join(root, 'src/syscode.js')).href);
+    {
+      const ns = [
+        { id: 'a', type: 'app', label: 'API Server' },
+        { id: 'c', type: 'cache', label: 'Redis' },
+        { id: 's', type: 'sql', label: 'Orders DB' },
+        { id: 'q', type: 'queue', label: 'Jobs Queue' },
+        { id: 'k', type: 'worker', label: 'Email Worker' },
+      ];
+      const es = [
+        { id: 'e1', from: 'a', to: 'c' }, { id: 'e2', from: 'a', to: 's' },
+        { id: 'e3', from: 'a', to: 'q' }, { id: 'e4', from: 'q', to: 'k' },
+      ];
+      const proj = sc.generateProject(ns, es);
+      const paths = proj.map(f => f.path);
+      check('the project has package.json, README, env, schema and a file per service',
+        ['package.json', 'README.md', '.env.example', 'db/schema.sql',
+         'services/api-server/server.js', 'services/email-worker/worker.js'].every(p => paths.includes(p)));
+      const server = proj.find(f => f.path.endsWith('server.js')).content;
+      check('a cache in front of the store generates cache-aside with invalidation',
+        server.includes('cache.get(') && server.includes('cache.set(') && server.includes('cache.del('));
+      check('a wired queue generates a producer that returns 202',
+        server.includes("sendToQueue('jobs'") && server.includes('202'));
+      const worker = proj.find(f => f.path.endsWith('worker.js')).content;
+      check('the worker consumes the queue, acks after work and dead-letters poison pills',
+        worker.includes("consume('jobs'") && worker.includes('ch.ack(msg)') && worker.includes('ch.nack(msg, false, false)'));
+      // The design decision expressed as code: remove the cache and the data
+      // layer must fall back to direct queries — no cache client at all.
+      const noCache = sc.generateProject(ns.filter(n => n.id !== 'c'), es.filter(e => e.to !== 'c'))
+        .find(f => f.path.endsWith('server.js')).content;
+      check('removing the cache removes cache-aside from the generated data layer',
+        !noCache.includes('cache.get(') && noCache.includes('SELECT * FROM'));
+      const pkg = JSON.parse(proj.find(f => f.path === 'package.json').content);
+      check('npm dependencies are derived from what the design is wired to',
+        pkg.dependencies.redis && pkg.dependencies.pg && pkg.dependencies.amqplib && !pkg.dependencies.kafkajs);
+      // RAG only appears when embeddings meet a vector store and an LLM.
+      const rag = sc.generateProject(
+        [{ id: 'a', type: 'app', label: 'Chat API' }, { id: 'v', type: 'vector', label: 'Qdrant' }, { id: 'l', type: 'llm', label: 'LLM' }],
+        [{ id: 'r1', from: 'a', to: 'v' }, { id: 'r2', from: 'a', to: 'l' }]
+      ).find(f => f.path.endsWith('server.js')).content;
+      check('a vector store plus an LLM generates a grounded /ask endpoint',
+        rag.includes("/ask'") && rag.includes('points/search') && rag.includes('context'));
+    }
   }
 
   // ── nothing in the interface is too small to read ──────────────────────────
