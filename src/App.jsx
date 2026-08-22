@@ -39,6 +39,7 @@ import { QUESTION_BANK, QUESTION_LEVELS, questionsAt } from './questions.js'
 import { explainFlow, isBidir } from './explain.js'
 import { generateCode, CODE_VIEWS } from './codegen.js'
 import { generateProject } from './syscode.js'
+import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1118,6 +1119,7 @@ export default function App() {
               ['chaos', 'Chaos', faults.length || null, 'Inject faults and watch it degrade'],
               ['cost', 'Cost', money(cost.total), 'What this design costs to run'],
               ['code', 'Code', null, 'docker-compose, Terraform and OpenAPI generated live from the canvas'],
+              ['assist', 'Ask AI', null, 'Ask the assistant about this design — bottlenecks, cost, failures, scaling'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1156,6 +1158,9 @@ export default function App() {
             <About />
           ) : tab === 'code' ? (
             <CodeGen nodes={nodes} edges={edges} cloud={cloud} sugs={sugs} />
+          ) : tab === 'assist' ? (
+            <Assistant nodes={nodes} edges={edges} sim={sim} cost={cost} sugs={sugs}
+              faults={faults} rps={rps} cloud={cloud} template={template} simOn={simOn} />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
           ) : tab === 'hld' ? (
@@ -1389,6 +1394,95 @@ function About() {
         </div>
       </div>
       </ReadAloud>
+    </section>
+  )
+}
+
+// The AI tab: a design-aware assistant. Offline it answers from the studio's
+// own analyses; with an API key (shared with the Interview tab) the user's
+// LLM answers, primed with a live snapshot of the canvas.
+function Assistant({ nodes, edges, sim, cost, sugs, faults, rps, cloud, template, simOn }) {
+  const [msgs, setMsgs] = useState([])
+  const [draft, setDraft] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const [keyDraft, setKeyDraft] = useState('')
+  const [provider, setProvider] = useState('anthropic')
+  const [, force] = useState(0)
+  const endRef = useRef(null)
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'nearest' }) }, [msgs, busy])
+  const ctxObj = { nodes, edges, sim, cost, sugs, faults, rps, cloud, template, simOn }
+
+  const send = async (text) => {
+    const question = (text ?? draft).trim()
+    if (!question || busy) return
+    setDraft(''); setErr(null)
+    const next = [...msgs, { role: 'user', text: question }]
+    setMsgs(next)
+    if (LLM.hasKey()) {
+      setBusy(true)
+      try {
+        const reply = await LLM.ask({
+          provider, key: LLM.getKey(), baseUrl: LLM.getBase(), model: LLM.getModel() || undefined,
+          system: assistantSystemPrompt(buildContext(ctxObj)),
+          messages: next.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })),
+        })
+        setMsgs(m => [...m, { role: 'assistant', text: reply, llm: true }])
+      } catch (e) { setErr(LLM.redact(e.message)) } finally { setBusy(false) }
+      return
+    }
+    const lines = offlineAnswer(question, ctxObj)
+    setMsgs(m => [...m, { role: 'assistant', lines }])
+  }
+
+  const chips = ['Where is my bottleneck?', 'How do I cut the cost?', 'What breaks first?', 'How does this scale?']
+  return (
+    <section className="assist">
+      <h3>🤖 Assistant</h3>
+      <p className="muted" style={{ marginTop: 0 }}>
+        {LLM.hasKey()
+          ? <><b>{LLM.PROVIDERS[provider]?.label || 'Your LLM'}</b> answers with this canvas as context — components, wiring, live numbers, findings.</>
+          : <>Answers come from the studio's own analyses of <b>this design</b> — free and offline. Add a key below and your own LLM takes over.</>}
+      </p>
+      <div className="assist-chips">
+        {chips.map(c => <button key={c} className="btn" onClick={() => send(c)}>{c}</button>)}
+      </div>
+      <div className="assist-log" aria-live="polite">
+        {msgs.map((m, i) => (
+          <div key={i} className={`assist-msg ${m.role}`}>
+            {m.lines ? m.lines.map((l, j) => <p key={j}><RichLine text={l} /></p>) : <p><RichLine text={m.text} /></p>}
+          </div>
+        ))}
+        {busy && <div className="assist-msg assistant"><p className="muted">thinking…</p></div>}
+        {err && <div className="assist-msg assistant"><p className="muted">The model call failed: {err}. The offline engine still works — ask again after removing the key, or check it.</p></div>}
+        <div ref={endRef} />
+      </div>
+      <div className="assist-input">
+        <input value={draft} placeholder="Ask about this design…" aria-label="Ask the assistant"
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') send() }} />
+        <button className="btn" disabled={busy || !draft.trim()} onClick={() => send()}>Send</button>
+      </div>
+      <details className="assist-key">
+        <summary>{LLM.hasKey() ? '✓ API key set (this session only)' : 'Optional: use your own LLM'}</summary>
+        <div className="field">
+          <label>Provider</label>
+          <select value={provider} onChange={e => setProvider(e.target.value)}>
+            {Object.entries(LLM.PROVIDERS).map(([k, p]) => <option key={k} value={k}>{p.label}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label>API key</label>
+          <input type="password" value={keyDraft} placeholder={LLM.hasKey() ? '•••••••• (set)' : 'sk-…'}
+            onChange={e => setKeyDraft(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn" style={{ flex: 1 }} disabled={!keyDraft.trim()}
+            onClick={() => { LLM.setKey(keyDraft.trim()); setKeyDraft(''); force(x => x + 1) }}>Save key</button>
+          {LLM.hasKey() && <button className="btn" onClick={() => { LLM.setKey(''); force(x => x + 1) }}>Remove</button>}
+        </div>
+        <p className="muted" style={{ fontSize: 12 }}>{LLM.KEY_WARNING} The same key powers the Interview tab.</p>
+      </details>
     </section>
   )
 }

@@ -2120,7 +2120,7 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all fourteen tabs are tabs', tabBtns.length === 14);
+    check('all fifteen tabs are tabs', tabBtns.length === 15);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',
@@ -2819,6 +2819,42 @@ try {
         return deadHosts.some(h => t.includes(h));
       });
       check('no dead external service host remains in the source' + (lingering.length ? ' — ' + lingering.join(', ') : ''), lingering.length === 0);
+    }
+
+    // ── the AI assistant's offline engine answers from THIS design ───────────
+    // Without a key the assistant must still be useful: every routed answer
+    // names real components from the canvas, and an empty canvas gets guidance
+    // rather than a shrug.
+    {
+      const as = await import(pathToFileURL(path.join(root, 'src/assistant.js')).href);
+      const nodes = [
+        { id: 'a', type: 'app', label: 'API Server', replicas: 2 },
+        { id: 's', type: 'sql', label: 'Orders DB' },
+        { id: 'c', type: 'cache', label: 'Hot Cache' },
+      ];
+      const edges = [{ id: 'e1', from: 'a', to: 'c' }, { id: 'e2', from: 'a', to: 's' }];
+      const sim = { p50: 20, p95: 80, p99: 140, successRate: 0.999, sysAvail: 0.9995,
+        stats: { a: { util: 0.85, in: 900 }, s: { util: 0.95, in: 500 }, c: { util: 0.3, in: 400 } } };
+      const cost = { total: 2400, rows: [
+        { id: 's', label: 'Orders DB', type: 'sql', total: 1500 },
+        { id: 'a', label: 'API Server', type: 'app', total: 700 },
+        { id: 'c', label: 'Hot Cache', type: 'cache', total: 200 } ] };
+      const ctx = { nodes, edges, sim, cost, sugs: [{ title: 'Cache reads in front of Orders DB' }], faults: [], rps: 1000, simOn: true, cloud: 'aws', template: null };
+      const joined = q => as.offlineAnswer(q, ctx).join(' ');
+      check('assistant names the hottest component when asked about bottlenecks',
+        joined('where is my bottleneck?').includes('Orders DB') && joined('bottleneck').includes('95%'));
+      check('assistant grounds cost answers in the actual bill',
+        joined('how do I cut the cost?').includes('$2.4k') && joined('cost').includes('Orders DB'));
+      check('assistant surfaces the advisor findings on request',
+        joined('any suggestions to improve?').includes('Cache reads in front of Orders DB'));
+      check('assistant flags single points of failure when asked what breaks',
+        joined('what breaks first?').includes('Orders DB'));
+      check('assistant explains a named component from its internals',
+        joined('tell me about the hot cache').toLowerCase().includes('lru') || joined('tell me about the hot cache').includes('🔍'));
+      check('assistant guides an empty canvas instead of failing',
+        as.offlineAnswer('help', { nodes: [], edges: [] }).join(' ').includes('template'));
+      check('the LLM system prompt carries the live design snapshot',
+        as.assistantSystemPrompt(as.buildContext(ctx)).includes('API Server') && as.buildContext(ctx).includes('p99 140ms'));
     }
   }
 

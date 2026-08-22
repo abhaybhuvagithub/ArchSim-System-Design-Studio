@@ -1634,3 +1634,20 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 }
 .code-file:hover { background: rgba(127,140,160,.1); }
 .code-file.active { border-color: var(--accent); background: rgba(91,140,255,.14); }
+
+/* ── AI assistant tab ──────────────────────────────────────────────────── */
+.assist-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.assist-chips .btn { font-size: 12px; }
+.assist-log {
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+  min-height: 120px; max-height: 46vh; overflow: auto; margin-bottom: 8px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.assist-msg { max-width: 92%; border-radius: 8px; padding: 6px 10px; font-size: 12.5px; line-height: 1.5; }
+.assist-msg p { margin: 0 0 4px; } .assist-msg p:last-child { margin-bottom: 0; }
+.assist-msg.user { align-self: flex-end; background: rgba(91,140,255,.16); border: 1px solid var(--accent); }
+.assist-msg.assistant { align-self: flex-start; background: var(--chip-bg, rgba(127,140,160,.08)); border: 1px solid var(--border); }
+.assist-input { display: flex; gap: 6px; }
+.assist-input input { flex: 1; }
+.assist-key { margin-top: 10px; font-size: 12.5px; }
+.assist-key summary { cursor: pointer; }
