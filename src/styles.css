@@ -1731,3 +1731,9 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .roi-model { margin: 8px 0 4px; }
 .roi-basis { font-size: 12.5px; line-height: 1.55; }
 .roi-note { font-size: 12px; }
+.roi-exec {
+  border: 1px solid var(--accent); border-radius: 10px; padding: 12px;
+  background: rgba(91,140,255,.08); font-size: 13px; line-height: 1.6; margin: 10px 0 14px;
+}
+.roi-h { font-weight: 700; font-size: 13px; margin: 14px 0 2px; }
+.roi-card.warn { border-color: rgba(255,159,10,.5); background: rgba(255,159,10,.08); }

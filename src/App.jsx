@@ -1197,7 +1197,7 @@ export default function App() {
             <Assistant nodes={nodes} edges={edges} sim={sim} cost={cost} sugs={sugs}
               faults={faults} rps={rps} cloud={cloud} template={template} simOn={simOn} />
           ) : tab === 'roi' ? (
-            <ROITab template={template} cost={cost} rps={rps} simOn={simOn} />
+            <ROITab template={template} cost={cost} rps={rps} simOn={simOn} sim={sim} nodes={nodes} />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
           ) : tab === 'hld' ? (
@@ -1435,11 +1435,10 @@ function About() {
   )
 }
 
-// The ROI tab: the business view of the loaded design. Infra comes from the
-// live cost report; the revenue side is an honestly-labeled model (authored
-// for marquee designs, archetype-derived otherwise) reduced to one unit that
-// makes everything comparable: dollars per million requests.
-function ROITab({ template, cost, rps, simOn }) {
+// The ROI tab as an executive briefing. Three audiences, one page:
+// the Chairman gets one honest sentence, the CFO gets a P&L shape with
+// downtime priced in revenue, the CTO gets efficiency, risk and drivers.
+function ROITab({ template, cost, rps, simOn, sim, nodes }) {
   if (!template) {
     return <section className="roi"><h3>💹 ROI</h3>
       <p className="muted">Load a design from the picker — ROI reads its live infra cost against a revenue model for that business.</p></section>
@@ -1450,33 +1449,59 @@ function ROITab({ template, cost, rps, simOn }) {
   }
   const r = roiFor(template, cost, rps)
   const money = n => n >= 1e9 ? '$' + (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? '$' + (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? '$' + (n / 1e3).toFixed(1) + 'k' : '$' + Math.max(0, n).toFixed(n < 10 ? 2 : 0)
+  const avail = sim?.sysAvail ?? 1
+  const downMinMo = (1 - avail) * 43800
+  const revAtRisk = r.internal ? 0 : r.revenue * (1 - avail)
+  const hot = (nodes || []).map(n => ({ n, u: sim?.stats?.[n.id]?.util || 0 })).sort((a, b) => b.u - a.u)[0]
+  const drivers = (cost?.rows || []).slice(0, 3)
+  const spofs = (nodes || []).filter(n => (n.replicas || 1) === 1 && sim?.stats?.[n.id]?.in > 0).length
+
+  if (r.internal) {
+    return (
+      <section className="roi">
+        <h3>💹 ROI — {template.name}</h3>
+        <div className="roi-exec"><b>For the board:</b> this is an internal capability, not a revenue line. It costs {money(r.infra)}/month ({money(r.infra * 12)}/yr) to run and earns its keep in outages prevented and engineering time saved — judge it against the cost of not having it.</div>
+        <div className="roi-grid">
+          <div className="roi-card"><div className="roi-k">Infra / month</div><div className="roi-v">{money(r.infra)}</div></div>
+          <div className="roi-card"><div className="roi-k">Annualized</div><div className="roi-v">{money(r.infra * 12)}</div></div>
+          <div className="roi-card"><div className="roi-k">Cost per 1M requests</div><div className="roi-v">{money(r.costPerM)}</div></div>
+        </div>
+        <p className="roi-basis">{r.basis}</p>
+      </section>
+    )
+  }
   return (
     <section className="roi">
       <h3>💹 ROI — {template.name}</h3>
-      {r.internal ? (
-        <>
-          <div className="roi-grid">
-            <div className="roi-card"><div className="roi-k">Infra / month</div><div className="roi-v">{money(r.infra)}</div></div>
-            <div className="roi-card"><div className="roi-k">Requests / month</div><div className="roi-v">{(r.reqsMonth / 1e9).toFixed(1)}B</div></div>
-            <div className="roi-card"><div className="roi-k">Cost per 1M requests</div><div className="roi-v">{money(r.costPerM)}</div></div>
-          </div>
-          <p className="roi-basis">{r.basis}</p>
-        </>
-      ) : (
-        <>
-          <div className="roi-grid">
-            <div className="roi-card"><div className="roi-k">Est. revenue / month</div><div className="roi-v">{money(r.revenue)}</div></div>
-            <div className="roi-card"><div className="roi-k">Infra / month</div><div className="roi-v">{money(r.infra)}</div></div>
-            <div className="roi-card good"><div className="roi-k">Gross margin</div><div className="roi-v">{r.marginPct.toFixed(1)}%</div></div>
-            <div className="roi-card"><div className="roi-k">Earned per 1M req</div><div className="roi-v">{money(r.revPerM)}</div></div>
-            <div className="roi-card"><div className="roi-k">Spent per 1M req</div><div className="roi-v">{money(r.costPerM)}</div></div>
-            <div className="roi-card"><div className="roi-k">Infra share of revenue</div><div className="roi-v">{r.infraShare === null ? '—' : r.infraShare < 0.1 ? '<0.1%' : r.infraShare.toFixed(1) + '%'}</div></div>
-          </div>
-          <p className="roi-model"><span className={`prov-chip ${r.cls === 'authored' ? 'prov-vendor' : 'prov-modeled'}`}>{r.cls === 'authored' ? 'Authored model' : 'Archetype model'}</span> <b>{r.model}</b></p>
-          <p className="roi-basis">{r.basis}</p>
-          <p className="roi-note muted">Both sides scale with traffic here, so the margin holds as you drag the slider — what changes it is the model itself. This is an order-of-magnitude teaching view, not a forecast: swap in your own unit economics before betting on it.</p>
-        </>
-      )}
+
+      <div className="roi-exec">
+        <b>For the board:</b> at today\u2019s traffic this business earns about {money(r.revenue)}/month against {money(r.infra)}/month of infrastructure — a {r.marginPct.toFixed(0)}% gross margin that holds as traffic grows, because revenue and cost scale together. The number to watch is not the bill; it is availability: every 0.1% of downtime puts ~{money(r.revenue * 0.001)}/month of revenue at risk.
+      </div>
+
+      <div className="roi-h">💰 CFO view</div>
+      <div className="roi-grid">
+        <div className="roi-card"><div className="roi-k">Revenue / month</div><div className="roi-v">{money(r.revenue)}</div></div>
+        <div className="roi-card"><div className="roi-k">Revenue / year</div><div className="roi-v">{money(r.revenue * 12)}</div></div>
+        <div className="roi-card"><div className="roi-k">Infra (COGS) / month</div><div className="roi-v">{money(r.infra)}</div></div>
+        <div className="roi-card good"><div className="roi-k">Gross margin</div><div className="roi-v">{r.marginPct.toFixed(1)}%</div></div>
+        <div className="roi-card"><div className="roi-k">Infra share of revenue</div><div className="roi-v">{r.infraShare === null ? '—' : r.infraShare < 0.1 ? '<0.1%' : r.infraShare.toFixed(1) + '%'}</div></div>
+        <div className="roi-card warn"><div className="roi-k">Revenue at risk (availability)</div><div className="roi-v">{money(revAtRisk)}/mo</div></div>
+      </div>
+      <p className="roi-basis">At {(avail * 100).toFixed(3)}% modeled availability, expect ~{downMinMo < 1 ? '<1' : Math.round(downMinMo)} minutes of downtime a month; at this revenue rate that is roughly {money(revAtRisk)} of exposure — usually the cheapest insurance on this page is a replica, not a discount.</p>
+
+      <div className="roi-h">🛠 CTO view</div>
+      <div className="roi-grid">
+        <div className="roi-card"><div className="roi-k">Earned per 1M req</div><div className="roi-v">{money(r.revPerM)}</div></div>
+        <div className="roi-card"><div className="roi-k">Spent per 1M req</div><div className="roi-v">{money(r.costPerM)}</div></div>
+        <div className="roi-card"><div className="roi-k">Availability</div><div className="roi-v">{(avail * 100).toFixed(3)}%</div></div>
+        <div className="roi-card"><div className="roi-k">Hottest component</div><div className="roi-v" style={{ fontSize: 14 }}>{hot ? `${hot.n.label} · ${Math.round(hot.u * 100)}%` : '—'}</div></div>
+        <div className="roi-card"><div className="roi-k">Single points of failure</div><div className="roi-v">{spofs}</div></div>
+        <div className="roi-card"><div className="roi-k">Top cost drivers</div><div className="roi-v" style={{ fontSize: 12.5, fontWeight: 500 }}>{drivers.length ? drivers.map(d => d.label).join(', ') : '—'}</div></div>
+      </div>
+
+      <p className="roi-model"><span className={`prov-chip ${r.cls === 'authored' ? 'prov-vendor' : 'prov-modeled'}`}>{r.cls === 'authored' ? 'Authored model' : 'Archetype model'}</span> <b>{r.model}</b></p>
+      <p className="roi-basis">{r.basis}</p>
+      <p className="roi-note muted">Both sides scale with traffic here, so the margin holds as you drag the slider — what changes it is the model itself. This is an order-of-magnitude teaching view, not a forecast: swap in your own unit economics before betting on it.</p>
     </section>
   )
 }
