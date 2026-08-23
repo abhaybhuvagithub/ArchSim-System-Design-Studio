@@ -2121,6 +2121,24 @@ try {
       check('the modal closes cleanly', !doc.querySelector('.modal-content'));
       await goTab('Breakdown');   // the node click routed to Capacity; restore for the voice checks below
     }
+
+    // ── the ROI tab, driven ──────────────────────────────────────────────────
+    {
+      const simBtn = byText('.toolbar button', '▶ Simulate') || [...doc.querySelectorAll('button')].find(b => b.textContent.includes('▶ Simulate'));
+      if (simBtn) { click(simBtn); await wait(250); }   // ROI's infra side needs the simulation running
+      await goTab('ROI');
+      const roi = () => doc.querySelector('.roi');
+      check('the ROI tab renders the business view for the loaded design',
+        !!roi() && /ROI —/.test(roi().textContent));
+      check('it shows both sides of the ledger per million requests',
+        /per 1M req/i.test(roi().textContent) && /Infra \/ month/.test(roi().textContent));
+      check('the revenue model is honestly labeled with its basis',
+        (/Authored model|Archetype model/.test(roi().textContent)) && !!roi().querySelector('.roi-basis'));
+      check('the not-a-forecast note is present', /not a forecast/i.test(roi().textContent));
+      const stopBtn = [...doc.querySelectorAll('button')].find(b => b.textContent.includes('⏸ Stop'));
+      if (stopBtn) { click(stopBtn); await wait(150); }  // restore prior state for downstream sections
+      await goTab('Breakdown');
+    }
     check('a voice picker is offered', !!doc.querySelector('.ra-voice'));
     check('the voice picker is labelled', !!doc.querySelector('.ra-voice')?.getAttribute('aria-label'));
     check('the voice picker groups by language',
@@ -2225,7 +2243,7 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all fifteen tabs are tabs', tabBtns.length === 15);
+    check('all sixteen tabs are tabs', tabBtns.length === 16);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',
@@ -3053,6 +3071,33 @@ try {
       check('the UPI link carries id, amount and currency', (() => {
         const u = L.upiLink(7999, 'Lifetime');
         return u.startsWith('upi://pay?') && u.includes(encodeURIComponent('abhay.bhuva@okhdfcbank')) && u.includes('am=7999') && u.includes('cu=INR');
+      })());
+    }
+
+    // ── ROI: the business view stays finite and honestly labeled ─────────────
+    {
+      const { roiFor } = await import(pathToFileURL(path.join(root, 'src/roi.js')).href);
+      const T3 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
+      const { simulate: sim3 } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+      const { costReport: cr3 } = await import(pathToFileURL(path.join(root, 'src/pricing.js')).href);
+      let roiBad = [];
+      let authored = 0, internal = 0;
+      for (const t of T3) {
+        const s3 = sim3(t.nodes, t.edges, t.rps, new Set());
+        const r = roiFor(t, cr3(t.nodes, s3, 1), t.rps);
+        if (!r || typeof r.basis !== 'string' || r.basis.length < 40) { roiBad.push(t.name); continue }
+        const nums = r.internal ? [r.infra, r.costPerM] : [r.infra, r.revenue, r.margin, r.marginPct, r.revPerM];
+        if (!nums.every(Number.isFinite)) roiBad.push(t.name);
+        if (r.internal) internal++; else if (r.cls === 'authored') authored++;
+      }
+      check(`ROI computes finite, explained numbers for all ${T3.length} templates` + (roiBad.length ? ' — ' + roiBad.slice(0, 4).join(', ') : ''), roiBad.length === 0);
+      check('at least twenty-five designs carry an authored revenue model', authored >= 25);
+      check('internal capabilities are framed as cost, not revenue', internal >= 5);
+      check('a take-rate business shows the payments truth (revenue per 1M far above cost per 1M)', (() => {
+        const t = T3.find(x => x.name === 'Payment System (Stripe-lite)');
+        const s3 = sim3(t.nodes, t.edges, t.rps, new Set());
+        const r = roiFor(t, cr3(t.nodes, s3, 1), t.rps);
+        return r.revPerM > r.costPerM * 100 && r.marginPct > 99;
       })());
     }
 
