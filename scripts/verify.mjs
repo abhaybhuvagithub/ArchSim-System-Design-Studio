@@ -2131,10 +2131,16 @@ try {
       check('the ROI tab renders the business view for the loaded design',
         !!roi() && /ROI —/.test(roi().textContent));
       check('it shows both sides of the ledger per million requests',
-        /per 1M req/i.test(roi().textContent) && /Infra \/ month/.test(roi().textContent));
+        /per 1M req/i.test(roi().textContent) && /Infra \(COGS\)/.test(roi().textContent));
       check('the revenue model is honestly labeled with its basis',
         (/Authored model|Archetype model/.test(roi().textContent)) && !!roi().querySelector('.roi-basis'));
       check('the not-a-forecast note is present', /not a forecast/i.test(roi().textContent));
+      // executive framing: one sentence for the board, P&L for the CFO, risk for the CTO
+      check('the board gets one plain-English sentence', /For the board:/.test(roi().textContent));
+      check('the CFO view prices downtime in revenue',
+        /CFO view/.test(roi().textContent) && /Revenue at risk/.test(roi().textContent) && /Revenue \/ year/.test(roi().textContent));
+      check('the CTO view names the hottest component and SPOF count',
+        /CTO view/.test(roi().textContent) && /Hottest component/.test(roi().textContent) && /Single points of failure/.test(roi().textContent));
       const stopBtn = [...doc.querySelectorAll('button')].find(b => b.textContent.includes('⏸ Stop'));
       if (stopBtn) { click(stopBtn); await wait(150); }  // restore prior state for downstream sections
       await goTab('Breakdown');
