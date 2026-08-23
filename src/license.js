@@ -75,11 +75,18 @@ export function makeKey(plan, now = new Date()) {
   return `${payload}-${sig(payload)}`
 }
 
-export function validateKey(raw, now = new Date()) {
+// Keys that leaked publicly get listed here and die on the next deploy —
+// the no-backend answer to a shared key. Add the full key string, redeploy.
+export const REVOKED_KEYS = new Set([
+  // 'AS1-L-FOREVER-XXXX-XXXXXX',
+])
+
+export function validateKey(raw, now = new Date(), revoked = REVOKED_KEYS) {
   const key = String(raw || '').trim().toUpperCase()
   const m = key.match(/^(AS1-([MYL])-(FOREVER|\d{8})-[A-Z0-9]{4})-([A-Z0-9]{6})$/)
   if (!m) return { ok: false, reason: 'That does not look like an ArchSim key (AS1-…).' }
   if (sig(m[1]) !== m[4]) return { ok: false, reason: 'The key signature does not check out — copy it exactly as sent.' }
+  if (revoked.has(key)) return { ok: false, revoked: true, reason: 'This key has been revoked. If you bought it, get in touch and a replacement is on the way.' }
   const plan = { M: 'monthly', Y: 'yearly', L: 'lifetime' }[m[2]]
   if (m[3] !== 'FOREVER') {
     const exp = new Date(`${m[3].slice(0, 4)}-${m[3].slice(4, 6)}-${m[3].slice(6, 8)}T23:59:59Z`)
@@ -94,7 +101,7 @@ export function getLicense() {
   try {
     const k = localStorage.getItem(LICENSE_STORE)
     if (!k) return null
-    const v = validateKey(k)
+    const v = validateKey(k)   // re-validated every load: expiry and revocation both bite here
     return v.ok ? { key: k, ...v } : null
   } catch { return null }
 }
@@ -107,3 +114,31 @@ export function upiLink(amountInr, planLabel) {
   const p = new URLSearchParams({ pa: UPI_ID, pn: UPI_NAME, am: String(amountInr), cu: 'INR', tn: `ArchSim ${planLabel}` })
   return 'upi://pay?' + p.toString()
 }
+
+// ── anti brute-force on the activation field ───────────────────────────────
+// Five wrong keys arms a 60-second cooldown. This is UI throttling, not
+// cryptography: with the salt necessarily in the bundle, the honest threat
+// model is casual guessing and script kiddies, and this prices both out.
+export const ATTEMPTS_STORE = 'archsim.license.attempts'
+const MAX_MISSES = 5
+const COOLDOWN_MS = 60_000
+
+export function attemptState(now = Date.now(), store) {
+  let raw
+  try { raw = (store || localStorage).getItem(ATTEMPTS_STORE) } catch { return { blocked: false, misses: 0 } }
+  let a = []
+  try { a = JSON.parse(raw || '[]') } catch { a = [] }
+  a = a.filter(t => now - t < COOLDOWN_MS)
+  return { blocked: a.length >= MAX_MISSES, misses: a.length, retryInMs: a.length ? COOLDOWN_MS - (now - a[0]) : 0 }
+}
+export function recordMiss(now = Date.now(), store) {
+  try {
+    const st = store || localStorage
+    let a = []
+    try { a = JSON.parse(st.getItem(ATTEMPTS_STORE) || '[]') } catch { a = [] }
+    a = a.filter(t => now - t < COOLDOWN_MS)
+    a.push(now)
+    st.setItem(ATTEMPTS_STORE, JSON.stringify(a))
+  } catch { /* private mode */ }
+}
+export function clearMisses(store) { try { (store || localStorage).removeItem(ATTEMPTS_STORE) } catch { /* private mode */ } }
