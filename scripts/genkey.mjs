@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 // Mint an ArchSim Pro license key after a payment arrives.
 //
-//   node scripts/genkey.mjs lifetime
-//   node scripts/genkey.mjs yearly
-//   node scripts/genkey.mjs monthly
-//   node scripts/genkey.mjs monthly 5     (mint five)
+//   node scripts/genkey.mjs monthly | halfyear | yearly     (the sold tiers)
+//   node scripts/genkey.mjs lifetime                        (owner/grandfather only — not on the price list)
+//   node scripts/genkey.mjs monthly 5                       (mint five)
 //
 // Same code path as the in-app validator (src/license.js), so a minted key
 // can never drift from what the app accepts.
@@ -24,8 +23,8 @@ const LEDGER = path.join(here, 'issued-keys.log')
 
 const plan = process.argv[2]
 const count = Math.max(1, Math.min(50, parseInt(process.argv[3] || '1', 10) || 1))
-if (!['monthly', 'yearly', 'lifetime'].includes(plan)) {
-  console.error('usage: node scripts/genkey.mjs <monthly|yearly|lifetime> [count]')
+if (!['monthly', 'halfyear', 'yearly', 'lifetime'].includes(plan)) {
+  console.error('usage: node scripts/genkey.mjs <monthly|halfyear|yearly|lifetime> [count]')
   process.exit(1)
 }
 

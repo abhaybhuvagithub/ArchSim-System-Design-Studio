@@ -1552,8 +1552,8 @@ function PricingModal({ want, license, onClose, onActivated, onRemoved }) {
                 ))}
               </div>
               <div className="pr-how">
-                <p><b>How it works (India · UPI):</b> pay to <code>{UPI_ID}</code> <button className="btn pr-copy" onClick={copyUpi}>copy</button> from any UPI app (the buttons above open yours on mobile, with the amount filled in). Then send the payment screenshot with the word <i>lifetime</i>, <i>yearly</i> or <i>monthly</i> via <a href={CONTACT_URL} target="_blank" rel="noopener noreferrer">LinkedIn</a> — your key arrives within 24 hours, usually much faster.</p>
-                <p className="muted">Outside India? Message the same LinkedIn for card/PayPal options. Keys are per-person, work on all your devices, and lifetime means lifetime.</p>
+                <p><b>How it works (India · UPI):</b> pay to <code>{UPI_ID}</code> <button className="btn pr-copy" onClick={copyUpi}>copy</button> from any UPI app (the buttons above open yours on mobile, with the amount filled in). Then send the payment screenshot with the plan name — <i>1 month</i>, <i>6 months</i> or <i>1 year</i> — via <a href={CONTACT_URL} target="_blank" rel="noopener noreferrer">LinkedIn</a> — your key arrives within 24 hours, usually much faster.</p>
+                <p className="muted">Outside India? Message the same LinkedIn for card/PayPal options. Keys are per-person and work on all your devices; earlier lifetime keys stay valid forever.</p>
               </div>
               <div className="pr-key">
                 <label htmlFor="pr-key-in"><b>Already have a key?</b></label>
