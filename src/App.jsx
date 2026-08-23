@@ -1059,9 +1059,9 @@ export default function App() {
           {simOn && (
             <div className="statbar">
               <div className="chip">QPS <b>{fmt(rps)}</b></div>
-              <div className="chip">p50 <b>{Math.round(sim.p50)} ms</b></div>
-              <div className="chip">p95 <b>{Math.round(sim.p95)} ms</b></div>
-              <div className="chip">p99 <b>{Math.round(sim.p99)} ms</b></div>
+              <div className="chip" title="Model output, not a measurement — read latencies as a band of roughly ±40%">p50 <b>~{Math.round(sim.p50)} ms</b></div>
+              <div className="chip" title="Model output, not a measurement — read latencies as a band of roughly ±40%">p95 <b>~{Math.round(sim.p95)} ms</b></div>
+              <div className="chip" title="Model output, not a measurement — read latencies as a band of roughly ±40%">p99 <b>~{Math.round(sim.p99)} ms</b></div>
               <div className={`chip ${sim.successRate < 0.99 ? 'bad' : 'ok'}`}>success <b>{(sim.successRate * 100).toFixed(2)}%</b></div>
               <div className="chip">availability <b>{(sim.sysAvail * 100).toFixed(3)}%</b></div>
               <div className="chip" title="Estimated monthly cloud cost at this traffic level">cost <b>{money(cost.total)}/mo</b></div>

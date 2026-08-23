@@ -314,6 +314,28 @@ export function ComponentDetails({ nodeId, node, onClose }) {
             <p>{spec?.desc}</p>
           </div>
 
+          {(() => {
+            const prov = getProvenance(node.type)
+            const cls = PROVENANCE_CLASSES[prov.cls]
+            return (
+              <div className="details-section provenance">
+                <h3>🧾 Where these numbers come from</h3>
+                <p>
+                  <span className={`prov-chip prov-${prov.cls}`} title={cls.hint}>{cls.label}</span>
+                  {' '}cap {spec?.cap?.toLocaleString()} rps · ~{spec?.lat}ms · {(spec?.avail * 100).toFixed(2)}% per replica
+                </p>
+                <p className="prov-basis">{prov.basis}</p>
+                {prov.refs.length > 0 && (
+                  <p className="prov-refs">
+                    {prov.refs.map((r, i) => (
+                      <a key={i} href={r.url} target="_blank" rel="noopener noreferrer">{r.label}</a>
+                    ))}
+                  </p>
+                )}
+              </div>
+            )
+          })()}
+
           {diagram && (
             <div className="details-section">
               <h3>📊 Diagram (Data Flow)</h3>

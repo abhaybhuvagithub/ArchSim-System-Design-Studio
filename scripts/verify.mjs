@@ -2922,6 +2922,39 @@ try {
         /onNodeDown = \(e, n\) => \{[^}]*setTab\('capacity'\)/s.test(app));
     }
 
+    // ── provenance: every number shows its receipts ──────────────────────────
+    {
+      const pv = await import(pathToFileURL(path.join(root, 'src/provenance.js')).href);
+      const cat = (await import(pathToFileURL(path.join(root, 'src/catalog.js')).href)).CATALOG;
+      const types = Object.keys(cat);
+      const classes = new Set(['benchmark', 'vendor', 'modeled']);
+      const bad = types.filter(t => {
+        const p = pv.getProvenance(t);
+        return !p || !classes.has(p.cls) || typeof p.basis !== 'string' || p.basis.length < 60 || !Array.isArray(p.refs);
+      });
+      check(`every one of the ${types.length} components has a provenance entry with a class and a real basis` + (bad.length ? ' — ' + bad.slice(0, 5).join(', ') : ''), bad.length === 0);
+      // Cited references must be https and from stable documentation roots —
+      // a fabricated or rotting link would poison exactly the trust this builds.
+      const okHosts = ['redis.io', 'postgresql.org', 'kafka.apache.org', 'nginx.org', 'elastic.co', 'cassandra.apache.org', 'mongodb.com', 'rabbitmq.com', 'techempower.com', 'aws.amazon.com', 'docs.aws.amazon.com', 'cloud.google.com', 'developers.cloudflare.com', 'kubernetes.io', 'prometheus.io', 'envoyproxy.io', 'etcd.io', 'docs.anthropic.com', 'platform.openai.com', 'docs.pinecone.io', 'firecracker-microvm.github.io', 'clickhouse.com', 'flink.apache.org', 'spark.apache.org', 'firebase.google.com', 'airflow.apache.org', 'developer.hashicorp.com', 'opentelemetry.io'];
+      const badRef = [];
+      for (const t of types) for (const r of pv.getProvenance(t).refs) {
+        let u; try { u = new URL(r.url) } catch { badRef.push(t + ':' + r.url); continue }
+        if (u.protocol !== 'https:' || !okHosts.some(h => u.hostname === h || u.hostname.endsWith('.' + h))) badRef.push(t + ':' + u.hostname);
+      }
+      check('every provenance reference is https on an allowlisted documentation root' + (badRef.length ? ' — ' + badRef.slice(0, 4).join(', ') : ''), badRef.length === 0);
+      const anchored = types.filter(t => pv.getProvenance(t).cls !== 'modeled').length;
+      check('at least twenty-five components are anchored to public benchmarks or vendor docs', anchored >= 25);
+      const modalSrc = fs.readFileSync(path.join(root, 'src/component-details.jsx'), 'utf8');
+      check('the internals modal renders the provenance section',
+        modalSrc.includes('Where these numbers come from') && modalSrc.includes('getProvenance(node.type)'));
+      const appSrc2 = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      check('latency chips read as approximations with an honest tooltip',
+        /title="Model output, not a measurement[^"]*">p99 <b>~/.test(appSrc2));
+      const aboutSrc = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
+      check('the About page states the model-honesty contract',
+        aboutSrc.includes('How honest are the numbers?') && aboutSrc.includes('flight simulator'));
+    }
+
     // ── traffic slider reaches internet scale and stays readable ─────────────
     {
       const app = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
