@@ -2036,6 +2036,7 @@ try {
     check('stopping returns to Listen', /Listen/.test(ra().textContent));
     check('stopping clears the highlight', !doc.querySelector('.speaking'));
 
+
     // leaving the tab must not leave a voice reading a panel nobody can see
     click(byText('.readaloud button', 'Listen'));
     await wait(120);
@@ -2050,6 +2051,32 @@ try {
     const rateSel = doc.querySelector('.ra-rate select');
     check('reading speed can be changed', !!rateSel && rateSel.options.length >= 4);
     check('the speed control is labelled', !!rateSel.getAttribute('aria-label'));
+
+    // ── the internals modal, opened for real ─────────────────────────────────
+    // getProvenance shipped once without its import: the build passed (JSX has
+    // no identifier check) and a source-level grep passed, but the first user
+    // to click 🔍 got a ReferenceError. Only actually opening the modal in the
+    // DOM catches that class of bug, so that is what happens here.
+    {
+      const nodeEl = doc.querySelector('.node');
+      check('a template node is on the canvas to inspect', !!nodeEl);
+      nodeEl.dispatchEvent(new win.MouseEvent('pointerdown', { bubbles: true }));
+      await wait(150);
+      const detailsBtn = byText('.btn', '🔍 Internals');
+      check('selecting a node offers the 🔍 Internals button', !!detailsBtn);
+      click(detailsBtn);
+      await wait(200);
+      const modal = doc.querySelector('.modal-content');
+      check('the internals modal actually opens without crashing', !!modal && errs.length === 0);
+      check('it shows the provenance section with a class chip and basis',
+        /Where these numbers come from/.test(modal?.textContent || '') && !!modal?.querySelector('.prov-chip') && !!modal?.querySelector('.prov-basis'));
+      check('the four internals fields render',
+        /Algorithm/i.test(modal?.textContent || '') && /Mechanism/i.test(modal?.textContent || ''));
+      click(doc.querySelector('.modal-close'));
+      await wait(120);
+      check('the modal closes cleanly', !doc.querySelector('.modal-content'));
+      await goTab('Breakdown');   // the node click routed to Capacity; restore for the voice checks below
+    }
     check('a voice picker is offered', !!doc.querySelector('.ra-voice'));
     check('the voice picker is labelled', !!doc.querySelector('.ra-voice')?.getAttribute('aria-label'));
     check('the voice picker groups by language',

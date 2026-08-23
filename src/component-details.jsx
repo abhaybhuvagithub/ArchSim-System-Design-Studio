@@ -1,5 +1,6 @@
 import { COMPONENT_INTERNALS, getComponentInternals } from './component-internals.js'
 import { CATALOG } from './catalog.js'
+import { getProvenance, PROVENANCE_CLASSES } from './provenance.js'
 
 const COMPONENT_DIAGRAMS = {
   cache: `
