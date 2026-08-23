@@ -15,9 +15,9 @@ export const LICENSE_STORE = 'archsim.license.v1'
 
 // ── pricing (single source of truth for the pricing modal) ─────────────────
 export const PRICES = {
-  monthly: { label: '1 Month', inr: 499, note: 'per month', keyPlan: 'M' },
-  halfyear: { label: '6 Months', inr: 2499, note: '₹417/month — save 17%', keyPlan: 'H' },
-  yearly: { label: '1 Year', inr: 2999, note: '₹250/month — save 50%', keyPlan: 'Y', highlight: true },
+  monthly: { label: '1 Month', inr: 999, note: 'per month', keyPlan: 'M' },
+  halfyear: { label: '6 Months', inr: 4999, note: '₹833/month — save 17%', keyPlan: 'H' },
+  yearly: { label: '1 Year', inr: 7999, note: '₹667/month — save 33%', keyPlan: 'Y', highlight: true },
 }
 export const UPI_ID = 'abhay.bhuva@okhdfcbank'
 export const UPI_NAME = 'Abhay Bhuva'
