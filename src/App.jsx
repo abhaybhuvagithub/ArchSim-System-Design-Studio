@@ -41,7 +41,7 @@ import { generateCode, CODE_VIEWS } from './codegen.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 import { Onboarding } from './onboarding.jsx'
-import { PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink } from './license.js'
+import { PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink, attemptState, recordMiss, clearMisses } from './license.js'
 import { roiFor } from './roi.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -1513,8 +1513,11 @@ function PricingModal({ want, license, onClose, onActivated, onRemoved }) {
   const [keyDraft, setKeyDraft] = useState('')
   const [err, setErr] = useState(null)
   const activate = () => {
+    const gate = attemptState()
+    if (gate.blocked) { setErr(`Too many attempts — try again in ${Math.ceil(gate.retryInMs / 1000)}s. Keys arrive by LinkedIn after payment; guessing one is a 1-in-2-billion lottery.`); return }
     const v = validateKey(keyDraft)
-    if (!v.ok) { setErr(v.reason); return }
+    if (!v.ok) { recordMiss(); setErr(v.reason); return }
+    clearMisses()
     setLicense(keyDraft); setErr(null); onActivated()
     // App's license state updates and this dialog re-renders straight into
     // the "Pro is active" view — that is the success screen.

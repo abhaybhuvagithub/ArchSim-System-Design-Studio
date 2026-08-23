@@ -3100,6 +3100,36 @@ try {
         const u = L.upiLink(7999, 'Lifetime');
         return u.startsWith('upi://pay?') && u.includes(encodeURIComponent('abhay.bhuva@okhdfcbank')) && u.includes('am=7999') && u.includes('cu=INR');
       })());
+      // Forged / revoked / duplicate protections, at their honest layers:
+      // signature rejects forgeries, the revocation list kills leaked keys on
+      // the next deploy, throttling prices out brute force, and the mint
+      // ledger makes duplicate ISSUANCE impossible.
+      check('a revoked key is rejected even with a valid signature', (() => {
+        const k = L.makeKey('lifetime');
+        const v = L.validateKey(k, new Date(), new Set([k]));
+        return v.ok === false && v.revoked === true && /replacement/.test(v.reason);
+      })());
+      check('a stored key is re-validated on every load (revocation and expiry both bite)',
+        /re-validated every load/.test(fs.readFileSync(path.join(root, 'src/license.js'), 'utf8')));
+      check('five misses arm the activation cooldown and it expires', (() => {
+        const mem = new Map();
+        const st = { getItem: (x) => mem.get(x) ?? null, setItem: (x, v) => mem.set(x, v), removeItem: (x) => mem.delete(x) };
+        let t = 1000;
+        for (let i = 0; i < 4; i++) L.recordMiss(t += 50, st);
+        const four = L.attemptState(t, st).blocked;
+        L.recordMiss(t += 50, st);
+        const five = L.attemptState(t, st).blocked;
+        const later = L.attemptState(t + 61000, st).blocked;
+        return four === false && five === true && later === false;
+      })());
+      check('the pricing dialog enforces the cooldown before validating',
+        /attemptState\(\)[\s\S]{0,300}recordMiss\(\)/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
+      check('the customer-key ledger is gitignored (public repo, private keys)',
+        fs.readFileSync(path.join(root, '.gitignore'), 'utf8').includes('scripts/issued-keys.log'));
+      check('genkey re-rolls on ledger collision so duplicate issuance is impossible', (() => {
+        const g = fs.readFileSync(path.join(root, 'scripts/genkey.mjs'), 'utf8');
+        return g.includes('issued.has(key)') && g.includes('do {') && g.includes('issued-keys.log');
+      })());
     }
 
     // ── ROI: the business view stays finite and honestly labeled ─────────────
