@@ -3200,6 +3200,24 @@ try {
         /GA_MEASUREMENT_ID = ''/.test(an) && /if \(!GA_MEASUREMENT_ID\) return/.test(an));
       check('ADMIN.md documents the dashboard, GA4 and the keywords path',
         fs.existsSync(path.join(root, 'ADMIN.md')) && /Search Console/.test(fs.readFileSync(path.join(root, 'ADMIN.md'), 'utf8')));
+      // publish mode: the public copy is ciphertext or it does not ship
+      {
+        const pub = path.join(tmp, 'pub.html');
+        execFileSync('node', [path.join(root, 'scripts/admin.mjs'),
+          '--ledger', ledger, '--out', path.join(tmp, 'dash2.html'), '--visitors', '1000', '--now', '2026-08-23T12:00:00Z',
+          '--publish', '--pass', 'suite passphrase 1', '--publish-out', pub], { encoding: 'utf8' });
+        const shell = fs.readFileSync(pub, 'utf8');
+        check('the published copy leaks no plaintext (no revenue, no dashboard markup)',
+          !shell.includes('9,997') && !shell.includes('Paying customers') && shell.includes('AES-GCM'));
+        check('the published copy carries the in-browser decryptor', /crypto\.subtle\.deriveKey/.test(shell) && /Wrong passphrase/.test(shell));
+        check('publish refuses a weak or missing passphrase', (() => {
+          try {
+            execFileSync('node', [path.join(root, 'scripts/admin.mjs'), '--ledger', ledger, '--out', path.join(tmp, 'dash3.html'),
+              '--visitors', '1', '--now', '2026-08-23T12:00:00Z', '--publish', '--pass', 'short', '--publish-out', path.join(tmp, 'nope.html')], { encoding: 'utf8', stdio: 'pipe' });
+            return false;
+          } catch { return true }
+        })());
+      }
     }
 
     // ── ROI: the business view stays finite and honestly labeled ─────────────

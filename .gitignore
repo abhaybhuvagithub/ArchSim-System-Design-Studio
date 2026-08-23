@@ -8,4 +8,4 @@ verify-report.txt
 scripts/issued-keys.log
 
 # private business dashboard — never commit
-admin-dashboard.html
+/admin-dashboard.html
