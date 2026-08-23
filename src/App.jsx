@@ -40,6 +40,7 @@ import { explainFlow, isBidir } from './explain.js'
 import { generateCode, CODE_VIEWS } from './codegen.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
+import { Onboarding, seenOnboarding } from './onboarding.jsx'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -91,6 +92,7 @@ export default function App() {
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
   const [tourAt, setTourAt] = useState(null)
+  const [onboard, setOnboard] = useState(() => !seenOnboarding())
   const [flow, setFlow] = useState('all')
   const [a11y, setA11y] = useState(() => {
     try { return localStorage.getItem('archsim.a11y') === '1' } catch (e) { return false }
@@ -779,6 +781,20 @@ export default function App() {
   return (
     <div className={`app ${compact ? 'compact' : ''} ${mobile ? 'mobile' : ''}`}>
       <a className="skip-link" href="#analysis">Skip to the written analysis</a>
+      {onboard && (
+        <Onboarding
+          onClose={() => setOnboard(false)}
+          onTour={() => setTourAt(0)}
+          onNoTour={() => markSeen(window.localStorage)}
+          onApply={({ template: tplName, rps: newRps, cloud: newCloud }) => {
+            if (tplName) {
+              const i = TEMPLATES.findIndex(t => t.name === tplName)
+              if (i >= 0) loadTemplate(String(i))
+            } else { blank() }
+            setRps(newRps)
+            setCloud(newCloud); saveCloud(newCloud)
+          }} />
+      )}
       <span className="sr-only" role="status" aria-live="polite">{announce}</span>
       <header className="toolbar" role="banner">
         <div className="logo">Arch<span>Sim</span></div>
@@ -866,7 +882,7 @@ export default function App() {
           title="Replay the guided walkthrough of the app">? Guide</button>
       </header>
 
-      <Tour at={tourAt} setAt={setTourAt} setTab={setTab} loadTemplate={loadTemplate} />
+      <Tour at={tourAt} setAt={setTourAt} setTab={setTab} loadTemplate={loadTemplate} ready={!onboard} />
 
       <div className="body">
         <nav aria-label="Components" data-tour="palette" className={`palette ${floatPanel.left ? 'floating' : ''} ${maxed === 'left' ? 'maxed' : ''} ${compact ? 'drawer left' : ''} ${compact && drawer === 'left' ? 'open' : ''}`}
@@ -2487,7 +2503,7 @@ function ConsistencyFields({ n, setNodes }) {
 // The first-run tour. A spotlight is just a hole in a dimmed overlay: an
 // absolutely-positioned box with an enormous outset box-shadow. That avoids
 // clip-path, which is patchy in older Safari.
-function Tour({ at, setAt, setTab, loadTemplate }) {
+function Tour({ at, setAt, setTab, loadTemplate, ready }) {
   const steps = useMemo(() => (typeof document === 'undefined' ? TOUR_STEPS : stepsFor(document)), [at != null])
   const step = at == null ? null : steps[at]
   const tipRef = useRef(null)
@@ -2497,10 +2513,11 @@ function Tour({ at, setAt, setTab, loadTemplate }) {
   // and we measure where things actually are, not where they start.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (!ready) return              // the onboarding wizard runs first
     if (!shouldAutoStart(window.localStorage)) return
     const t = setTimeout(() => setAt(0), 600)
     return () => clearTimeout(t)
-  }, [])
+  }, [ready])
 
   // Side effects the step asks for, before we measure.
   useEffect(() => {

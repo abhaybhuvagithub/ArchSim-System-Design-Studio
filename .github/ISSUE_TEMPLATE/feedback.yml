@@ -1,0 +1,16 @@
+name: 💬 Feedback / idea
+description: Something confusing, something missing, or something you wish it did
+labels: [feedback]
+body:
+  - type: textarea
+    id: feedback
+    attributes:
+      label: What's on your mind?
+      description: Confusing UI, a template you want, a number that looks wrong, a feature idea — all welcome. Blunt is fine.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part?
+      options: [Canvas & simulation, Templates, Learn / lessons, Code generation, Explain walkthrough, Ask AI, Cost model, Chaos, Other]

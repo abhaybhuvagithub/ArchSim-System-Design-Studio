@@ -1,0 +1,26 @@
+name: 🐛 Something broke
+description: A crash, a wrong number, or a feature that did not do what it said
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, and what went wrong? A screenshot of the error card helps enormously.
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where in the studio?
+      placeholder: e.g. Matrix tab after selecting K8s + Saga, or the Explain walkthrough on the Ramp template
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & device
+      placeholder: e.g. Chrome 130 on Android / Safari on iPhone 15
+  - type: textarea
+    id: design
+    attributes:
+      label: Your design (optional)
+      description: If a specific canvas triggers it, paste the template name or describe the components involved.

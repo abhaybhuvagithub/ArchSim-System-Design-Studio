@@ -1651,3 +1651,36 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .assist-input input { flex: 1; }
 .assist-key { margin-top: 10px; font-size: 12.5px; }
 .assist-key summary { cursor: pointer; }
+
+/* ── First-run onboarding wizard ───────────────────────────────────────── */
+.ob-overlay {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(8,10,14,.55); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.ob-card {
+  width: min(460px, 100%); background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 12px; padding: 18px;
+  box-shadow: 0 14px 44px rgba(0,0,0,.5);
+}
+.ob-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.ob-title { font-size: 15px; flex: 1; }
+.ob-count { font-size: 12px; opacity: .6; }
+.ob-choices { display: flex; flex-direction: column; gap: 8px; }
+.ob-choice {
+  text-align: left; display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: transparent; color: inherit; cursor: pointer;
+}
+.ob-choice:hover { background: rgba(127,140,160,.08); }
+.ob-choice.on { border-color: var(--accent); background: rgba(91,140,255,.12); }
+.ob-choice-label { font-size: 13.5px; font-weight: 600; }
+.ob-choice-hint { font-size: 12px; opacity: .7; }
+.ob-nav { display: flex; gap: 8px; margin-top: 14px; }
+.ob-nav .btn { flex: 1; }
+.ob-primary { border-color: var(--accent); background: rgba(91,140,255,.16); }
+.ob-skip {
+  display: block; margin: 10px auto 0; border: 0; background: none;
+  color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline;
+}
+.ob-note { font-size: 12px; opacity: .6; text-align: center; margin: 8px 0 0; }
