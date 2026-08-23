@@ -6,3 +6,6 @@ verify-report.txt
 
 # customer license ledger — never commit (public repo)
 scripts/issued-keys.log
+
+# private business dashboard — never commit
+admin-dashboard.html
