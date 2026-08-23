@@ -1969,6 +1969,11 @@ try {
       /const \[onboard, setOnboard\] = useState\(true\)/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
     check('the traffic step defaults to 1M rps (viral)',
       /useState\('viral'\)/.test(fs.readFileSync(path.join(root, 'src/onboarding.jsx'), 'utf8')));
+    // The wizard's cloud step offers every cloud the app itself supports.
+    check('the wizard offers all six clouds, Oracle and Apple included', (() => {
+      const ob = fs.readFileSync(path.join(root, 'src/onboarding.jsx'), 'utf8');
+      return ['generic', 'aws', 'gcp', 'azure', 'oci', 'apple'].every(id => new RegExp("id: '" + id + "'").test(ob));
+    })());
   }
   // Everything downstream assumes a mounted app. Without this, a bad bundle
   // produces a cascade of "cannot read properties of undefined" that says

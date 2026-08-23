@@ -29,6 +29,8 @@ const CLOUDS_PICK = [
   { id: 'aws', label: 'AWS', hint: 'Named AWS services + pricing' },
   { id: 'gcp', label: 'Google Cloud', hint: 'Named GCP services + pricing' },
   { id: 'azure', label: 'Azure', hint: 'Named Azure services + pricing' },
+  { id: 'oci', label: 'Oracle Cloud', hint: 'Named OCI services — the budget option (~28% cheaper)' },
+  { id: 'apple', label: 'Apple', hint: 'CloudKit-era mappings for app-first designs' },
 ]
 
 export function Onboarding({ onApply, onTour, onNoTour, onClose }) {
