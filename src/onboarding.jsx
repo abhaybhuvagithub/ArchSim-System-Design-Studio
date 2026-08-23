@@ -1,6 +1,8 @@
-// First-run onboarding: three quick choices instead of a cold canvas.
-// Shows once, ever — skipping counts as seeing. It runs before the guided
-// tour (which it can hand off to), never alongside it.
+// Onboarding start screen: three quick choices instead of a cold canvas.
+// Opens on every page load (by request — a hard refresh brings it back);
+// Skip closes it for the session. It still runs before the guided tour and
+// hands off to it explicitly; the once-ever flag now only governs the
+// tour's own first-visit auto-start.
 import React, { useState } from 'react'
 
 export const ONBOARD_KEY = 'archsim.onboarded.v1'
@@ -83,7 +85,7 @@ export function Onboarding({ onApply, onTour, onNoTour, onClose }) {
           {last && <button className="btn" onClick={() => finish(true)}>Start + 60-sec tour</button>}
         </div>
         <button className="ob-skip" onClick={skip}>Skip — just show me the studio</button>
-        <p className="ob-note">Everything runs in your browser. This appears once; the ? Guide button replays the tour any time.</p>
+        <p className="ob-note">Everything runs in your browser. Refresh brings this back any time; the ? Guide button replays the tour.</p>
       </div>
     </div>
   )

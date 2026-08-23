@@ -1963,6 +1963,10 @@ try {
     await wait(120);
     check('Skip closes the wizard and the studio is usable', !ob() && !!doc.querySelector('.toolbar'));
     check('skipping records that onboarding has been seen', !!win.localStorage.getItem('archsim.onboarded.v1'));
+    // By request: the wizard is a start screen — it opens on EVERY page load
+    // (hard refresh included), not once-ever. Skip only closes the session.
+    check('the wizard opens on every page load, not once-ever',
+      /const \[onboard, setOnboard\] = useState\(true\)/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
   }
   // Everything downstream assumes a mounted app. Without this, a bad bundle
   // produces a cascade of "cannot read properties of undefined" that says
