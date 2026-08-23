@@ -1941,6 +1941,29 @@ try {
   await import(pathToFileURL(entryPath).href);
   await wait(700);
   check('app mounts', doc.body.innerHTML.length > 2000);
+
+  // ── first-run onboarding: appears once, ever, and never blocks the studio ──
+  // Fresh storage means the wizard greets this run exactly like a new user.
+  // Exercise it, dismiss it, and prove it stays dismissed — then the rest of
+  // the suite sees the normal UI, tour auto-start included.
+  {
+    const ob = () => doc.querySelector('.ob-overlay');
+    check('the onboarding wizard greets a first visit', !!ob());
+    check('it is a labelled modal dialog',
+      ob()?.getAttribute('role') === 'dialog' && ob()?.getAttribute('aria-modal') === 'true');
+    check('it offers real starting points, not an empty shell',
+      [...doc.querySelectorAll('.ob-choice')].length >= 3 && /URL shortener/i.test(ob()?.textContent || ''));
+    click(byText('.ob-nav .btn', 'Next →'));
+    await wait(80);
+    check('Next advances to the traffic step', /2 \/ 3/.test(doc.querySelector('.ob-count')?.textContent || ''));
+    click(byText('.ob-nav .btn', '← Back'));
+    await wait(80);
+    check('Back returns to the first step', /1 \/ 3/.test(doc.querySelector('.ob-count')?.textContent || ''));
+    click(doc.querySelector('.ob-skip'));
+    await wait(120);
+    check('Skip closes the wizard and the studio is usable', !ob() && !!doc.querySelector('.toolbar'));
+    check('skipping records that onboarding has been seen', !!win.localStorage.getItem('archsim.onboarded.v1'));
+  }
   // Everything downstream assumes a mounted app. Without this, a bad bundle
   // produces a cascade of "cannot read properties of undefined" that says
   // nothing about the actual cause.
