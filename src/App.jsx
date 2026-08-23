@@ -40,7 +40,7 @@ import { explainFlow, isBidir } from './explain.js'
 import { generateCode, CODE_VIEWS } from './codegen.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
-import { Onboarding, seenOnboarding } from './onboarding.jsx'
+import { Onboarding } from './onboarding.jsx'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -92,7 +92,7 @@ export default function App() {
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
   const [tourAt, setTourAt] = useState(null)
-  const [onboard, setOnboard] = useState(() => !seenOnboarding())
+  const [onboard, setOnboard] = useState(true)   // greets every page load; Skip just closes it for this session
   const [flow, setFlow] = useState('all')
   const [a11y, setA11y] = useState(() => {
     try { return localStorage.getItem('archsim.a11y') === '1' } catch (e) { return false }
