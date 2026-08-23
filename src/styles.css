@@ -1721,3 +1721,13 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .pr-key input { flex: 1; }
 .pr-err { color: #ff6b6b; font-size: 12.5px; margin: 6px 0 0; }
 .pr-active p { font-size: 13px; }
+
+/* ── ROI tab ───────────────────────────────────────────────────────────── */
+.roi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 10px 0; }
+.roi-card { border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.roi-card.good { border-color: rgba(52,199,89,.5); background: rgba(52,199,89,.08); }
+.roi-k { font-size: 12px; opacity: .7; }
+.roi-v { font-size: 18px; font-weight: 700; margin-top: 2px; }
+.roi-model { margin: 8px 0 4px; }
+.roi-basis { font-size: 12.5px; line-height: 1.55; }
+.roi-note { font-size: 12px; }

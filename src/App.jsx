@@ -42,6 +42,7 @@ import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 import { Onboarding } from './onboarding.jsx'
 import { PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink } from './license.js'
+import { roiFor } from './roi.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -1153,6 +1154,7 @@ export default function App() {
               ['cost', 'Cost', money(cost.total), 'What this design costs to run'],
               ['code', 'Code', null, 'docker-compose, Terraform and OpenAPI generated live from the canvas'],
               ['assist', 'Ask AI', null, 'Ask the assistant about this design — bottlenecks, cost, failures, scaling'],
+              ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1194,6 +1196,8 @@ export default function App() {
           ) : tab === 'assist' ? (
             <Assistant nodes={nodes} edges={edges} sim={sim} cost={cost} sugs={sugs}
               faults={faults} rps={rps} cloud={cloud} template={template} simOn={simOn} />
+          ) : tab === 'roi' ? (
+            <ROITab template={template} cost={cost} rps={rps} simOn={simOn} />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
           ) : tab === 'hld' ? (
@@ -1427,6 +1431,52 @@ function About() {
         </div>
       </div>
       </ReadAloud>
+    </section>
+  )
+}
+
+// The ROI tab: the business view of the loaded design. Infra comes from the
+// live cost report; the revenue side is an honestly-labeled model (authored
+// for marquee designs, archetype-derived otherwise) reduced to one unit that
+// makes everything comparable: dollars per million requests.
+function ROITab({ template, cost, rps, simOn }) {
+  if (!template) {
+    return <section className="roi"><h3>💹 ROI</h3>
+      <p className="muted">Load a design from the picker — ROI reads its live infra cost against a revenue model for that business.</p></section>
+  }
+  if (!simOn) {
+    return <section className="roi"><h3>💹 ROI</h3>
+      <p className="muted">Press <b>▶ Simulate</b> — the infra side of ROI is the live cost of the traffic actually flowing.</p></section>
+  }
+  const r = roiFor(template, cost, rps)
+  const money = n => n >= 1e9 ? '$' + (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? '$' + (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? '$' + (n / 1e3).toFixed(1) + 'k' : '$' + Math.max(0, n).toFixed(n < 10 ? 2 : 0)
+  return (
+    <section className="roi">
+      <h3>💹 ROI — {template.name}</h3>
+      {r.internal ? (
+        <>
+          <div className="roi-grid">
+            <div className="roi-card"><div className="roi-k">Infra / month</div><div className="roi-v">{money(r.infra)}</div></div>
+            <div className="roi-card"><div className="roi-k">Requests / month</div><div className="roi-v">{(r.reqsMonth / 1e9).toFixed(1)}B</div></div>
+            <div className="roi-card"><div className="roi-k">Cost per 1M requests</div><div className="roi-v">{money(r.costPerM)}</div></div>
+          </div>
+          <p className="roi-basis">{r.basis}</p>
+        </>
+      ) : (
+        <>
+          <div className="roi-grid">
+            <div className="roi-card"><div className="roi-k">Est. revenue / month</div><div className="roi-v">{money(r.revenue)}</div></div>
+            <div className="roi-card"><div className="roi-k">Infra / month</div><div className="roi-v">{money(r.infra)}</div></div>
+            <div className="roi-card good"><div className="roi-k">Gross margin</div><div className="roi-v">{r.marginPct.toFixed(1)}%</div></div>
+            <div className="roi-card"><div className="roi-k">Earned per 1M req</div><div className="roi-v">{money(r.revPerM)}</div></div>
+            <div className="roi-card"><div className="roi-k">Spent per 1M req</div><div className="roi-v">{money(r.costPerM)}</div></div>
+            <div className="roi-card"><div className="roi-k">Infra share of revenue</div><div className="roi-v">{r.infraShare === null ? '—' : r.infraShare < 0.1 ? '<0.1%' : r.infraShare.toFixed(1) + '%'}</div></div>
+          </div>
+          <p className="roi-model"><span className={`prov-chip ${r.cls === 'authored' ? 'prov-vendor' : 'prov-modeled'}`}>{r.cls === 'authored' ? 'Authored model' : 'Archetype model'}</span> <b>{r.model}</b></p>
+          <p className="roi-basis">{r.basis}</p>
+          <p className="roi-note muted">Both sides scale with traffic here, so the margin holds as you drag the slider — what changes it is the model itself. This is an order-of-magnitude teaching view, not a forecast: swap in your own unit economics before betting on it.</p>
+        </>
+      )}
     </section>
   )
 }
