@@ -15,9 +15,9 @@ export const LICENSE_STORE = 'archsim.license.v1'
 
 // ── pricing (single source of truth for the pricing modal) ─────────────────
 export const PRICES = {
-  monthly: { label: 'Pro Monthly', inr: 499, note: 'per month', keyPlan: 'M' },
-  yearly: { label: 'Pro Yearly', inr: 2999, note: 'per year — 2 months free', keyPlan: 'Y' },
-  lifetime: { label: 'Lifetime', inr: 7999, note: 'one payment, forever — founding price', keyPlan: 'L', highlight: true },
+  monthly: { label: '1 Month', inr: 499, note: 'per month', keyPlan: 'M' },
+  halfyear: { label: '6 Months', inr: 2499, note: '₹417/month — save 17%', keyPlan: 'H' },
+  yearly: { label: '1 Year', inr: 2999, note: '₹250/month — save 50%', keyPlan: 'Y', highlight: true },
 }
 export const UPI_ID = 'abhay.bhuva@okhdfcbank'
 export const UPI_NAME = 'Abhay Bhuva'
@@ -62,12 +62,12 @@ function sig(payload) {
 }
 
 export function makeKey(plan, now = new Date()) {
-  const p = { monthly: 'M', yearly: 'Y', lifetime: 'L' }[plan]
-  if (!p) throw new Error('plan must be monthly | yearly | lifetime')
+  const p = { monthly: 'M', halfyear: 'H', yearly: 'Y', lifetime: 'L' }[plan]
+  if (!p) throw new Error('plan must be monthly | halfyear | yearly | lifetime')
   let expiry = 'FOREVER'
   if (p !== 'L') {
     const d = new Date(now)
-    d.setDate(d.getDate() + (p === 'M' ? 32 : 367))   // a couple of grace days
+    d.setDate(d.getDate() + (p === 'M' ? 32 : p === 'H' ? 184 : 367))   // a couple of grace days
     expiry = d.toISOString().slice(0, 10).replace(/-/g, '')
   }
   const rand = Array.from({ length: 4 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('')
@@ -83,11 +83,11 @@ export const REVOKED_KEYS = new Set([
 
 export function validateKey(raw, now = new Date(), revoked = REVOKED_KEYS) {
   const key = String(raw || '').trim().toUpperCase()
-  const m = key.match(/^(AS1-([MYL])-(FOREVER|\d{8})-[A-Z0-9]{4})-([A-Z0-9]{6})$/)
+  const m = key.match(/^(AS1-([MHYL])-(FOREVER|\d{8})-[A-Z0-9]{4})-([A-Z0-9]{6})$/)  // L stays accepted: issued lifetime keys are grandfathered
   if (!m) return { ok: false, reason: 'That does not look like an ArchSim key (AS1-…).' }
   if (sig(m[1]) !== m[4]) return { ok: false, reason: 'The key signature does not check out — copy it exactly as sent.' }
   if (revoked.has(key)) return { ok: false, revoked: true, reason: 'This key has been revoked. If you bought it, get in touch and a replacement is on the way.' }
-  const plan = { M: 'monthly', Y: 'yearly', L: 'lifetime' }[m[2]]
+  const plan = { M: 'monthly', H: 'halfyear', Y: 'yearly', L: 'lifetime' }[m[2]]
   if (m[3] !== 'FOREVER') {
     const exp = new Date(`${m[3].slice(0, 4)}-${m[3].slice(4, 6)}-${m[3].slice(6, 8)}T23:59:59Z`)
     if (now > exp) return { ok: false, reason: `This ${plan} key expired on ${exp.toISOString().slice(0, 10)} — renewing takes a minute.`, expired: true, plan }

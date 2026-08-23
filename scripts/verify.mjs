@@ -2005,7 +2005,7 @@ try {
     check('the dialog names the design and shows all three tiers with lifetime flagged best',
       /Discord/.test(doc.querySelector('.pricing')?.textContent || '') &&
       doc.querySelectorAll('.pr-tier').length === 3 && /Best value/.test(doc.querySelector('.pr-tier.best')?.textContent || '') &&
-      /Lifetime/.test(doc.querySelector('.pr-tier.best')?.textContent || ''));
+      /1 Year/.test(doc.querySelector('.pr-tier.best')?.textContent || '') && !/Lifetime/.test(doc.querySelector('.pricing')?.textContent || ''));
     check('the UPI payment path is on the dialog', /abhay\.bhuva@okhdfcbank/.test(doc.querySelector('.pr-how')?.textContent || ''));
     const badIn = doc.querySelector('#pr-key-in');
     typeInto(badIn, 'AS1-L-FOREVER-XXXX-WRONG1');
@@ -3094,8 +3094,18 @@ try {
         ['URL Shortener (Bitly)', 'GenAI: RAG Assistant', 'Ramp', 'Ticketmaster', 'Chat (WhatsApp)'].every(n => L.isTemplateFree(n)));
       check('the free set is generous but the library is the product',
         L.FREE_TEMPLATES.size >= 12 && L.FREE_TEMPLATES.size <= 25 && T2.length - L.FREE_TEMPLATES.size >= 60);
-      check('the lifetime tier exists and is the highlighted one',
-        L.PRICES.lifetime && L.PRICES.lifetime.highlight === true && L.PRICES.lifetime.inr > L.PRICES.yearly.inr);
+      check('the sold tiers are 1 month, 6 months and 1 year — no lifetime on the price list',
+        !!L.PRICES.monthly && !!L.PRICES.halfyear && !!L.PRICES.yearly && !L.PRICES.lifetime &&
+        L.PRICES.monthly.inr < L.PRICES.halfyear.inr && L.PRICES.halfyear.inr < L.PRICES.yearly.inr);
+      check('yearly is the highlighted tier', L.PRICES.yearly.highlight === true);
+      check('a 6-month key mints, expires ~184 days out, and validates', (() => {
+        const v = L.validateKey(L.makeKey('halfyear', new Date('2026-01-01')), new Date('2026-01-02'));
+        return v.ok && v.plan === 'halfyear' && v.expires === '2026-07-04';
+      })());
+      check('already-issued lifetime keys stay valid (grandfathered)', (() => {
+        const v = L.validateKey(L.makeKey('lifetime'));
+        return v.ok && v.lifetime === true;
+      })());
       check('the UPI link carries id, amount and currency', (() => {
         const u = L.upiLink(7999, 'Lifetime');
         return u.startsWith('upi://pay?') && u.includes(encodeURIComponent('abhay.bhuva@okhdfcbank')) && u.includes('am=7999') && u.includes('cu=INR');
