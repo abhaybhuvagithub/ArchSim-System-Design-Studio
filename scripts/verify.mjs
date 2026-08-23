@@ -2899,6 +2899,18 @@ try {
         /Breakdown/.test(rj('how do I present this in an interview?')) && /Interview/.test(rj('interview prep?')));
     }
 
+    // ── canvas interaction contract ──────────────────────────────────────────
+    {
+      const app = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      // The hover card must appear on plain hover — gating it on "nothing
+      // selected" made it invisible right after loading a template (which
+      // selects a node) until the user happened to click blank canvas.
+      check('the hover card is not gated on an empty selection',
+        app.includes('hoverNode && hoverNode.id !== sel') && !app.includes('hoverNode && !selNode &&'));
+      check('clicking a node opens the Capacity tab, like edges already do',
+        /onNodeDown = \(e, n\) => \{[^}]*setTab\('capacity'\)/s.test(app));
+    }
+
     // ── traffic slider reaches internet scale and stays readable ─────────────
     {
       const app = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
