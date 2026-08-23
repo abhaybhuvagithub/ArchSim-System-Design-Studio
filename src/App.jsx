@@ -1451,7 +1451,11 @@ function Assistant({ nodes, edges, sim, cost, sugs, faults, rps, cloud, template
     setMsgs(m => [...m, { role: 'assistant', lines }])
   }
 
-  const chips = ['Where is my bottleneck?', 'How do I cut the cost?', 'What breaks first?', 'How does this scale?']
+  const chips = [
+    'Where is my bottleneck?', 'How do I cut the cost?', 'What breaks first?',
+    'Can this survive 10x traffic?', 'How many replicas do I need?', 'Is my design secure?',
+    'What availability do I get?', 'How does this scale?', 'How do I present this in an interview?',
+  ]
   return (
     <section className="assist">
       <h3>🤖 Assistant</h3>

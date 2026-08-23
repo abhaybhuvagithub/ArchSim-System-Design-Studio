@@ -2878,6 +2878,25 @@ try {
         as.offlineAnswer('help', { nodes: [], edges: [] }).join(' ').includes('template'));
       check('the LLM system prompt carries the live design snapshot',
         as.assistantSystemPrompt(as.buildContext(ctx)).includes('API Server') && as.buildContext(ctx).includes('p99 140ms'));
+      // The expanded question set: every new route must stay grounded.
+      const realT = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES.find(t => t.name === 'URL Shortener (Bitly)');
+      const realSim = (await import(pathToFileURL(path.join(root, 'src/sim.js')).href)).simulate(realT.nodes, realT.edges, realT.rps, new Set());
+      const realCtx = { nodes: realT.nodes, edges: realT.edges, sim: realSim, cost: { total: 100, rows: [] }, sugs: [], faults: [], rps: realT.rps, simOn: true, template: realT };
+      const rj = q => as.offlineAnswer(q, realCtx).join(' ');
+      check('the 10x what-if runs the real simulator and reports a rate',
+        /10×|10x/.test(rj('can this survive 10x traffic?')) && /success rate/.test(rj('can this survive 10x?')));
+      check('an Nx question is not shadowed by the scale route',
+        /simulator says/.test(rj('what happens at 100x?')) && !/Scale.*tab.*ladder/.test(rj('what happens at 100x?').slice(0, 40)));
+      check('replica planning computes concrete counts at 70% target',
+        /replicas|headroom/.test(rj('how many replicas do I need?')));
+      check('the security review inspects the actual canvas',
+        /gateway|Guardrails|vault|IAM|audit|boxes are ticked/i.test(rj('is my design secure?')));
+      check('availability names the number and the weakest links',
+        /System availability is \*\*\d/.test(rj('what availability do I get?')) && /Weakest links/.test(rj('uptime?')));
+      check('the glossary defines classic concepts on demand',
+        /retries collapse to one effect/.test(rj('what is idempotency?')) && /partition/.test(rj('what is the cap theorem?')));
+      check('interview-prep answers point at Breakdown and Interview mode',
+        /Breakdown/.test(rj('how do I present this in an interview?')) && /Interview/.test(rj('interview prep?')));
     }
 
     // ── traffic slider reaches internet scale and stays readable ─────────────

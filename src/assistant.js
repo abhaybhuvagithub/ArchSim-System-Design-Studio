@@ -9,6 +9,9 @@
 // the abstract — that is the entire point of putting it inside the studio.
 import { CATALOG } from './catalog.js'
 import { getComponentInternals } from './component-internals.js'
+import { simulate } from './sim.js'
+import { costReport } from './pricing.js'
+import { cloudById } from './clouds.js'
 
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toString()
 
@@ -88,7 +91,7 @@ export function offlineAnswer(question, { nodes = [], edges = [], sim, cost, sug
     if (spofs.length) out.push('Single points of failure on this canvas (one replica each): ' + spofs.slice(0, 4).map(n => `**${n.label}**`).join(', ') + ' — any one of these going down takes its whole path with it.')
     return out
   }
-  if (/scale|billion|grow|10x|100x/.test(q)) {
+  if (/scale|billion|grow/.test(q)) {
     return [template
       ? `Open the **Scale** tab — this design (${template.name}) has a full playbook: the binding constraint, a four-rung ladder to massive scale, the levers (each spotlights the components it touches), and the wall you cannot scale away.`
       : 'Open the **Scale** tab for the scaling ladder. Rule of thumb on any canvas: cache reads first, split stateless tiers second, shard state last — and identify the one constraint that binds before touching anything.']
@@ -97,6 +100,79 @@ export function offlineAnswer(question, { nodes = [], edges = [], sim, cost, sug
     return [`This is ${template ? `**${template.name}**` : 'a custom design'}: ${nodes.length} components handling ${fmt(rps)} rps.`,
       'Press **🧭 Explain** in the toolbar for the hop-by-hop walkthrough — it highlights each connection in request order and narrates what happens there (and can read it aloud).',
       'The **Brief** tab writes the whole design up in prose you can export.']
+  }
+  // What-if: push 10x / 100x / any Nx through the real simulator
+  if (/\b(10x|100x|\d+x)\b|spike|survive|handle more/.test(q)) {
+    const mult = parseInt((q.match(/(\d+)\s*x/) || [])[1] || '10', 10)
+    const target = Math.min(rps * mult, 2e8)
+    const s2 = simulate(nodes, edges, target, new Set())
+    const flowing = Object.values(s2.stats || {}).some(st => (st.in || 0) > 0)
+    if (!flowing) return ['The design has no traffic source wired in — add a Client from the palette and connect it, then I can push ' + fmt(target) + ' rps through it.']
+    const hot2 = nodes.map(n => ({ n, u: s2.stats?.[n.id]?.util || 0 })).filter(x => x.u >= 1).sort((a, b) => b.u - a.u)
+    const out = [`At **${fmt(target)} rps** (${mult}× current), the simulator says: success rate **${(s2.successRate * 100).toFixed(1)}%**, p99 **${Math.round(s2.p99)}ms**.`]
+    if (hot2.length) out.push('First to saturate: ' + hot2.slice(0, 3).map(x => `**${x.n.label}** (${Math.round(x.u * 100)}%)`).join(', ') + ' — that is where the next replicas or a cache go.')
+    else out.push('Nothing saturates — this design absorbs it. Drag the traffic slider there and watch it live.')
+    return out
+  }
+  if (/how many replicas|right.?siz|replica count|capacity plan/.test(q)) {
+    if (!simOn) return ['Turn on **▶ Simulate** first — replica math needs the live per-component traffic.']
+    const plans = nodes.map(n => {
+      const st = sim.stats?.[n.id]; if (!st || !st.in) return null
+      const cap = CATALOG[n.type]?.cap || 1000
+      const need = Math.ceil(st.in / (cap * 0.7))
+      const have = Math.max(1, n.replicas || 1)
+      return need > have ? `**${n.label}**: ${have} → ${need} replicas (targets 70% at its ${fmt(st.in)} rps)` : null
+    }).filter(Boolean)
+    return plans.length
+      ? ['Sizing every component to run at ~70% utilization:', ...plans.map(p => '• ' + p), 'Select a component and edit replicas in the inspector — the Capacity tab shows the same math continuously.']
+      : ['Every component already has headroom at ~70% target utilization. Raise the traffic slider to find the next sizing decision.']
+  }
+  if (/secur|attack|hack|vulnerab|auth\b/.test(q)) {
+    const has = t => nodes.some(n => n.type === t)
+    const out = []
+    if (!has('gateway') && !has('waf')) out.push('• No **API gateway or WAF** — nothing enforces auth, rate limits or input rules at the front door.')
+    if (nodes.some(n => ['llm', 'gemini3', 'gemini2', 'gemmaos'].includes(n.type)) && !has('guard')) out.push('• An LLM without **Guardrails** — prompt injection in, PII out, nothing scanning either direction.')
+    if (has('sql') && !has('pii') && !has('crypto')) out.push('• User data in SQL with no **tokenization vault or envelope encryption** in sight.')
+    if (!has('iam') && !has('secrets')) out.push('• No **IAM/secrets management** on the canvas — worth showing where credentials live.')
+    if (!has('audit') && !has('siem')) out.push('• No **audit log or SIEM** — after an incident, this design cannot answer "who did what".')
+    return out.length
+      ? ['A security read of this canvas:', ...out, 'Each of these is a drag-and-drop component from the Security palette group — add one and re-ask.']
+      : ['The usual boxes are ticked here: gateway/guarding, secrets, and audit surfaces are present. Next step: inject the security-flavored chaos faults (token expiry, cert rotation) and see what degrades.']
+  }
+  if (/availab|uptime|nines|downtime/.test(q)) {
+    if (!simOn) return ['Turn on **▶ Simulate** — availability composes from every component on the path, and the simulator does that math live.']
+    const weak = nodes.map(n => ({ n, a: CATALOG[n.type]?.avail ?? 1, r: Math.max(1, n.replicas || 1) })).sort((x, y) => (x.a ** 1) - (y.a ** 1)).slice(0, 3)
+    return [`System availability is **${(sim.sysAvail * 100).toFixed(3)}%** right now — about ${Math.round((1 - sim.sysAvail) * 525600)} minutes of downtime a year.`,
+      'Weakest links by component class: ' + weak.map(w => `**${w.n.label}** (${(w.a * 100).toFixed(2)}%${w.r === 1 ? ', single replica' : ''})`).join(', ') + '.',
+      'Replicas multiply the nines: the same component at 2+ replicas only fails when all copies do. The Chaos tab lets you rehearse exactly that.']
+  }
+  if (/interview|present|walk.?through|whiteboard/.test(q)) {
+    return [template
+      ? `For **${template.name}**, the **Breakdown** tab is the interview script: requirements → entities → API → the two deep dives — and the Mid/Senior/Staff bar at the bottom tells you what each level is expected to cover.`
+      : 'Structure it the way the Breakdown tab structures every template: 2 minutes of requirements, 1 minute of entities and API, then spend your time on two deep dives where the hard trade-offs live.',
+      'Then run **🎤 Interview** mode — it plays the interviewer, probes your answers stage by stage, and grades what you actually said.']
+  }
+  const GLOSSARY = {
+    'cap theorem': 'Under a network partition, a distributed store chooses: refuse some requests (consistency) or serve possibly-stale data (availability). Not a menu of three — partitions happen, so you are picking C or A for partition time.',
+    'idempoten': 'An operation safe to apply twice: retries collapse to one effect. Achieved with client-supplied keys the server dedupes on. Every money write and every queue consumer in this studio leans on it.',
+    'cache-aside': 'The app reads the cache, misses to the store, writes the result back with a TTL. Simple and everywhere — its sharp edges are stampedes on hot-key expiry (fix: jittered TTLs, request coalescing).',
+    'sharding': 'Splitting one dataset across machines by a key. The key choice is the whole game: it decides your hot spots (Discord shards by guild, Tinder by geography) and what queries stay single-shard.',
+    'backpressure': 'Slowing the producer when the consumer falls behind, instead of buffering to death. Queues make it visible; the alternative is unbounded memory and a worse crash later.',
+    'exactly-once': 'The delivery guarantee that is really at-least-once plus idempotent processing plus transactional sinks. See the Ad Click Aggregator template — there it is the bill.',
+    'fan-out': 'One event, many recipients. On write (precompute feeds) or on read (query time) — the trade is storage vs latency, and celebrities break whichever you pick first.',
+    'hot partition': 'One shard taking disproportionate load because the key concentrates (one viral stream, one celebrity). Fixes: better keys, salting, or isolating the hot tenant deliberately.',
+    'p99': 'The latency 99% of requests beat — the tail your busiest users live in. Means are lies at scale: one slow dependency in a 100-call fan-out makes p99 the common case.',
+    'load shedding': 'Refusing work you cannot serve well, early and cheaply, so the work you accept stays fast. A 429 at the gateway beats a timeout at the database.',
+    'circuit breaker': 'Stop calling a failing dependency for a cooldown after errors cross a threshold — fail fast, recover probe by probe. Turns a slow outage into a clean one.',
+    'consistent hashing': 'A hash ring where adding a node moves only ~1/N of keys instead of reshuffling everything. How caches and stores scale membership without a stampede.',
+    'quorum': 'Requiring R reads + W writes to overlap (R+W > N) so a read always sees the newest write. The dial between latency and consistency in replicated stores.',
+    'saga': 'A distributed transaction as a sequence of local commits, each with a compensation to undo it. Order the irreversible steps last — you cannot un-send an email.',
+    'cqrs': 'Split the write model from the read model and let reads denormalize freely. Pairs with event sourcing; the cost is eventual consistency between the two sides.',
+    'wal': 'Write-ahead log: append the intent durably before applying it, replay after a crash. The primitive under databases, queues and every "how is this durable?" answer.',
+  }
+  const g = Object.keys(GLOSSARY).find(k => q.includes(k))
+  if (g && /what is|what's|define|mean|explain/.test(q)) {
+    return [GLOSSARY[g], nodes.length ? 'Want it applied? Name a component on your canvas and I will connect it.' : 'Load a template and I can point at where this shows up in a real design.']
   }
   const compHit = nodes.find(n => q.includes(n.label.toLowerCase())) || nodes.find(n => q.includes((CATALOG[n.type]?.name || '').toLowerCase()))
   if (compHit) {
