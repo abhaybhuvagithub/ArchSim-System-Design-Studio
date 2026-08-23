@@ -1684,3 +1684,14 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
   color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline;
 }
 .ob-note { font-size: 12px; opacity: .6; text-align: center; margin: 8px 0 0; }
+
+/* ── provenance in the internals modal ─────────────────────────────────── */
+.prov-chip {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; border: 1px solid var(--border);
+}
+.prov-benchmark { background: rgba(52,199,89,.14); border-color: rgba(52,199,89,.5); }
+.prov-vendor { background: rgba(91,140,255,.14); border-color: rgba(91,140,255,.5); }
+.prov-modeled { background: rgba(255,159,10,.14); border-color: rgba(255,159,10,.5); }
+.prov-basis { font-size: 12.5px; line-height: 1.55; opacity: .9; }
+.prov-refs a { margin-right: 12px; font-size: 12px; }

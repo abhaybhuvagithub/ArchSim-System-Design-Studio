@@ -16,6 +16,14 @@ const tips = TIPS.reduce((n, g) => n + g.items.length, 0)
 
 export const ABOUT = [
   {
+    title: 'How honest are the numbers?',
+    lines: [
+      'This is a flight simulator, not the airplane. The dynamics are engineered to be right — queueing curves, fan-out multiplication, availability composition, cache economics — so the reflexes you build here transfer to real systems. The exact figures are not predictions.',
+      'Every component now carries its receipts: open any 🔍 internals view and the "Where these numbers come from" section labels each figure as **benchmark-anchored**, **vendor-documented**, or a **modeled estimate** — with links where public sources exist.',
+      'Read latencies as bands, not points (the ~ on every chip means roughly ±40%). What no closed-form model captures: GC pauses, retry storms, coordinated omission, the specific ways your code is slow. For real capacity planning, calibrate against your own metrics — for design reasoning and interviews, order-of-magnitude is exactly the right resolution.',
+    ],
+  },
+  {
     title: 'What this is',
     lines: [
       '**ArchSim is a system design studio that runs your architecture instead of just drawing it.**',
