@@ -1991,6 +1991,17 @@ try {
     await wait(250);
     check('picking a Pro design while free opens the pricing dialog, not the design',
       !!doc.querySelector('.pricing') && !doc.querySelector('.tpl-header'));
+    // the combobox search list marks Pro designs with a lock while free…
+    {
+      const tin = doc.querySelector('.tplpick input');
+      typeInto(tin, 'Discord');
+      tin.dispatchEvent(new win.Event('focus', { bubbles: true }));
+      await wait(150);
+      const item = [...doc.querySelectorAll('.tplpick-i')].find(li => li.textContent.includes('Discord'));
+      check('the search list shows 🔒 on Pro designs while free', !!item && item.textContent.includes('🔒'));
+      typeInto(tin, '');
+      await wait(80);
+    }
     check('the dialog names the design and shows all three tiers with lifetime flagged best',
       /Discord/.test(doc.querySelector('.pricing')?.textContent || '') &&
       doc.querySelectorAll('.pr-tier').length === 3 && /Best value/.test(doc.querySelector('.pr-tier.best')?.textContent || '') &&
@@ -2010,6 +2021,17 @@ try {
     click(doc.querySelector('.pricing').closest('.modal-overlay').querySelector('.modal-close'));
     await wait(120);
     check('the toolbar now shows the PRO badge', /PRO ✓/.test(doc.querySelector('.pro-on')?.textContent || ''));
+    // …and activating a key strips the locks from that same list immediately
+    {
+      const tin = doc.querySelector('.tplpick input');
+      typeInto(tin, 'Discord');
+      tin.dispatchEvent(new win.Event('focus', { bubbles: true }));
+      await wait(150);
+      const item = [...doc.querySelectorAll('.tplpick-i')].find(li => li.textContent.includes('Discord'));
+      check('activation removes the 🔒 from the search list without a reload', !!item && !item.textContent.includes('🔒'));
+      typeInto(tin, '');
+      await wait(80);
+    }
     selN.value = proOpt.value;
     selN.dispatchEvent(new win.Event('change', { bubbles: true }));
     await wait(250);

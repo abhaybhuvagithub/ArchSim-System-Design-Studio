@@ -3457,7 +3457,7 @@ function TemplatePicker({ onPick, pro = false }) {
       ...TEMPLATES.map((t, i) => ({ value: String(i), label: (pro || isTemplateFree(t.name)) ? t.name : '🔒 ' + t.name, group: t.group, t })),
     ]
     return base.filter(x => x.t ? matchesTpl(x.t, q) : matchesTpl({ name: x.label, group: x.group }, q))
-  }, [q])
+  }, [q, pro])   // pro in deps: activating a key must strip the 🔒 labels immediately
 
   useEffect(() => { setActive(0) }, [q])
   useEffect(() => {
