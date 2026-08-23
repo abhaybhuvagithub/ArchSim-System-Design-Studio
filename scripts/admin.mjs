@@ -14,6 +14,15 @@
 //
 // Flags (mainly for tests): --ledger <path> --out <path> --visitors <n>
 //                           --now <iso date> --fees <pct>
+//
+// PUBLISH MODE — a real URL, safely:
+//   node scripts/admin.mjs --publish --pass 'your strong passphrase'
+// encrypts the dashboard (PBKDF2 200k + AES-GCM via WebCrypto) and writes
+// public/admin-dashboard.html — ciphertext plus an in-browser decryptor.
+// Committing and deploying THAT is safe: the public site serves only the
+// ciphertext, and the passphrase never leaves your head. Then:
+//   bash scripts/deploy.sh
+// and the dashboard lives at /admin-dashboard.html behind your passphrase.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -137,3 +146,53 @@ there, not in GA. Full steps: <code>ADMIN.md</code>.</div>
 fs.writeFileSync(OUT, html)
 console.log('admin dashboard →', OUT)
 console.log(`customers ${customers.length} (active ${active} / expired ${expired}) · revenue ${inr(revenue)} · MRR ${inr(mrr)} · visitors ${visitors ?? 'n/a'}`)
+
+// ── publish mode: encrypted copy for the public site ───────────────────────
+if (process.argv.includes('--publish')) {
+  const pass = arg('pass', process.env.ADMIN_PASS || '')
+  if (!pass || pass.length < 8) {
+    console.error('publish needs --pass (8+ chars): the passphrase is the entire security of the public copy')
+    process.exit(1)
+  }
+  const { webcrypto } = await import('node:crypto')
+  const enc = new TextEncoder()
+  const salt = webcrypto.getRandomValues(new Uint8Array(16))
+  const iv = webcrypto.getRandomValues(new Uint8Array(12))
+  const keyMat = await webcrypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey'])
+  const key = await webcrypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' },
+    keyMat, { name: 'AES-GCM', length: 256 }, false, ['encrypt'])
+  const cipher = new Uint8Array(await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(html)))
+  const b64 = (u8) => Buffer.from(u8).toString('base64')
+  const PUB = arg('publish-out', path.join(here, '..', 'public', 'admin-dashboard.html'))
+  const shell = `<!doctype html><html><head><meta charset="utf-8"><title>ArchSim — Admin</title>
+<meta name="robots" content="noindex,nofollow"><style>
+  body { font: 14px/1.5 system-ui, sans-serif; background: #0e1116; color: #e6e9ef; display: grid; place-items: center; min-height: 100vh; margin: 0; }
+  .box { background: #161b24; border: 1px solid #2a3242; border-radius: 12px; padding: 26px; width: min(360px, 90vw); }
+  h1 { font-size: 16px; margin: 0 0 10px; } input, button { font: inherit; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #2a3242; padding: 9px 10px; }
+  input { background: #0e1116; color: inherit; margin-bottom: 10px; } button { background: #5b8cff; color: #fff; border: 0; cursor: pointer; font-weight: 600; }
+  .err { color: #ff6b6b; font-size: 12.5px; min-height: 1.2em; margin-top: 8px; } .muted { opacity: .55; font-size: 12px; margin-top: 10px; }
+</style></head><body>
+<div class="box"><h1>🔐 Admin dashboard</h1>
+<input id="p" type="password" placeholder="Passphrase" autofocus>
+<button id="go">Unlock</button><div class="err" id="e"></div>
+<div class="muted">Encrypted at rest (PBKDF2·AES-GCM). Decryption happens only in this browser.</div></div>
+<script>
+const SALT='${b64(salt)}',IV='${b64(iv)}',DATA='${b64(cipher)}';
+const un=(s)=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function unlock(){
+  const pass=document.getElementById('p').value; const e=document.getElementById('e'); e.textContent='';
+  try{
+    const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+    const k=await crypto.subtle.deriveKey({name:'PBKDF2',salt:un(SALT),iterations:200000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+    const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:un(IV)},k,un(DATA));
+    document.open(); document.write(new TextDecoder().decode(plain)); document.close();
+  }catch{ e.textContent='Wrong passphrase.'; }
+}
+document.getElementById('go').onclick=unlock;
+document.getElementById('p').addEventListener('keydown',ev=>{if(ev.key==='Enter')unlock()});
+</script></body></html>`
+  fs.writeFileSync(PUB, shell)
+  console.log('encrypted public copy →', PUB)
+  console.log('deploy it: bash scripts/deploy.sh  → /admin-dashboard.html unlocks with your passphrase')
+}

@@ -28,3 +28,12 @@ you get queries, impressions, clicks and position — the "keywords" report.
 ## What stays impossible without a server
 Per-user accounts, login analytics, and true active-device counts need a backend.
 The moment revenue justifies it: Razorpay webhooks + a small worker, same key format.
+
+## The URL version (encrypted)
+```
+node scripts/admin.mjs --publish --pass 'your strong passphrase'
+bash scripts/deploy.sh
+```
+The dashboard then lives at `/admin-dashboard.html` on the public site — as AES-GCM
+ciphertext with an in-browser unlock. Refresh it the same way after new sales.
+The passphrase is the entire security of that page: 4+ random words, never reuse it.
