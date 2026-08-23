@@ -1,0 +1,109 @@
+// Licensing for ArchSim Pro. Design constraints, honestly stated:
+//
+//   • No backend exists, so keys are validated client-side with a signature
+//     scheme. A determined person can crack any client-side check; they were
+//     never going to pay. The check keeps honest people honest and makes the
+//     product sellable today at zero infrastructure cost.
+//   • Plans and expiry are ENCODED IN THE KEY (AS1-<plan>-<expiry>-<rand>-<sig>)
+//     so monthly/yearly keys expire without a server. Lifetime keys never do.
+//   • Keys are minted with scripts/genkey.mjs (same code path as validation,
+//     so they can never drift apart) and delivered manually after payment —
+//     the right amount of machinery for customers #1–100. Razorpay webhooks
+//     can replace the manual step later without changing the key format.
+
+export const LICENSE_STORE = 'archsim.license.v1'
+
+// ── pricing (single source of truth for the pricing modal) ─────────────────
+export const PRICES = {
+  monthly: { label: 'Pro Monthly', inr: 499, note: 'per month', keyPlan: 'M' },
+  yearly: { label: 'Pro Yearly', inr: 2999, note: 'per year — 2 months free', keyPlan: 'Y' },
+  lifetime: { label: 'Lifetime', inr: 7999, note: 'one payment, forever — founding price', keyPlan: 'L', highlight: true },
+}
+export const UPI_ID = 'abhay.bhuva@okhdfcbank'
+export const UPI_NAME = 'Abhay Bhuva'
+export const CONTACT_URL = 'https://www.linkedin.com/in/abhaybhuva/'
+
+// ── the free tier ──────────────────────────────────────────────────────────
+// Free stays genuinely useful: the full simulator, chaos, learning, and this
+// set of templates — including everything the onboarding wizard and the tour
+// can load. Everything else in the library is Pro.
+export const FREE_TEMPLATES = new Set([
+  'URL Shortener (Bitly)',        // wizard + the classic
+  'GenAI: RAG Assistant',         // wizard
+  'Ramp',                         // wizard
+  'Ticketmaster',                 // tour
+  'Chat (WhatsApp)',
+  'Ride Sharing (Uber)',
+  'Video Platform (YouTube)',
+  'Rate Limiter (as a system)',
+  'Redis (Distributed Cache)',
+  'Notification System',
+  'Web Crawler',
+  'Zomato',
+  'Netflix',
+  'News Feed (Twitter/X)',
+  'Payment System (Stripe-lite)',
+])
+export const isTemplateFree = name => FREE_TEMPLATES.has(name)
+
+// ── key format & signature ─────────────────────────────────────────────────
+// AS1-<P>-<YYYYMMDD|FOREVER>-<RAND4>-<SIG6>   e.g. AS1-L-FOREVER-K7Q2-3F9ZXC
+const SALT = 'archsim-studio-2026-gift-city'
+
+function sig(payload) {
+  // djb2 over payload+salt, folded to 6 base36 chars. Not cryptography —
+  // a tamper-evidence seal, per the constraints stated above.
+  let h = 5381
+  const s = payload + SALT
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0
+  let h2 = 2166136261
+  for (let i = s.length - 1; i >= 0; i--) h2 = Math.imul(h2 ^ s.charCodeAt(i), 16777619) >>> 0
+  return (h.toString(36) + h2.toString(36)).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6).padEnd(6, 'X')
+}
+
+export function makeKey(plan, now = new Date()) {
+  const p = { monthly: 'M', yearly: 'Y', lifetime: 'L' }[plan]
+  if (!p) throw new Error('plan must be monthly | yearly | lifetime')
+  let expiry = 'FOREVER'
+  if (p !== 'L') {
+    const d = new Date(now)
+    d.setDate(d.getDate() + (p === 'M' ? 32 : 367))   // a couple of grace days
+    expiry = d.toISOString().slice(0, 10).replace(/-/g, '')
+  }
+  const rand = Array.from({ length: 4 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('')
+  const payload = `AS1-${p}-${expiry}-${rand}`
+  return `${payload}-${sig(payload)}`
+}
+
+export function validateKey(raw, now = new Date()) {
+  const key = String(raw || '').trim().toUpperCase()
+  const m = key.match(/^(AS1-([MYL])-(FOREVER|\d{8})-[A-Z0-9]{4})-([A-Z0-9]{6})$/)
+  if (!m) return { ok: false, reason: 'That does not look like an ArchSim key (AS1-…).' }
+  if (sig(m[1]) !== m[4]) return { ok: false, reason: 'The key signature does not check out — copy it exactly as sent.' }
+  const plan = { M: 'monthly', Y: 'yearly', L: 'lifetime' }[m[2]]
+  if (m[3] !== 'FOREVER') {
+    const exp = new Date(`${m[3].slice(0, 4)}-${m[3].slice(4, 6)}-${m[3].slice(6, 8)}T23:59:59Z`)
+    if (now > exp) return { ok: false, reason: `This ${plan} key expired on ${exp.toISOString().slice(0, 10)} — renewing takes a minute.`, expired: true, plan }
+    return { ok: true, plan, expires: exp.toISOString().slice(0, 10) }
+  }
+  return { ok: true, plan, lifetime: true }
+}
+
+// ── stored license ─────────────────────────────────────────────────────────
+export function getLicense() {
+  try {
+    const k = localStorage.getItem(LICENSE_STORE)
+    if (!k) return null
+    const v = validateKey(k)
+    return v.ok ? { key: k, ...v } : null
+  } catch { return null }
+}
+export function setLicense(key) { try { localStorage.setItem(LICENSE_STORE, String(key).trim().toUpperCase()) } catch { /* private mode */ } }
+export function clearLicense() { try { localStorage.removeItem(LICENSE_STORE) } catch { /* private mode */ } }
+export const isPro = () => !!getLicense()
+
+// UPI deep link for the India payment path (mobile opens the UPI app directly).
+export function upiLink(amountInr, planLabel) {
+  const p = new URLSearchParams({ pa: UPI_ID, pn: UPI_NAME, am: String(amountInr), cu: 'INR', tn: `ArchSim ${planLabel}` })
+  return 'upi://pay?' + p.toString()
+}

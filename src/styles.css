@@ -1695,3 +1695,29 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .prov-modeled { background: rgba(255,159,10,.14); border-color: rgba(255,159,10,.5); }
 .prov-basis { font-size: 12.5px; line-height: 1.55; opacity: .9; }
 .prov-refs a { margin-right: 12px; font-size: 12px; }
+
+/* ── Pro pricing ───────────────────────────────────────────────────────── */
+.pro-cta { border-color: var(--accent); background: rgba(91,140,255,.14); font-weight: 600; }
+.pro-on { border-color: rgba(52,199,89,.55); background: rgba(52,199,89,.12); font-weight: 600; }
+.pricing .modal-body { max-width: 640px; }
+.pr-tiers { display: flex; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+.pr-tier {
+  flex: 1; min-width: 150px; position: relative;
+  border: 1px solid var(--border); border-radius: 10px; padding: 14px 12px 12px;
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+}
+.pr-tier.best { border-color: var(--accent); background: rgba(91,140,255,.08); }
+.pr-flag {
+  position: absolute; top: -9px; left: 10px; font-size: 12px; font-weight: 700;
+  background: var(--accent); color: #fff; border-radius: 999px; padding: 1px 8px;
+}
+.pr-name { font-weight: 600; font-size: 13.5px; }
+.pr-price { font-size: 22px; font-weight: 700; }
+.pr-note { font-size: 12px; opacity: .7; min-height: 2.4em; }
+.pr-pay { margin-top: 4px; }
+.pr-copy { font-size: 12px; padding: 1px 8px; }
+.pr-how p { font-size: 12.5px; line-height: 1.55; }
+.pr-key { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.pr-key input { flex: 1; }
+.pr-err { color: #ff6b6b; font-size: 12.5px; margin: 6px 0 0; }
+.pr-active p { font-size: 13px; }

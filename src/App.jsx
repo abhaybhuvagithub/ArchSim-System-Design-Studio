@@ -41,6 +41,7 @@ import { generateCode, CODE_VIEWS } from './codegen.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 import { Onboarding } from './onboarding.jsx'
+import { PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink } from './license.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -93,6 +94,8 @@ export default function App() {
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
   const [tourAt, setTourAt] = useState(null)
   const [onboard, setOnboard] = useState(true)   // greets every page load; Skip just closes it for this session
+  const [license, setLicenseState] = useState(getLicense)
+  const [pricing, setPricing] = useState(null)   // null | { want?: template }
   const [flow, setFlow] = useState('all')
   const [a11y, setA11y] = useState(() => {
     try { return localStorage.getItem('archsim.a11y') === '1' } catch (e) { return false }
@@ -596,6 +599,11 @@ export default function App() {
       return
     }
     const t = TEMPLATES[+idx]
+    if (t && !isTemplateFree(t.name) && !license) {
+      setPricing({ want: t })
+      notify(`🔒 ${t.name} is a Pro design — the free set stays fully open`, 'info')
+      return
+    }
     setNodes(t.nodes.map(n => ({ ...n })))
     setEdges(t.edges.map(e => ({ ...e })))
     setTemplate(t); setChecks({}); setSel(null); setDown({}); setApplied([])
@@ -781,6 +789,12 @@ export default function App() {
   return (
     <div className={`app ${compact ? 'compact' : ''} ${mobile ? 'mobile' : ''}`}>
       <a className="skip-link" href="#analysis">Skip to the written analysis</a>
+      {pricing && (
+        <PricingModal want={pricing.want} license={license}
+          onClose={() => setPricing(null)}
+          onActivated={() => { setLicenseState(getLicense()); }}
+          onRemoved={() => { clearLicense(); setLicenseState(null) }} />
+      )}
       {onboard && (
         <Onboarding
           onClose={() => setOnboard(false)}
@@ -804,7 +818,7 @@ export default function App() {
             <button className={`btn ${drawer === 'right' ? 'active' : ''}`} onClick={() => setDrawer(d => d === 'right' ? null : 'right')}>▤</button>
           </>
         )}
-        <TemplatePicker onPick={loadTemplate} />
+        <TemplatePicker onPick={loadTemplate} pro={!!license} />
         <button className={`btn ${simOn ? 'active' : ''}`} data-tour="simulate" onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
         <button className={`btn ${chaosOn ? 'danger' : ''}`} data-tour="chaos" onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">Chaos {chaosOn ? 'ON' : 'off'}</button>
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} data-tour="improve" onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
@@ -880,6 +894,9 @@ export default function App() {
 
         <button className="btn" data-tour="help" onClick={() => setTourAt(0)}
           title="Replay the guided walkthrough of the app">? Guide</button>
+        <button className={`btn ${license ? 'pro-on' : 'pro-cta'}`} onClick={() => setPricing({})}
+          title={license ? `ArchSim Pro active (${license.plan}${license.lifetime ? ' — lifetime' : ' until ' + license.expires})` : 'Unlock all 89 designs with every breakdown and scaling playbook'}>
+          {license ? 'PRO ✓' : '⭐ Pro'}</button>
       </header>
 
       <Tour at={tourAt} setAt={setTourAt} setTab={setTab} loadTemplate={loadTemplate} ready={!onboard} />
@@ -1411,6 +1428,70 @@ function About() {
       </div>
       </ReadAloud>
     </section>
+  )
+}
+
+// The Pro pricing dialog: three tiers with lifetime highlighted, the UPI
+// payment path (manual key delivery for now — Razorpay webhooks slot in
+// later without changing the key format), and key activation.
+function PricingModal({ want, license, onClose, onActivated, onRemoved }) {
+  const [keyDraft, setKeyDraft] = useState('')
+  const [err, setErr] = useState(null)
+  const activate = () => {
+    const v = validateKey(keyDraft)
+    if (!v.ok) { setErr(v.reason); return }
+    setLicense(keyDraft); setErr(null); onActivated()
+    // App's license state updates and this dialog re-renders straight into
+    // the "Pro is active" view — that is the success screen.
+  }
+  const copyUpi = () => { try { navigator.clipboard.writeText(UPI_ID) } catch { /* no clipboard */ } }
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content pricing" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="ArchSim Pro">
+        <div className="modal-header">
+          <div className="modal-title"><h2>{want ? `🔒 ${want.name} is a Pro design` : '⭐ ArchSim Pro'}</h2></div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {license ? (
+            <div className="pr-active">
+              <p><b>Pro is active</b> — {license.lifetime ? 'lifetime access, forever' : `${license.plan} plan until ${license.expires}`}. Every design, breakdown and scaling playbook is unlocked.</p>
+              <button className="btn" onClick={onRemoved}>Remove key from this browser</button>
+            </div>
+          ) : (
+            <>
+              {want?.tagline && <p className="muted" style={{ marginTop: 0 }}>{want.tagline}</p>}
+              <p><b>Free keeps the full simulator</b> — canvas, chaos, learning, Ask AI, and {'15'} classic designs. <b>Pro unlocks the whole library</b>: all 89 designs with every written breakdown (requirements → API → deep dives → the Staff bar) and every 4-lever scaling playbook.</p>
+              <div className="pr-tiers">
+                {Object.entries(PRICES).map(([id, p]) => (
+                  <div key={id} className={`pr-tier ${p.highlight ? 'best' : ''}`}>
+                    {p.highlight && <div className="pr-flag">Best value</div>}
+                    <div className="pr-name">{p.label}</div>
+                    <div className="pr-price">₹{p.inr.toLocaleString('en-IN')}</div>
+                    <div className="pr-note">{p.note}</div>
+                    <a className="btn pr-pay" href={upiLink(p.inr, p.label)}>Pay by UPI</a>
+                  </div>
+                ))}
+              </div>
+              <div className="pr-how">
+                <p><b>How it works (India · UPI):</b> pay to <code>{UPI_ID}</code> <button className="btn pr-copy" onClick={copyUpi}>copy</button> from any UPI app (the buttons above open yours on mobile, with the amount filled in). Then send the payment screenshot with the word <i>lifetime</i>, <i>yearly</i> or <i>monthly</i> via <a href={CONTACT_URL} target="_blank" rel="noopener noreferrer">LinkedIn</a> — your key arrives within 24 hours, usually much faster.</p>
+                <p className="muted">Outside India? Message the same LinkedIn for card/PayPal options. Keys are per-person, work on all your devices, and lifetime means lifetime.</p>
+              </div>
+              <div className="pr-key">
+                <label htmlFor="pr-key-in"><b>Already have a key?</b></label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input id="pr-key-in" value={keyDraft} placeholder="AS1-…" aria-label="License key"
+                    onChange={e => { setKeyDraft(e.target.value); setErr(null) }}
+                    onKeyDown={e => { if (e.key === 'Enter') activate() }} />
+                  <button className="btn" disabled={!keyDraft.trim()} onClick={activate}>Activate</button>
+                </div>
+                {err && <p className="pr-err">{err}</p>}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -3288,7 +3369,7 @@ export function matchesTpl(t, q) {
 // design. Both controls call the same loadTemplate, so there is no second copy
 // of the state to drift — and the 60-template verification sweep keeps driving
 // the select directly instead of opening and clicking sixty times.
-function TemplatePicker({ onPick }) {
+function TemplatePicker({ onPick, pro = false }) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [active, setActive] = useState(0)
@@ -3298,7 +3379,7 @@ function TemplatePicker({ onPick }) {
     const base = [
       { value: 'blank', label: '＋ Blank canvas', group: 'Start from scratch' },
       { value: 'starter', label: '◻︎ Starter scaffold', group: 'Start from scratch' },
-      ...TEMPLATES.map((t, i) => ({ value: String(i), label: t.name, group: t.group, t })),
+      ...TEMPLATES.map((t, i) => ({ value: String(i), label: (pro || isTemplateFree(t.name)) ? t.name : '🔒 ' + t.name, group: t.group, t })),
     ]
     return base.filter(x => x.t ? matchesTpl(x.t, q) : matchesTpl({ name: x.label, group: x.group }, q))
   }, [q])

@@ -1975,6 +1975,50 @@ try {
       return ['generic', 'aws', 'gcp', 'azure', 'oci', 'apple'].every(id => new RegExp("id: '" + id + "'").test(ob));
     })());
   }
+
+  // ── the paywall, driven for real ───────────────────────────────────────────
+  // Unlicensed: picking a Pro design must open the pricing dialog and load
+  // nothing. Activating a freshly-minted key through the UI must unlock it.
+  // The key stays active for the rest of the run, so the template sweep and
+  // every downstream section test the product as a Pro user sees it.
+  {
+    const L2 = await import(pathToFileURL(path.join(root, 'src/license.js')).href);
+    const selN = [...doc.querySelectorAll('select')].find((x) => [...x.options].some((o) => o.textContent.includes('Discord')));
+    check('the native picker lists Pro designs', !!selN);
+    const proOpt = [...selN.options].find((o) => o.textContent.includes('Discord'));
+    selN.value = proOpt.value;
+    selN.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await wait(250);
+    check('picking a Pro design while free opens the pricing dialog, not the design',
+      !!doc.querySelector('.pricing') && !doc.querySelector('.tpl-header'));
+    check('the dialog names the design and shows all three tiers with lifetime flagged best',
+      /Discord/.test(doc.querySelector('.pricing')?.textContent || '') &&
+      doc.querySelectorAll('.pr-tier').length === 3 && /Best value/.test(doc.querySelector('.pr-tier.best')?.textContent || '') &&
+      /Lifetime/.test(doc.querySelector('.pr-tier.best')?.textContent || ''));
+    check('the UPI payment path is on the dialog', /abhay\.bhuva@okhdfcbank/.test(doc.querySelector('.pr-how')?.textContent || ''));
+    const badIn = doc.querySelector('#pr-key-in');
+    typeInto(badIn, 'AS1-L-FOREVER-XXXX-WRONG1');
+    click(byText('.pr-key .btn', 'Activate'));
+    await wait(120);
+    check('a bad key is refused with a reason', !!doc.querySelector('.pr-err'));
+    const goodKey = L2.makeKey('lifetime');
+    typeInto(badIn, goodKey);
+    click(byText('.pr-key .btn', 'Activate'));
+    await wait(150);
+    check('a freshly-minted lifetime key activates through the UI',
+      /Pro is active/.test(doc.querySelector('.pricing')?.textContent || '') && win.localStorage.getItem('archsim.license.v1') === goodKey);
+    click(doc.querySelector('.pricing').closest('.modal-overlay').querySelector('.modal-close'));
+    await wait(120);
+    check('the toolbar now shows the PRO badge', /PRO ✓/.test(doc.querySelector('.pro-on')?.textContent || ''));
+    selN.value = proOpt.value;
+    selN.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await wait(250);
+    check('the same Pro design loads once licensed', /Discord/.test(doc.querySelector('.tpl-header')?.textContent || ''));
+    selN.value = 'blank';
+    selN.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await wait(200);
+    check('back to a blank canvas for the rest of the run', !doc.querySelector('.tpl-header'));
+  }
   // Everything downstream assumes a mounted app. Without this, a bad bundle
   // produces a cascade of "cannot read properties of undefined" that says
   // nothing about the actual cause.
@@ -2980,6 +3024,36 @@ try {
       const aboutSrc = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
       check('the About page states the model-honesty contract',
         aboutSrc.includes('How honest are the numbers?') && aboutSrc.includes('flight simulator'));
+    }
+
+    // ── licensing: keys, tiers, and the free set ─────────────────────────────
+    {
+      const L = await import(pathToFileURL(path.join(root, 'src/license.js')).href);
+      const T2 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
+      const life = L.makeKey('lifetime');
+      const vLife = L.validateKey(life);
+      check('a lifetime key mints and validates as lifetime', vLife.ok && vLife.lifetime === true);
+      const mon = L.makeKey('monthly');
+      check('a monthly key carries a real expiry', L.validateKey(mon).ok && /^\d{4}-\d{2}-\d{2}$/.test(L.validateKey(mon).expires));
+      check('an expired key is rejected with its date', (() => {
+        const old = L.makeKey('monthly', new Date('2020-01-01'));
+        const v = L.validateKey(old); return v.ok === false && v.expired === true && /2020/.test(v.reason);
+      })());
+      check('a tampered key is rejected', L.validateKey(life.slice(0, -1) + (life.endsWith('A') ? 'B' : 'A')).ok === false);
+      check('garbage is rejected politely', L.validateKey('let me in').ok === false && L.validateKey('').ok === false);
+      const names = new Set(T2.map(t => t.name));
+      const ghost = [...L.FREE_TEMPLATES].filter(n => !names.has(n));
+      check('every free-tier template actually exists' + (ghost.length ? ' — ' + ghost.join(', ') : ''), ghost.length === 0);
+      check('wizard and tour starting designs are all in the free set',
+        ['URL Shortener (Bitly)', 'GenAI: RAG Assistant', 'Ramp', 'Ticketmaster', 'Chat (WhatsApp)'].every(n => L.isTemplateFree(n)));
+      check('the free set is generous but the library is the product',
+        L.FREE_TEMPLATES.size >= 12 && L.FREE_TEMPLATES.size <= 25 && T2.length - L.FREE_TEMPLATES.size >= 60);
+      check('the lifetime tier exists and is the highlighted one',
+        L.PRICES.lifetime && L.PRICES.lifetime.highlight === true && L.PRICES.lifetime.inr > L.PRICES.yearly.inr);
+      check('the UPI link carries id, amount and currency', (() => {
+        const u = L.upiLink(7999, 'Lifetime');
+        return u.startsWith('upi://pay?') && u.includes(encodeURIComponent('abhay.bhuva@okhdfcbank')) && u.includes('am=7999') && u.includes('cu=INR');
+      })());
     }
 
     // ── traffic slider reaches internet scale and stays readable ─────────────
