@@ -16,7 +16,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { makeKey, validateKey } from '../src/license.js'
+import { makeKey, validateKey, PRICES } from '../src/license.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const LEDGER = path.join(here, 'issued-keys.log')

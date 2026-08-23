@@ -3166,6 +3166,42 @@ try {
         /visitors != null &&/.test(appSrc3) && /👥 \{formatVisitors\(visitors\)\}/.test(appSrc3));
     }
 
+    // ── the admin dashboard: the whole business from real data ───────────────
+    {
+      const { execFileSync } = await import('node:child_process');
+      const os = await import('node:os');
+      const L3 = await import(pathToFileURL(path.join(root, 'src/license.js')).href);
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'archsim-admin-'));
+      const ledger = path.join(tmp, 'ledger.log');
+      const out = path.join(tmp, 'dash.html');
+      fs.writeFileSync(ledger, [
+        [L3.makeKey('monthly', new Date('2026-08-10')), 'monthly', 999, '2026-08-10T10:00:00Z'],
+        [L3.makeKey('yearly', new Date('2026-08-01')), 'yearly', 7999, '2026-08-01T10:00:00Z'],
+        [L3.makeKey('monthly', new Date('2026-03-01')), 'monthly', 999, '2026-03-01T10:00:00Z'],
+        [L3.makeKey('lifetime'), 'lifetime', 0, '2026-08-23T10:00:00Z'],
+      ].map((l) => l.join('\t')).join('\n') + '\n');
+      const stdout = execFileSync('node', [path.join(root, 'scripts/admin.mjs'),
+        '--ledger', ledger, '--out', out, '--visitors', '1000', '--now', '2026-08-23T12:00:00Z', '--fees', '2'], { encoding: 'utf8' });
+      const dash = fs.readFileSync(out, 'utf8');
+      check('the admin dashboard generates from the ledger', dash.includes('ArchSim — Admin Dashboard'));
+      check('it counts customers with active vs expired from real key expiry',
+        /customers 3 \(active 2 \/ expired 1\)/.test(stdout));
+      check('revenue, MRR and conversion compute correctly',
+        dash.includes('₹9,997') && /₹1,666/.test(dash) && dash.includes('0.30%'));
+      check('owner ₹0 keys are excluded from revenue and labeled',
+        dash.includes('owner/₹0 keys'));
+      check('it refuses to invent web analytics and points at the GA4/Search Console path',
+        /collects none of this by itself/.test(dash) && /Search Console/.test(dash));
+      check('the generated dashboard is gitignored (it contains revenue)',
+        fs.readFileSync(path.join(root, '.gitignore'), 'utf8').includes('admin-dashboard.html'));
+      // GA4 ships wired but OFF: with no measurement id, nothing may load.
+      const an = fs.readFileSync(path.join(root, 'src/analytics.js'), 'utf8');
+      check('analytics is disabled by default — empty ID means nothing loads',
+        /GA_MEASUREMENT_ID = ''/.test(an) && /if \(!GA_MEASUREMENT_ID\) return/.test(an));
+      check('ADMIN.md documents the dashboard, GA4 and the keywords path',
+        fs.existsSync(path.join(root, 'ADMIN.md')) && /Search Console/.test(fs.readFileSync(path.join(root, 'ADMIN.md'), 'utf8')));
+    }
+
     // ── ROI: the business view stays finite and honestly labeled ─────────────
     {
       const { roiFor } = await import(pathToFileURL(path.join(root, 'src/roi.js')).href);

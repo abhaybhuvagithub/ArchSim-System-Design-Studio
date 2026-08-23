@@ -43,6 +43,7 @@ import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.
 import { Onboarding } from './onboarding.jsx'
 import { PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink, attemptState, recordMiss, clearMisses } from './license.js'
 import { roiFor } from './roi.js'
+import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
@@ -131,6 +132,7 @@ export default function App() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4200)
   }, [])
   useEffect(() => { countVisit().then(v => { if (v != null) setVisitors(v) }) }, [])
+  useEffect(() => { initAnalytics() }, [])
   useEffect(() => {
     const onResize = () => setVw(window.innerWidth)
     window.addEventListener('resize', onResize)
