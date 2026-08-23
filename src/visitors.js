@@ -8,10 +8,15 @@ const CACHE_KEY = 'archsim.visitors'
 // A second "free counter" service used to sit in this list; it shut down in
 // 2023 and every page load paid a timeout to a corpse until it was removed.
 // One live service, or the chip hides.
+// Abacus (abacus.jasoncameron.dev) is the open-source successor built to
+// replace the free counter service that died in 2023; counterapi.dev stays as the fallback. Each
+// provider gets 3.5s, first finite answer wins, all fail -> cached -> hidden.
 const ENDPOINTS = [
+  { url: `https://abacus.jasoncameron.dev/hit/${NS}/visits`, read: d => d?.value },
   { url: `https://api.counterapi.dev/v1/${NS}/visits/up`, read: d => d?.count },
 ]
 const READ_ONLY = [
+  { url: `https://abacus.jasoncameron.dev/get/${NS}/visits`, read: d => d?.value },
   { url: `https://api.counterapi.dev/v1/${NS}/visits/`, read: d => d?.count },
 ]
 

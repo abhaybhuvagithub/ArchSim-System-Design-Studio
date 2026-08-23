@@ -3142,6 +3142,30 @@ try {
       })());
     }
 
+    // ── the visitor counter: real number or no number ────────────────────────
+    // countapi.xyz died once and hid the chip for months; the contract now is
+    // two independent providers, first finite answer wins, and total failure
+    // hides the chip rather than inventing a count.
+    {
+      const realFetch = globalThis.fetch;
+      globalThis.fetch = async (url) => ({ ok: true, json: async () => String(url).includes('abacus') ? { value: 4321 } : { count: 111 } });
+      const vm = await import(pathToFileURL(path.join(root, 'src/visitors.js')).href + '?t=1');
+      check('the primary provider answers and wins', (await vm.countVisit()) === 4321);
+      globalThis.fetch = async (url) => String(url).includes('abacus') ? ({ ok: false }) : ({ ok: true, json: async () => ({ count: 222 }) });
+      check('a dead primary falls back to the second provider', (await vm.countVisit()) === 222);
+      globalThis.fetch = async () => { throw new Error('offline') };
+      try { globalThis.localStorage?.removeItem('archsim.visitors') } catch { /* no storage */ }
+      check('all providers dead and no cache → null, chip hides instead of lying', (await vm.countVisit()) === null);
+      globalThis.fetch = realFetch;
+      const vsrc = fs.readFileSync(path.join(root, 'src/visitors.js'), 'utf8');
+      check('two independent counter providers are configured, both https',
+        /abacus\.jasoncameron\.dev\/hit/.test(vsrc) && /api\.counterapi\.dev\/v1/.test(vsrc) && !/http:\/\//.test(vsrc));
+      check('every provider fetch is capped by a timeout', /AbortController/.test(vsrc) && /3500/.test(vsrc));
+      const appSrc3 = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      check('the 👥 chip renders in the toolbar when a count exists',
+        /visitors != null &&/.test(appSrc3) && /👥 \{formatVisitors\(visitors\)\}/.test(appSrc3));
+    }
+
     // ── ROI: the business view stays finite and honestly labeled ─────────────
     {
       const { roiFor } = await import(pathToFileURL(path.join(root, 'src/roi.js')).href);
