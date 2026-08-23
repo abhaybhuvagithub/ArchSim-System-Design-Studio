@@ -488,7 +488,7 @@ export default function App() {
   // ---- canvas interactions ----
   const onNodeDown = (e, n) => {
     e.stopPropagation()
-    setSel(n.id); setSelEdge(null)
+    setSel(n.id); setSelEdge(null); setTab('capacity')
     const p = toWorld(e.clientX, e.clientY)
     drag.current = { kind: 'node', id: n.id, dx: p.x - n.x, dy: p.y - n.y }
   }
@@ -1023,7 +1023,7 @@ export default function App() {
             </g>
           </svg>
 
-          {hoverNode && !selNode && (
+          {hoverNode && hoverNode.id !== sel && (
             <HoverCard n={hoverNode} sim={sim} simOn={simOn} cloud={cloud} cloudName={cloudInfo.name}
               diag={health.find(h => h.id === hoverNode.id) || null} />
           )}
