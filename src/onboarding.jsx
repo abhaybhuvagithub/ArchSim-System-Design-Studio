@@ -34,7 +34,7 @@ const CLOUDS_PICK = [
 export function Onboarding({ onApply, onTour, onNoTour, onClose }) {
   const [step, setStep] = useState(0)
   const [start, setStart] = useState('rag')
-  const [traffic, setTraffic] = useState('steady')
+  const [traffic, setTraffic] = useState('viral')   // default: 1M rps
   const [cloudPick, setCloudPick] = useState('generic')
 
   const finish = (tour) => {

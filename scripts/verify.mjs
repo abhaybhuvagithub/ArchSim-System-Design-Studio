@@ -1967,6 +1967,8 @@ try {
     // (hard refresh included), not once-ever. Skip only closes the session.
     check('the wizard opens on every page load, not once-ever',
       /const \[onboard, setOnboard\] = useState\(true\)/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
+    check('the traffic step defaults to 1M rps (viral)',
+      /useState\('viral'\)/.test(fs.readFileSync(path.join(root, 'src/onboarding.jsx'), 'utf8')));
   }
   // Everything downstream assumes a mounted app. Without this, a bad bundle
   // produces a cascade of "cannot read properties of undefined" that says
