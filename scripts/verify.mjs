@@ -3142,6 +3142,25 @@ try {
       })());
     }
 
+    // ── chaos hints: every kill names the node and the fix ───────────────────
+    {
+      const { fixSummary, FAULTS: FL } = await import(pathToFileURL(path.join(root, 'src/faults.js')).href);
+      const scaleF = FL.find(f => f.fix?.kind === 'scale');
+      const attachF = FL.find(f => f.fix?.kind === 'attach');
+      const insertF = FL.find(f => f.fix?.kind === 'insert');
+      check('a single-replica victim is called a SPOF with the replica fix',
+        /SPOF/.test(fixSummary(scaleF, { label: 'Orders DB', replicas: 1 })) && /raise replicas/.test(fixSummary(scaleF, { label: 'Orders DB', replicas: 1 })));
+      check('a multi-replica victim gets the survivors-absorb framing',
+        /survivors absorb/.test(fixSummary(scaleF, { label: 'API', replicas: 4 })) && /4 replicas/.test(fixSummary(scaleF, { label: 'API', replicas: 4 })));
+      check('attach and insert fixes name the component and point at Improve',
+        /attach a Backup/.test(fixSummary(attachF, { label: 'L' }, () => 'Backup')) && /in front of/.test(fixSummary(insertF, { label: 'D' }, () => 'Cache')) && /Improve/.test(fixSummary(insertF, { label: 'D' }, () => 'Cache')));
+      const appSrc4 = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      check('manual fault injection carries the fix in its notification',
+        /fixSummary\(f, target/.test(appSrc4) && /heals in \$\{f\.secs\}s\$\{fix/.test(appSrc4));
+      check('random Chaos-ON kills notify with the node and its fix',
+        /Chaos killed \$\{victim\.label\}/.test(appSrc4) && /its only replica/.test(appSrc4) && /survivors absorb it/.test(appSrc4));
+    }
+
     // ── the visitor counter: real number or no number ────────────────────────
     // countapi.xyz died once and hid the chip for months; the contract now is
     // two independent providers, first finite answer wins, and total failure
