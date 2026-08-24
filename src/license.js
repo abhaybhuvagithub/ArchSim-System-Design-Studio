@@ -78,7 +78,7 @@ export function makeKey(plan, now = new Date()) {
 // Keys that leaked publicly get listed here and die on the next deploy —
 // the no-backend answer to a shared key. Add the full key string, redeploy.
 export const REVOKED_KEYS = new Set([
-  // 'AS1-L-FOREVER-XXXX-XXXXXX',
+  'AS1-L-FOREVER-AKPH-1RE9I1',   // leaked in a public commit 2026-08-24 — rotated
 ])
 
 export function validateKey(raw, now = new Date(), revoked = REVOKED_KEYS) {

@@ -3142,6 +3142,27 @@ try {
       })());
     }
 
+    // ── secret tripwire: a public repo must never track credentials ──────────
+    // launch/private happened once: a passphrase and a license key committed
+    // to a world-readable repo. This scan fails the build if it recurs.
+    {
+      const { execFileSync: ex2 } = await import('node:child_process');
+      const tracked = ex2('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
+      check('no tracked path looks like a private-notes file',
+        !tracked.some(p => /private/i.test(p)));
+      const keyRe = /AS1-[MHYL]-(FOREVER|\d{8})-[A-Z0-9]{4}-[A-Z0-9]{6}/;
+      const allowed = new Set(['scripts/verify.mjs', 'src/license.js']);   // the suite's invalid fixture; the revocation list must name dead keys
+      const leaks = tracked.filter(p => {
+        if (allowed.has(p) || p.endsWith('.png')) return false;
+        let t; try { t = fs.readFileSync(path.join(root, p), 'utf8') } catch { return false }
+        return keyRe.test(t) || /Passphrase:\s/.test(t);
+      });
+      check('no tracked file contains a license key or a passphrase' + (leaks.length ? ' — ' + leaks.join(', ') : ''), leaks.length === 0);
+      check('the leaked key is revoked in-app', (() => {
+        return fs.readFileSync(path.join(root, 'src/license.js'), 'utf8').includes("'AS1-L-FOREVER-AKPH-1RE9I1'");
+      })());
+    }
+
     // ── chaos hints: every kill names the node and the fix ───────────────────
     {
       const { fixSummary, FAULTS: FL } = await import(pathToFileURL(path.join(root, 'src/faults.js')).href);
