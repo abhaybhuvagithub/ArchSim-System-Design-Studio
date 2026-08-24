@@ -13,6 +13,12 @@
 
 export const LICENSE_STORE = 'archsim.license.v1'
 
+// ── master switch ──────────────────────────────────────────────────────────
+// false = open access: no locks, no ⭐ Pro button, every design free. All the
+// paywall machinery (keys, tiers, revocation, ledger) stays intact and
+// tested underneath — re-arming is flipping this one line to true.
+export const PRO_ENABLED = false
+
 // ── pricing (single source of truth for the pricing modal) ─────────────────
 export const PRICES = {
   monthly: { label: '1 Month', inr: 999, note: 'per month', keyPlan: 'M' },

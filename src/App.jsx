@@ -41,7 +41,7 @@ import { generateCode, CODE_VIEWS } from './codegen.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 import { Onboarding } from './onboarding.jsx'
-import { PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink, attemptState, recordMiss, clearMisses } from './license.js'
+import { PRO_ENABLED, PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink, attemptState, recordMiss, clearMisses } from './license.js'
 import { roiFor } from './roi.js'
 import { initAnalytics } from './analytics.js'
 
@@ -607,7 +607,7 @@ export default function App() {
       return
     }
     const t = TEMPLATES[+idx]
-    if (t && !isTemplateFree(t.name) && !license) {
+    if (PRO_ENABLED && t && !isTemplateFree(t.name) && !license) {
       setPricing({ want: t })
       notify(`🔒 ${t.name} is a Pro design — the free set stays fully open`, 'info')
       return
@@ -826,7 +826,7 @@ export default function App() {
             <button className={`btn ${drawer === 'right' ? 'active' : ''}`} onClick={() => setDrawer(d => d === 'right' ? null : 'right')}>▤</button>
           </>
         )}
-        <TemplatePicker onPick={loadTemplate} pro={!!license} />
+        <TemplatePicker onPick={loadTemplate} pro={PRO_ENABLED ? !!license : true} />
         <button className={`btn ${simOn ? 'active' : ''}`} data-tour="simulate" onClick={() => setSimOn(s => !s)}>{simOn ? '⏸ Stop' : '▶ Simulate'}</button>
         <button className={`btn ${chaosOn ? 'danger' : ''}`} data-tour="chaos" onClick={() => { setChaosOn(c => !c); setChaosUsed(true) }} title="Randomly kills nodes while simulating; they auto-recover in 6s">Chaos {chaosOn ? 'ON' : 'off'}</button>
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} data-tour="improve" onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
@@ -902,9 +902,9 @@ export default function App() {
 
         <button className="btn" data-tour="help" onClick={() => setTourAt(0)}
           title="Replay the guided walkthrough of the app">? Guide</button>
-        <button className={`btn ${license ? 'pro-on' : 'pro-cta'}`} onClick={() => setPricing({})}
+        {PRO_ENABLED && <button className={`btn ${license ? 'pro-on' : 'pro-cta'}`} onClick={() => setPricing({})}
           title={license ? `ArchSim Pro active (${license.plan}${license.lifetime ? ' — lifetime' : ' until ' + license.expires})` : 'Unlock all 89 designs with every breakdown and scaling playbook'}>
-          {license ? 'PRO ✓' : '⭐ Pro'}</button>
+          {license ? 'PRO ✓' : '⭐ Pro'}</button>}
       </header>
 
       <Tour at={tourAt} setAt={setTourAt} setTab={setTab} loadTemplate={loadTemplate} ready={!onboard} />

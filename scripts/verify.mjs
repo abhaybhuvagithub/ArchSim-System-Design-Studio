@@ -1983,6 +1983,24 @@ try {
   // every downstream section test the product as a Pro user sees it.
   {
     const L2 = await import(pathToFileURL(path.join(root, 'src/license.js')).href);
+    if (!L2.PRO_ENABLED) {
+      // ── open access mode: the paywall is hidden, and that is proven too ────
+      check('no Pro button appears in the toolbar while the switch is off',
+        !doc.querySelector('.pro-cta') && !doc.querySelector('.pro-on'));
+      const selN = [...doc.querySelectorAll('select')].find((x) => [...x.options].some((o) => o.textContent.includes('Discord')));
+      check('the picker lists every design without a single lock',
+        !![...selN.options].length && ![...selN.options].some((o) => o.textContent.includes('🔒')));
+      const proOpt = [...selN.options].find((o) => o.textContent.includes('Discord'));
+      selN.value = proOpt.value;
+      selN.dispatchEvent(new win.Event('change', { bubbles: true }));
+      await wait(250);
+      check('a formerly-Pro design loads directly, no dialog, no license',
+        /Discord/.test(doc.querySelector('.tpl-header')?.textContent || '') && !doc.querySelector('.pricing'));
+      selN.value = 'blank';
+      selN.dispatchEvent(new win.Event('change', { bubbles: true }));
+      await wait(200);
+      check('back to a blank canvas for the rest of the run', !doc.querySelector('.tpl-header'));
+    } else {
     const selN = [...doc.querySelectorAll('select')].find((x) => [...x.options].some((o) => o.textContent.includes('Discord')));
     check('the native picker lists Pro designs', !!selN);
     const proOpt = [...selN.options].find((o) => o.textContent.includes('Discord'));
@@ -2041,6 +2059,7 @@ try {
     await wait(200);
     check('back to a blank canvas for the rest of the run', !doc.querySelector('.tpl-header'));
   }
+    }
   // Everything downstream assumes a mounted app. Without this, a bad bundle
   // produces a cascade of "cannot read properties of undefined" that says
   // nothing about the actual cause.
@@ -3106,6 +3125,7 @@ try {
         const v = L.validateKey(L.makeKey('lifetime'));
         return v.ok && v.lifetime === true;
       })());
+      check('the paywall master switch is currently OFF — full open access', L.PRO_ENABLED === false);
       check('the UPI link carries id, amount and currency', (() => {
         const u = L.upiLink(7999, 'Lifetime');
         return u.startsWith('upi://pay?') && u.includes(encodeURIComponent('abhay.bhuva@okhdfcbank')) && u.includes('am=7999') && u.includes('cu=INR');
