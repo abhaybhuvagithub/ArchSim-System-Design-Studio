@@ -9,3 +9,6 @@ scripts/issued-keys.log
 
 # private business dashboard — never commit
 /admin-dashboard.html
+
+# never commit secrets — passphrases and keys live in a password manager
+*private*
