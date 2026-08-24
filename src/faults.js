@@ -269,3 +269,21 @@ export function compileFaults(active, nodes, edges) {
   }
   return { node, cut, rpsMul }
 }
+
+// One actionable line for a fault on a node: what to do, right now, on the
+// canvas. Derived from the fault's structured fix so hints can never drift
+// from what Improve actually applies.
+export function fixSummary(fault, node, catalogName = t => t) {
+  if (!fault) return ''
+  const label = node?.label || 'the target'
+  const r = Math.max(1, node?.replicas || 1)
+  const k = fault.fix?.kind
+  if (k === 'scale') {
+    return r === 1
+      ? `${label} runs a single replica — a SPOF. Fix: select it and raise replicas so losing one is absorbed.`
+      : `${label} has ${r} replicas; survivors absorb the hit. If p99 climbs, one more replica buys headroom.`
+  }
+  if (k === 'attach') return `Fix: attach a ${catalogName(fault.fix.type)} to ${label} — ✨ Improve has it as one click.`
+  if (k === 'insert') return `Fix: put a ${catalogName(fault.fix.type)} in front of ${label} — ✨ Improve has it as one click.`
+  return fault.hint || ''
+}

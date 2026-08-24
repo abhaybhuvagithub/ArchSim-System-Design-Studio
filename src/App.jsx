@@ -9,7 +9,7 @@ import { LESSON, COMPARISONS, QUIZ, NUMBERS, TIPS } from './learn.js'
 import { costReport, nodeCost, money, HOURS, rightSizePlan, scaleAll, rightSizeReplicas, CURRENCIES, setCurrency, readCurrency, saveCurrency, PRICED_AT, PRICE_BASIS, PRICE_SOURCES, VERIFIED, daysSincePriced, yearsSincePriced, priceEscalationMultiplier } from './pricing.js'
 import { autoArrange } from './layout.js'
 import { CLOUDS, CLOUD_MAP, cloudById, serviceName, readCloud, saveCloud } from './clouds.js'
-import { FAULTS, FAULT_GROUPS, faultById, faultOnNode, pickTarget, compileFaults } from './faults.js'
+import { FAULTS, FAULT_GROUPS, faultById, faultOnNode, pickTarget, compileFaults, fixSummary } from './faults.js'
 import { describeArchitecture } from './describe.js'
 import { countVisit, formatVisitors } from './visitors.js'
 import { ABOUT, ABOUT_COMPARE } from './about.js'
@@ -292,7 +292,8 @@ export default function App() {
       until: Date.now() + f.secs * 1000,
     }])
     if (target) setHover(target.id)
-    notify(`${f.icon} ${f.name} injected${target ? ` on ${target.label}` : ''} — heals in ${f.secs}s`, 'bad')
+    const fix = fixSummary(f, target, t => CATALOG[t]?.name || t)
+    notify(`${f.icon} ${f.name} injected${target ? ` on ${target.label}` : ''} — heals in ${f.secs}s${fix ? `. ${fix}` : ''}`, 'bad')
   }
   const clearFault = key => setFaults(fs => fs.filter(x => x.key !== key))
   const recoverAll = () => {
@@ -444,6 +445,10 @@ export default function App() {
         const candidates = nodes.filter(n => !CATALOG[n.type]?.source && !d[n.id])
         if (!candidates.length) return d
         const victim = candidates[Math.floor(Math.random() * candidates.length)]
+        const r = Math.max(1, victim.replicas || 1)
+        notify(r === 1
+          ? `💥 Chaos killed ${victim.label} — its only replica. Fix: select it and raise replicas; a SPOF turns every crash into an outage.`
+          : `💥 Chaos killed one of ${victim.label}'s ${r} replicas — survivors absorb it. Watch its bar in Capacity; if p99 climbs, add one more.`, 'bad')
         return { ...d, [victim.id]: Date.now() + 6000 }
       })
     }, 4000)
