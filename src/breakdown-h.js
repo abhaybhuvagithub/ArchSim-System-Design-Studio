@@ -616,4 +616,62 @@ export default {
   },
 },
 
+
+'Astrotalk': {
+  meta: 'India - consumer marketplace - medium - the product is a metered minute',
+  overview: 'Astrology consultations over chat and call, billed per minute against a prepaid wallet. The interesting engineering is that the billable unit is time on a live socket: the session broker must meter minutes exactly once while the connection wobbles, the wallet drains, and the astrologer\'s queue of waiting seekers grows.',
+  scope: 'Discovery and matching, presence and queues, the metered session with wallet billing, and kundli generation. Payments-in, live streaming events and the astrologer payout ledger are below the line.',
+  fr: {
+    core: ['Discover astrologers by skill, language, rating and price per minute', 'Show live availability and join a wait queue', 'Run chat/call sessions metered per minute against the wallet', 'Generate kundli (birth charts) from birth details'],
+    out: ['Wallet top-up rails', 'Live streaming sessions', 'Astrologer payouts and settlements'],
+  },
+  nfr: {
+    core: ['Billing ticks are exactly-once - a doubled minute is a refund and a review', 'Presence is honest: an offline astrologer never sells a session', 'A session survives a network blip without double-metering the gap', 'Kundli compute is deterministic and cached forever'],
+    out: ['Video quality engineering - the call rides a standard RTC provider'],
+  },
+  nums: [['per minute', 'the billable unit'], ['~Rs 20-50', 'a typical per-minute rate'], ['1 queue', 'per astrologer - the marketplace scarcity'], ['0', 'tolerable double-billed minutes']],
+  entities: [
+    ['Astrologer', 'profile, skills, rate per minute, live status and a queue'],
+    ['Session', 'one metered conversation: reserve -> tick -> settle'],
+    ['Wallet', 'prepaid ACID balance; every tick debits it'],
+    ['Kundli', 'a deterministic chart computed from birth data - cache key: the birth data itself'],
+  ],
+  apiIntro: 'REST for discovery and session control; the socket carries the conversation while billing ticks flow server-side.',
+  api: [
+    { dir: '->', name: 'GET /astrologers?skill=&lang=', body: '-> { list: [{ id, ratePerMin, status, queueLen }] }' },
+    { dir: '->', name: 'POST /sessions', body: '{ astrologerId }\n-> { sessionId, reservedMins } | 402 low balance | 409 queue joined' },
+    { dir: '<->', name: 'WS /sessions/{id}', body: 'chat frames + call signaling; server emits minute ticks and remaining balance' },
+  ],
+  dives: [
+    {
+      title: 'Metering a minute exactly once on a flaky socket', focus: ['sess', 'k', 'bw', 'wal'],
+      blocks: [
+        ['p', 'The broker owns the clock, never the client: session start reserves a few minutes of wallet balance, then a server-side timer emits one tick per elapsed minute onto the billing stream with (sessionId, minuteIndex) as the idempotency key. The biller debits each tick once; hangup settles - used minutes stay debited, the rest of the reserve releases.'],
+        ['bul', [
+          'A reconnect resumes the same session and the same minute counter - the gap was still consultation time, and the meter never depended on the socket.',
+          'Ticks are exactly-once by key, not by hope: replays collapse in the biller, and the wallet row is the only ACID surface.',
+          'Balance-exhausted mid-session is a product moment the state machine encodes: warn at two minutes, pause at zero, never overdraw.',
+        ]],
+        ['warn', 'Metering on the client clock, or on socket liveness, bills the network instead of the consultation. The server timer plus idempotent ticks is the entire trust model of the product.'],
+      ],
+    },
+    {
+      title: 'Presence and queues: selling scarcity honestly', focus: ['pres', 'disc'],
+      blocks: [
+        ['p', 'The marketplace sells access to a specific human, so the astrologer\'s live status and queue length are the inventory. Presence lives in a cache updated by heartbeats; a missed heartbeat flips status before a seeker can buy a session that cannot start.'],
+        ['bul', [
+          'Queues are per astrologer and position is visible - waiting is tolerable when it is honest, churn when it is not.',
+          'One session at a time per astrologer: session start atomically claims the astrologer or joins the queue, never both.',
+          'Discovery ranks by a blend of rating, response rate and availability - an online mediocre astrologer outranks an offline great one right now, by design.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Discovery, a session flow with wallet debits, chat over a socket.',
+    senior: 'Server-owned metering with reserve-then-settle, idempotent minute ticks, heartbeat-honest presence with atomic claim-or-queue.',
+    staff: 'Design the disconnect and balance-exhaustion state machine end to end, the refund and dispute path off the tick log, and queue fairness for celebrity astrologers.',
+  },
+},
+
 }

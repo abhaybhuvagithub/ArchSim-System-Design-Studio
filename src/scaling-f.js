@@ -188,4 +188,22 @@ export default {
   wall: { t: 'The isolation floor', d: 'One hostile job, one fresh VM, destroyed after - seconds of boot-and-teardown and a full OS of overhead per job that no pooling amortizes away, because reuse is the vulnerability. Efficiency work shaves the floor; only weakening the security model removes it, which is to say: it stays.' },
 },
 
+
+'Astrotalk': {
+  constraint: 'Revenue is minutes on live sockets, and every minute must bill exactly once - the system scales sessions, but the astrologers themselves are scarce humans whose queues are the product.',
+  ladder: [
+    ['100K users', '~100 rps', 'Sessions on one broker, wallet in Postgres, presence polled. Fine.'],
+    ['5M users', '~1K rps', 'Metering moves to server ticks on a stream with idempotent billing; presence goes heartbeat-driven in cache; kundli results cache by birth data.'],
+    ['50M users', '~6K rps', 'Session brokers shard by astrologer (one claim point each); wallets shard by user; the socket tier scales on connections while ticks stay tiny.'],
+    ['150M users', '~20K rps', 'Festival-day surges (eclipse, Diwali muhurat) are calendar-known - pre-scale brokers and billers; celebrity queues get fairness policies and price as the throttle.'],
+  ],
+  levers: [
+    { t: 'Own the clock server-side, tick idempotently', d: 'One (sessionId, minuteIndex) tick per elapsed minute, deduped in the biller. Sockets can flap all they like - the meter and the money never notice.', n: ['sess', 'k', 'bw'] },
+    { t: 'Reserve-then-settle against the wallet', d: 'Block a few minutes at start, debit per tick, release at hangup. The ACID surface stays one row per user while thousands of sessions run concurrently.', n: ['wal', 'sess'] },
+    { t: 'Shard sessions by astrologer', d: 'Each astrologer is a single-consultation resource with a queue - making them the shard key gives every claim exactly one home and no cross-shard races.', n: ['sess', 'pres'] },
+    { t: 'Cache kundli forever', d: 'Same birth data, same chart, every time. Deterministic compute means the engine mostly serves cache hits and the ephemeris tables load once.', n: ['kun', 'eph'] },
+  ],
+  wall: { t: 'The astrologers are human', d: 'Software scales sessions; it cannot scale the supply of trusted astrologers or the minutes in their day. Past matching efficiency and queue fairness, growth is recruiting and retaining the humans - marketplace operations, not architecture - and peak demand on a festival day meets a hard ceiling of available consultation hours.' },
+},
+
 }

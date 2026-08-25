@@ -1793,4 +1793,19 @@ export const TEMPLATES = [
     'Caching (dependencies, layers) is what makes CI affordable; scoping it per repo is what makes it safe',
     'Fairness: per-org concurrency limits keep one monorepo from starving the fleet',
   ], 'Interview classics'),
+T('Astrotalk', 'Consultation marketplace: per-minute billing on a live socket', 5000, [
+    ['u', 'client', 'Seekers', 40, 240], ['cdn', 'cdn', 'CDN', 160, 240],
+    ['lb', 'lb', 'LB', 280, 240], ['gw', 'gateway', 'API GW', 400, 240, 3],
+    ['disc', 'app', 'Discovery / Match', 540, 120, 4], ['adb', 'nosql', 'Astrologer Profiles', 700, 120, 3],
+    ['pres', 'cache', 'Presence + Queues', 700, 220, 3], ['sess', 'app', 'Session Broker', 540, 300, 4],
+    ['wal', 'sql', 'Wallet ACID', 700, 300, 2], ['chat', 'ws', 'Chat / Call WS', 540, 420, 6],
+    ['k', 'kafka', 'Billing Ticks', 700, 400], ['bw', 'worker', 'Minute Biller', 820, 400, 3],
+    ['kun', 'micro', 'Kundli Engine', 400, 420, 3], ['eph', 'blob', 'Ephemeris Data', 280, 460],
+  ], [['u','cdn'],['cdn','lb'],['lb','gw'],['gw','disc'],['disc','adb'],['disc','pres'],['gw','sess'],['sess','pres'],['sess','wal'],['sess','k'],['k','bw'],['bw','wal'],['gw','chat'],['gw','kun'],['kun','eph']], [
+    'The product is a metered minute: a live session ticks billing events while the socket stays up',
+    'Wallet reserve-then-settle: block a few minutes of balance at session start, debit per tick, release the rest at hangup',
+    'Astrologer presence and wait-queues are the marketplace - a stale "online" flag sells a session that cannot start',
+    'Billing ticks are exactly-once: a doubled minute is a refund storm and a one-star review',
+    'Kundli computation is deterministic from birth data - compute once, cache forever',
+  ], 'Unicorns · India'),
 ]
