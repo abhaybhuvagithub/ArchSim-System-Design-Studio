@@ -43,6 +43,9 @@ const AUTHORED = {
   'Ad Click Aggregator': { revPerM: 50000, model: 'platform take', basis: 'The counted clicks ARE the billing: platform margin on ad spend per thousand clicks dwarfs infra by orders of magnitude.' },
   'FB Live Comments': { revPerM: 5, model: 'engagement', basis: 'Comments monetize indirectly through watch time and gifting slices.' },
   'Price Tracker': { revPerM: 800, model: 'affiliate', basis: '~4% affiliate commission when an alert converts; one purchase per ~5k tracked-price requests.' },
+  'Object Storage (S3)': { revPerM: 25, model: 'usage-metered storage', basis: 'GET requests bill ~$0.40 per million - near-free by design. The business is the storage annuity (GB-months) that request traffic advertises; the request path is a loss-leader for data gravity.' },
+  'Serverless Platform (Lambda)': { revPerM: 8, model: 'per-ms compute', basis: '$0.20 per million requests plus GB-seconds lands near $8 per million typical invokes. Margin is warm-pool prediction: an idle sandbox is pure cost, a cold start is a refund risk.' },
+  'CDN (Edge Network)': { revPerM: 4, model: 'per-GB egress', basis: 'Small objects at cents per GB make ~$4 per million requests; flat-rate plans push it lower. The real economics: every point of hit ratio is origin egress the customer stops buying - retention sells the ratio, not the requests.' },
   'URL Shortener (Bitly)': { revPerM: 100, model: 'SaaS plans', basis: 'Paid plans sell analytics and custom domains; redirects themselves are a loss-leader served from cache.' },
 }
 

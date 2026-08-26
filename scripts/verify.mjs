@@ -2679,8 +2679,12 @@ try {
       typeInto(qi()[2], '1'); await wait(150);
       check('a broken quorum is called out as bad in the inspector',
         !!doc.querySelector('.ddia-verdict.bad'));
-      typeInto(qi()[1], '2'); await wait(80);
-      typeInto(qi()[2], '2'); await wait(150);
+      // Fix the quorum relative to the node's actual replica count — the
+      // loaded template is whatever the sweep ended on, so n is not ours to
+      // assume (a 10-replica cache once broke a hardcoded w=2,r=2 here).
+      const nReps = parseInt(qi()[0].value, 10) || 3;
+      typeInto(qi()[1], String(nReps)); await wait(80);
+      typeInto(qi()[2], String(nReps)); await wait(150);
       check('fixing the quorum clears the warning',
         !!doc.querySelector('.ddia-verdict.good') && !doc.querySelector('.ddia-verdict.bad'));
       repSel.value = 'leader';
