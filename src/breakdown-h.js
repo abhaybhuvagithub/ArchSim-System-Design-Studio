@@ -1,62 +1,6 @@
 // Authored breakdowns, part 8 — the interview classics. Shape documented in breakdown.js.
 export default {
 
-'Tinder': {
-  meta: 'consumer - medium - the deck is precomputed, the match is a race',
-  overview: 'Swipe-based matching. The read side is a deck of candidates that must feel instant and local; the write side is a firehose of swipes that only matter when two of them agree. The interesting engineering is that a match is a race between two people\'s writes.',
-  scope: 'The recommendation deck, swipe ingestion, match detection and the match moment. Messaging after the match, payments and trust/safety review queues are below the line.',
-  fr: {
-    core: ['Serve a deck of nearby candidates matching preferences', 'Record swipes (like/pass) at high volume', 'Detect a mutual like and create a match', 'Notify both people within a second of the match'],
-    out: ['Chat after matching', 'Boosts and payments', 'Manual review tooling'],
-  },
-  nfr: {
-    core: ['Deck loads feel instant - candidates are precomputed, not queried live', 'Swipe writes are cheap and lossy-tolerant until they become a match', 'Match creation is exactly-once even when both swipes land in the same millisecond', 'Geo sharding keeps a city\'s traffic in its shard'],
-    out: ['Global consistency of the deck - staleness of minutes is invisible'],
-  },
-  nums: [['~2B', 'swipes a day at full scale'], ['~1%', 'of swipes become matches'], ['<1s', 'from mutual like to both phones buzzing'], ['minutes', 'of acceptable deck staleness']],
-  entities: [
-    ['Profile', 'photos, bio, preferences - the thing being swiped on'],
-    ['Deck', 'an ordered batch of candidate profiles, precomputed per user'],
-    ['Swipe', 'one directed judgement: (from, to, like|pass, ts)'],
-    ['Match', 'the mutual pair - transactional, pushed to both sides'],
-  ],
-  apiIntro: 'REST for decks and swipes. The swipe response is where the match surprise arrives.',
-  api: [
-    { dir: '->', name: 'GET /deck', body: '-> { candidates[] } - precomputed, geo-filtered, ranked' },
-    { dir: '->', name: 'POST /swipe', body: '{ targetId, dir }\n-> { matched: false } | { matched: true, matchId }' },
-  ],
-  dives: [
-    {
-      title: 'Match detection as a race two writers can win once', focus: ['sw', 'scache', 'mw'],
-      blocks: [
-        ['p', 'When A likes B, the system asks one question: did B already like A? The swipe cache answers it in one read. If yes, create the match - but B\'s like may be landing on another node at the same instant, and both sides discovering mutuality must still produce exactly one match.'],
-        ['bul', [
-          'The match insert is idempotent on the ordered pair (min(A,B), max(A,B)) - two racing creators collapse to one row.',
-          'Swipes stream to durable storage async; the cache is the hot mutual-check path.',
-          'A lost pass is invisible; a lost like costs one potential match - tolerable. A doubled match is a product bug everyone screenshots.',
-        ]],
-      ],
-    },
-    {
-      title: 'The deck: recommendation as a batch product', focus: ['rec', 'geo'],
-      blocks: [
-        ['p', 'Nothing about the deck is computed at request time. Geo shards hold candidates by cell; a ranking pass orders them by preference fit and activity; the deck endpoint pages through a precomputed list and filters already-swiped ids.'],
-        ['bul', [
-          'Geo sharding follows population, not geometry - Mumbai is many shards, Ladakh is a corner of one.',
-          'Already-swiped filtering is a bloom-filter check per candidate, not a join.',
-          'Deck exhaustion is a real state: widening radius and relaxing filters is a product policy the API must express.',
-        ]],
-        ['note', 'Staleness is fine; emptiness is not. A slightly old deck beats a spinner every time.'],
-      ],
-    },
-  ],
-  bar: {
-    mid: 'A profile store, a swipe endpoint, mutual-like check, push on match.',
-    senior: 'Precomputed geo decks, cache-first mutual detection, idempotent match creation under racing writes.',
-    staff: 'Design the shard-per-city capacity model, the already-swiped filter at billions of pairs, and the failure story for a lost like vs a doubled match.',
-  },
-},
-
 'LeetCode (Online Judge)': {
   meta: 'devtools - medium - hostile code, fair verdicts, spiky contests',
   overview: 'An online judge: strangers submit code, the platform runs it against hidden tests and returns a verdict - and during a contest, a hundred thousand people do this in the same minute. Two hard problems share the design: executing untrusted code safely, and making verdicts fair enough to rank careers on.',

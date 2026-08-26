@@ -1,23 +1,6 @@
 // Scaling playbooks, part 6 — the interview classics. Shape documented in scaling.js.
 export default {
 
-'Tinder': {
-  constraint: 'A match is a race between two writes that must produce exactly one result, inside a product where the whole write volume exists to make that moment happen.',
-  ladder: [
-    ['100K users', '~100 rps', 'One region, decks queried live, swipes in Postgres. Fine.'],
-    ['10M users', '~2K rps', 'Decks precompute per user; swipes go cache-first with async persistence; matches become idempotent pair-keyed inserts.'],
-    ['100M users', '~10K rps', 'Geo shards by city cell; the already-swiped filter becomes bloom-backed; match pushes ride a stream.'],
-    ['500M users', '~40K rps', 'Dense cities get dedicated shard groups; deck generation is a continuous batch product; cross-region roaming resolves to a home shard.'],
-  ],
-  levers: [
-    { t: 'Precompute the deck, always', d: 'Candidate generation at request time dies first at scale. Decks build offline from geo shards and rank models; the API pages a list.', n: ['rec', 'geo'] },
-    { t: 'Make match creation idempotent by pair', d: 'Key the match row on the ordered pair so two racing mutual-detections collapse to one insert. Correctness lives in the key, not in locking.', n: ['mw', 'mdb'] },
-    { t: 'Treat swipes as cache-first, storage-later', d: 'The mutual check needs the cache now; the archive needs the swipe eventually. Splitting those consistencies is what makes the write volume affordable.', n: ['sw', 'scache', 'k'] },
-    { t: 'Shard by geography because dating is local', d: 'A user swipes within a radius. City-cell shards keep the working set local and make capacity a per-city question - which is also how the business thinks.', n: ['geo'] },
-  ],
-  wall: { t: 'Density', d: 'The biggest cities concentrate users into shards that cannot split along geography anymore - everyone in the same square kilometers swiping the same pool. Past that, scaling is ranking-model efficiency and per-shard hardware, and the pool itself becomes the product constraint: there are only so many candidates nearby.' },
-},
-
 'LeetCode (Online Judge)': {
   constraint: 'Verdicts must be fair - identical limits on identical hardware - which forbids the elastic tricks every other queue-based system reaches for under a contest spike.',
   ladder: [

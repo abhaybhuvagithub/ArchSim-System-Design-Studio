@@ -156,7 +156,7 @@ export function offlineAnswer(question, { nodes = [], edges = [], sim, cost, sug
     'cap theorem': 'Under a network partition, a distributed store chooses: refuse some requests (consistency) or serve possibly-stale data (availability). Not a menu of three — partitions happen, so you are picking C or A for partition time.',
     'idempoten': 'An operation safe to apply twice: retries collapse to one effect. Achieved with client-supplied keys the server dedupes on. Every money write and every queue consumer in this studio leans on it.',
     'cache-aside': 'The app reads the cache, misses to the store, writes the result back with a TTL. Simple and everywhere — its sharp edges are stampedes on hot-key expiry (fix: jittered TTLs, request coalescing).',
-    'sharding': 'Splitting one dataset across machines by a key. The key choice is the whole game: it decides your hot spots (Discord shards by guild, Tinder by geography) and what queries stay single-shard.',
+    'sharding': 'Splitting one dataset across machines by a key. The key choice is the whole game: it decides your hot spots (Discord shards by guild, Uber by city geography) and what queries stay single-shard.',
     'backpressure': 'Slowing the producer when the consumer falls behind, instead of buffering to death. Queues make it visible; the alternative is unbounded memory and a worse crash later.',
     'exactly-once': 'The delivery guarantee that is really at-least-once plus idempotent processing plus transactional sinks. See the Ad Click Aggregator template — there it is the bill.',
     'fan-out': 'One event, many recipients. On write (precompute feeds) or on read (query time) — the trade is storage vs latency, and celebrities break whichever you pick first.',
