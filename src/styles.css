@@ -1751,3 +1751,14 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .prr-row.no .prr-mark { color: #ff6b6b; }
 .roi-s { font-size: 12px; }
 .slo-note { font-size: 12px; margin-top: 12px; }
+
+/* ── Acronyms tab ──────────────────────────────────────────────────────── */
+.acr-bar { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.acr-q { flex: 1; max-width: 420px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: inherit; }
+.acr-n { font-size: 12px; white-space: nowrap; }
+.acr-cats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.acr-list { display: flex; flex-direction: column; gap: 8px; }
+.acr-row { display: grid; grid-template-columns: 84px 1fr; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 12.5px; line-height: 1.5; }
+.acr-a { font-weight: 800; font-size: 13px; }
+.acr-d { opacity: .92; }
+.acr-c { font-size: 12px; margin-left: 6px; }

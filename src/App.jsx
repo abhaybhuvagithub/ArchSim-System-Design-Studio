@@ -44,6 +44,7 @@ import { Onboarding } from './onboarding.jsx'
 import { PRO_ENABLED, PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink, attemptState, recordMiss, clearMisses } from './license.js'
 import { roiFor } from './roi.js'
 import { sloReport, SLO_TARGETS } from './slo.js'
+import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -1164,6 +1165,7 @@ export default function App() {
               ['assist', 'Ask AI', null, 'Ask the assistant about this design — bottlenecks, cost, failures, scaling'],
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
               ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
+              ['acr', 'Acronyms', null, 'Every acronym in the studio, expanded - searchable'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1209,6 +1211,8 @@ export default function App() {
             <ROITab template={template} cost={cost} rps={rps} simOn={simOn} sim={sim} nodes={nodes} />
           ) : tab === 'slo' ? (
             <SLOTab nodes={nodes} edges={edges} sim={sim} simOn={simOn} />
+          ) : tab === 'acr' ? (
+            <AcronymsTab />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
           ) : tab === 'hld' ? (
@@ -1442,6 +1446,44 @@ function About() {
         </div>
       </div>
       </ReadAloud>
+    </section>
+  )
+}
+
+// The acronym glossary: every abbreviation the studio uses, expanded once,
+// with instant search and category filters. Reference, not prose - so no
+// read-aloud here.
+function AcronymsTab() {
+  const [q, setQ] = useState('')
+  const [cat, setCat] = useState('')
+  const needle = q.trim().toLowerCase()
+  const hits = ACRONYMS.filter(x =>
+    (!cat || x.c === cat) &&
+    (!needle || x.a.toLowerCase().includes(needle) || x.f.toLowerCase().includes(needle) || x.d.toLowerCase().includes(needle))
+  ).sort((a, b) => a.a.localeCompare(b.a))
+  return (
+    <section className="acr">
+      <h3>🔤 Acronyms</h3>
+      <div className="acr-bar">
+        <input className="acr-q" value={q} onChange={e => setQ(e.target.value)}
+          placeholder="Search 94 acronyms - try CQRS, burn, vector…" aria-label="Search acronyms" />
+        <span className="muted acr-n">{hits.length} of {ACRONYMS.length}</span>
+      </div>
+      <div className="acr-cats">
+        <button className={`btn ${cat === '' ? 'active' : ''}`} onClick={() => setCat('')}>All</button>
+        {Object.entries(ACRONYM_CATS).map(([k, v]) => (
+          <button key={k} className={`btn ${cat === k ? 'active' : ''}`} onClick={() => setCat(cat === k ? '' : k)}>{v}</button>
+        ))}
+      </div>
+      <div className="acr-list">
+        {hits.map(x => (
+          <div key={x.a} className="acr-row">
+            <div className="acr-a">{x.a}</div>
+            <div><b>{x.f}.</b> <span className="acr-d">{x.d}</span> <span className="acr-c muted">{ACRONYM_CATS[x.c]}</span></div>
+          </div>
+        ))}
+        {hits.length === 0 && <p className="muted">Nothing matches "{q}" - the Ask AI tab can explain terms beyond this list.</p>}
+      </div>
     </section>
   )
 }
