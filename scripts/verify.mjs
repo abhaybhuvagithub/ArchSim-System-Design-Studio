@@ -3391,10 +3391,38 @@ try {
         const es = JSON.stringify(f.edges);
         return f.nodes.some(n => n.type === 'lb') && es.includes('["u","lb-fix"]') && es.includes('["lb-fix","a"]') && !es.includes('["u","a"]');
       })());
-      check('the tail quick fix sizes saturated nodes toward 70% utilization', (() => {
+      check('the tail quick fix converges: sizes until its own gate passes', (() => {
         const ns = [{ id: 'a', type: 'app', label: 'API', replicas: 2, x: 1, y: 1 }];
-        const f = sloQuickFix('tail', ns, [], { stats: { a: { in: 5000, util: 1.4 } } });
-        return f && f.nodes[0].replicas >= 4 && /queueing delay/.test(f.note);
+        const resimStub = () => ({ p99: 120, successRate: 1, stats: { a: { in: 5000, util: 0.6 } } });
+        const f = sloQuickFix('tail', ns, [], { p99: 9000, successRate: 0.9, stats: { a: { in: 5000, util: 1.4 } } }, 0.999, resimStub);
+        return f && f.nodes[0].replicas >= 4 && /queueing delay/.test(f.note) && /gate cleared/.test(f.note);
+      })());
+      // The one-click guarantee, end to end on the real simulator: an
+      // overdriven real template must go green in a single fix call — the
+      // multi-click regression this replaced sized to throttled inflow and
+      // chased the bottleneck one tier per click.
+      check('one click clears tail AND burn on an overdriven real template', await (async () => {
+        const { simulate: simX } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const TX = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
+        const t = TX.find(x => x.name === 'Chat (WhatsApp)');
+        const rps = t.rps * 8;
+        const resim = (ns) => simX(ns, t.edges, rps, new Set());
+        const s0 = resim(t.nodes);
+        if (s0.p99 < 2000 && s0.successRate > 0.999) return false;   // overdrive must actually hurt
+        const tf = sloQuickFix('tail', t.nodes, t.edges, s0, 0.999, resim);
+        const bf = sloQuickFix('burn', t.nodes, t.edges, s0, 0.999, resim);
+        return resim(tf.nodes).p99 < 2000 && (1 - resim(bf.nodes).successRate) / 0.001 <= 1;
+      })());
+      check('when replicas cannot help, the fix says chain depth honestly instead of looping', await (async () => {
+        const { simulate: simX } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const TX = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
+        const t = TX.find(x => x.name === 'Zomato');
+        const rps = t.rps * 10;
+        const resim = (ns) => simX(ns, t.edges, rps, new Set());
+        const f = sloQuickFix('tail', t.nodes, t.edges, resim(t.nodes), 0.999, resim);
+        const after = resim(f.nodes);
+        const residualHot = Object.values(after.stats).some(st => st.util > 0.85);
+        return after.p99 >= 2000 ? (!residualHot && /chain depth/.test(f.note)) : true;
       })());
       check('the structural quick fix raises replicas until the target clears', (() => {
         const ns = [{ id: 'g', type: 'gateway', label: 'GW', replicas: 1, x: 1, y: 1 }, { id: 'a', type: 'app', label: 'API', replicas: 1, x: 1, y: 1 }];
