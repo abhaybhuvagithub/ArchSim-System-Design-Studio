@@ -2187,6 +2187,23 @@ try {
       await wait(150);
       const after = slo().textContent.match(/([\d.]+) min/)?.[1];
       check('tightening the target shrinks the budget live', before === '43.2' && after === '4.3');
+      // ── the acronym glossary, driven ───────────────────────────────────────
+      await goTab('Acronyms');
+      const acr = () => doc.querySelector('.acr');
+      check('the glossary renders all entries with a live count',
+        acr().querySelectorAll('.acr-row').length >= 80 && /of 9\d/.test(acr().textContent));
+      typeInto(acr().querySelector('.acr-q'), 'cqrs');
+      await wait(150);
+      check('search is instant and case-insensitive',
+        acr().querySelectorAll('.acr-row').length === 1 && /Command Query Responsibility Segregation/.test(acr().textContent));
+      typeInto(acr().querySelector('.acr-q'), '');
+      await wait(120);
+      click([...acr().querySelectorAll('.acr-cats .btn')].find(b => b.textContent === 'Security & Identity'));
+      await wait(150);
+      check('a category chip narrows to its family',
+        acr().querySelectorAll('.acr-row').length >= 10 && [...acr().querySelectorAll('.acr-c')].every(el => el.textContent === 'Security & Identity'));
+      click([...acr().querySelectorAll('.acr-cats .btn')].find(b => b.textContent === 'All'));
+      await wait(120);
       await goTab('ROI');
       // executive framing: one sentence for the board, P&L for the CFO, risk for the CTO
       check('the board gets one plain-English sentence', /For the board:/.test(roi().textContent));
@@ -2302,7 +2319,7 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all seventeen tabs are tabs', tabBtns.length === 17);
+    check('all eighteen tabs are tabs', tabBtns.length === 18);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',
@@ -3341,6 +3358,21 @@ try {
         const r = sloReport(n2, [], mk(1, 0.995), 0.9999);
         return r.ready === false && r.prr.some(x => /cannot reach/.test(x.d));
       })());
+    }
+
+    // ── the acronym glossary: complete, unique, honest ───────────────────────
+    {
+      const { ACRONYMS, ACRONYM_CATS } = await import(pathToFileURL(path.join(root, 'src/acronyms.js')).href);
+      check('the glossary carries at least eighty acronyms', ACRONYMS.length >= 80);
+      const seen = new Set(); let dups = 0;
+      for (const x of ACRONYMS) { if (seen.has(x.a)) dups++; seen.add(x.a); }
+      check('every acronym appears exactly once', dups === 0);
+      const bad = ACRONYMS.filter(x => !x.a || !x.f || !x.d || x.d.length < 25 || !ACRONYM_CATS[x.c]);
+      check('every entry has an expansion, a real one-liner and a valid category' + (bad.length ? ' — ' + bad.map(x => x.a).slice(0, 4).join(', ') : ''), bad.length === 0);
+      const src2 = fs.readFileSync(path.join(root, 'src/acronyms.js'), 'utf8');
+      check('glossary text is straight-ASCII quoted', !/[\u2018\u2019\u201C\u201D]/.test(src2));
+      check('the studio staples are all present',
+        ['CAP', 'CQRS', 'SLO', 'SPOF', 'RAG', 'WAL', 'DLQ', 'MRR', 'P99'].every(a => seen.has(a)));
     }
 
     // ── traffic slider reaches internet scale and stays readable ─────────────
