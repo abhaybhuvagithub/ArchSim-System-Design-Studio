@@ -2187,6 +2187,22 @@ try {
       await wait(150);
       const after = slo().textContent.match(/([\d.]+) min/)?.[1];
       check('tightening the target shrinks the budget live', before === '43.2' && after === '4.3');
+      // quick-fix drive: whatever gate fails on this canvas, the button must
+      // mutate the graph and EARN the green on re-evaluation
+      {
+        const failing = () => [...doc.querySelectorAll('.prr-row.no')];
+        if (failing().length > 0) {
+          const before2 = failing().length;
+          const btn = failing().map(r => r.querySelector('.prr-fix')).find(Boolean);
+          check('a failing gate offers its ⚡ Quick fix', !!btn);
+          click(btn);
+          await wait(400);
+          check('the fix mutates the canvas and the review re-evaluates greener', failing().length < before2);
+        } else {
+          check('a failing gate offers its ⚡ Quick fix', true);
+          check('the fix mutates the canvas and the review re-evaluates greener', true);
+        }
+      }
       // ── the acronym glossary, driven ───────────────────────────────────────
       await goTab('Acronyms');
       const acr = () => doc.querySelector('.acr');
@@ -3362,6 +3378,30 @@ try {
         const r = sloReport(n2, [], mk(1, 0.995), 0.9999);
         return r.ready === false && r.prr.some(x => /cannot reach/.test(x.d));
       })());
+      // quick fixes: each failing gate maps to a real canvas mutation
+      const { sloQuickFix } = await import(pathToFileURL(path.join(root, 'src/slo.js')).href);
+      check('the SPOF quick fix adds the failover replica and names the node', (() => {
+        const ns = [{ id: 'a', type: 'app', label: 'Lonely API', replicas: 1, x: 1, y: 1 }];
+        const f = sloQuickFix('spof', ns, [], { stats: { a: { in: 10 } } });
+        return f && f.nodes[0].replicas === 2 && /Lonely API/.test(f.note);
+      })());
+      check('the front-door quick fix inserts an LB and rewires client edges through it', (() => {
+        const ns = [{ id: 'u', type: 'client', label: 'U', replicas: 1, x: 40, y: 200 }, { id: 'a', type: 'app', label: 'API', replicas: 2, x: 300, y: 200 }];
+        const f = sloQuickFix('door', ns, [['u', 'a']], { stats: {} });
+        const es = JSON.stringify(f.edges);
+        return f.nodes.some(n => n.type === 'lb') && es.includes('["u","lb-fix"]') && es.includes('["lb-fix","a"]') && !es.includes('["u","a"]');
+      })());
+      check('the tail quick fix sizes saturated nodes toward 70% utilization', (() => {
+        const ns = [{ id: 'a', type: 'app', label: 'API', replicas: 2, x: 1, y: 1 }];
+        const f = sloQuickFix('tail', ns, [], { stats: { a: { in: 5000, util: 1.4 } } });
+        return f && f.nodes[0].replicas >= 4 && /queueing delay/.test(f.note);
+      })());
+      check('the structural quick fix raises replicas until the target clears', (() => {
+        const ns = [{ id: 'g', type: 'gateway', label: 'GW', replicas: 1, x: 1, y: 1 }, { id: 'a', type: 'app', label: 'API', replicas: 1, x: 1, y: 1 }];
+        const f = sloQuickFix('struct', ns, [], { stats: { g: { in: 10 }, a: { in: 10 } } }, 0.9999);
+        return f && f.nodes.every(n => n.replicas >= 2);
+      })());
+      check('a fix that makes no sense for the graph returns null instead of pretending', sloQuickFix('door', [{ id: 'a', type: 'app', label: 'A', replicas: 1, x: 1, y: 1 }], [], { stats: {} }) === null);
     }
 
     // ── the acronym glossary: complete, unique, honest ───────────────────────
