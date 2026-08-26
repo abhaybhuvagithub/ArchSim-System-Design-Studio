@@ -43,6 +43,7 @@ import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.
 import { Onboarding } from './onboarding.jsx'
 import { PRO_ENABLED, PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink, attemptState, recordMiss, clearMisses } from './license.js'
 import { roiFor } from './roi.js'
+import { sloReport, SLO_TARGETS } from './slo.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -1162,6 +1163,7 @@ export default function App() {
               ['code', 'Code', null, 'docker-compose, Terraform and OpenAPI generated live from the canvas'],
               ['assist', 'Ask AI', null, 'Ask the assistant about this design — bottlenecks, cost, failures, scaling'],
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
+              ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1205,6 +1207,8 @@ export default function App() {
               faults={faults} rps={rps} cloud={cloud} template={template} simOn={simOn} />
           ) : tab === 'roi' ? (
             <ROITab template={template} cost={cost} rps={rps} simOn={simOn} sim={sim} nodes={nodes} />
+          ) : tab === 'slo' ? (
+            <SLOTab nodes={nodes} edges={edges} sim={sim} simOn={simOn} />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
           ) : tab === 'hld' ? (
@@ -1438,6 +1442,49 @@ function About() {
         </div>
       </div>
       </ReadAloud>
+    </section>
+  )
+}
+
+// The SLO tab: pick a target, see the error budget it buys, watch the live
+// burn rate, and run the Production Readiness Review a Staff+ engineer would
+// run before green-lighting a launch.
+function SLOTab({ nodes, edges, sim, simOn }) {
+  const [target, setTarget] = useState(0.999)
+  if (!nodes.length) {
+    return <section className="slo"><h3>🎯 SLO & Error Budget</h3>
+      <p className="muted">Load a design — the SLO view reads its structure and live behavior.</p></section>
+  }
+  if (!simOn) {
+    return <section className="slo"><h3>🎯 SLO & Error Budget</h3>
+      <p className="muted">Press <b>▶ Simulate</b> — burn rate is a property of traffic actually flowing.</p></section>
+  }
+  const r = sloReport(nodes, edges, sim, target)
+  const nines = t => (t * 100).toFixed(t >= 0.9999 ? 2 : t >= 0.9995 ? 2 : 1) + '%'
+  return (
+    <section className="slo">
+      <h3>🎯 SLO & Error Budget</h3>
+      <p className="slo-pick">Target:
+        {SLO_TARGETS.map(t => (
+          <button key={t} className={`btn ${t === target ? 'active' : ''}`} onClick={() => setTarget(t)}>{nines(t)}</button>
+        ))}
+      </p>
+      <div className="roi-grid">
+        <div className="roi-card"><div className="roi-k">Error budget / month</div><div className="roi-v">{r.budgetMin.toFixed(1)} min</div><div className="roi-s muted">what {nines(target)} buys you</div></div>
+        <div className="roi-card"><div className="roi-k">Modeled availability</div><div className="roi-v">{(r.avail * 100).toFixed(3)}%</div><div className="roi-s muted">composed from replicas</div></div>
+        <div className="roi-card"><div className="roi-k">Live success</div><div className="roi-v">{(r.success * 100).toFixed(2)}%</div><div className="roi-s muted">at current traffic</div></div>
+        <div className={`roi-card ${r.burn > 1 ? 'warn' : 'good'}`}><div className="roi-k">Burn rate</div><div className="roi-v">{r.burn.toFixed(2)}×</div><div className="roi-s muted">{r.burn > 1 ? `budget gone in ~${r.exhaustDays.toFixed(1)} days` : 'within budget'}</div></div>
+      </div>
+      <div className={`slo-verdict ${r.ready ? 'ok' : 'no'}`}>{r.ready ? '✅ Production Readiness Review: READY — every gate below is green.' : '🚫 Production Readiness Review: NOT READY — a Staff+ review would block launch on the items below.'}</div>
+      <div className="prr">
+        {r.prr.map((x, i) => (
+          <div key={i} className={`prr-row ${x.ok ? 'ok' : 'no'}`}>
+            <span className="prr-mark">{x.ok ? '✓' : '✗'}</span>
+            <span><b>{x.t}.</b> {x.d}</span>
+          </div>
+        ))}
+      </div>
+      <p className="muted slo-note">The grammar of this page is the SRE one: an SLO target buys a monthly error budget; the live failure rate burns it at a multiple; a burn much above 1× pages a human before the month does. Chaos ⚡ is the drill — inject a fault and watch the burn card answer.</p>
     </section>
   )
 }

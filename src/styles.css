@@ -1737,3 +1737,17 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 }
 .roi-h { font-weight: 700; font-size: 13px; margin: 14px 0 2px; }
 .roi-card.warn { border-color: rgba(255,159,10,.5); background: rgba(255,159,10,.08); }
+
+/* ── SLO tab ───────────────────────────────────────────────────────────── */
+.slo-pick { display: flex; gap: 6px; align-items: center; }
+.slo-verdict { border-radius: 10px; padding: 11px 13px; font-size: 13px; font-weight: 600; margin: 12px 0; border: 1px solid var(--border); }
+.slo-verdict.ok { border-color: rgba(52,199,89,.55); background: rgba(52,199,89,.1); }
+.slo-verdict.no { border-color: rgba(255,107,107,.55); background: rgba(255,107,107,.09); }
+.prr { display: flex; flex-direction: column; gap: 7px; }
+.prr-row { display: flex; gap: 9px; font-size: 12.5px; line-height: 1.5; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; }
+.prr-row.no { border-color: rgba(255,107,107,.4); }
+.prr-mark { font-weight: 800; }
+.prr-row.ok .prr-mark { color: #34c759; }
+.prr-row.no .prr-mark { color: #ff6b6b; }
+.roi-s { font-size: 12px; }
+.slo-note { font-size: 12px; margin-top: 12px; }
