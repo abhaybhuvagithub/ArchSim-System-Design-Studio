@@ -43,7 +43,7 @@ import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.
 import { Onboarding } from './onboarding.jsx'
 import { PRO_ENABLED, PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink, attemptState, recordMiss, clearMisses } from './license.js'
 import { roiFor } from './roi.js'
-import { sloReport, SLO_TARGETS } from './slo.js'
+import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { initAnalytics } from './analytics.js'
 
@@ -1210,7 +1210,8 @@ export default function App() {
           ) : tab === 'roi' ? (
             <ROITab template={template} cost={cost} rps={rps} simOn={simOn} sim={sim} nodes={nodes} />
           ) : tab === 'slo' ? (
-            <SLOTab nodes={nodes} edges={edges} sim={sim} simOn={simOn} />
+            <SLOTab nodes={nodes} edges={edges} sim={sim} simOn={simOn}
+              onFix={(fix) => { setNodes(fix.nodes); if (fix.edges) setEdges(fix.edges); notify(fix.note, 'info') }} />
           ) : tab === 'acr' ? (
             <AcronymsTab />
           ) : tab === 'brief' ? (
@@ -1491,7 +1492,7 @@ function AcronymsTab() {
 // The SLO tab: pick a target, see the error budget it buys, watch the live
 // burn rate, and run the Production Readiness Review a Staff+ engineer would
 // run before green-lighting a launch.
-function SLOTab({ nodes, edges, sim, simOn }) {
+function SLOTab({ nodes, edges, sim, simOn, onFix }) {
   const [target, setTarget] = useState(0.999)
   if (!nodes.length) {
     return <section className="slo"><h3>🎯 SLO & Error Budget</h3>
@@ -1522,7 +1523,12 @@ function SLOTab({ nodes, edges, sim, simOn }) {
         {r.prr.map((x, i) => (
           <div key={i} className={`prr-row ${x.ok ? 'ok' : 'no'}`}>
             <span className="prr-mark">{x.ok ? '✓' : '✗'}</span>
-            <span><b>{x.t}.</b> {x.d}</span>
+            <span><b>{x.t}.</b> {x.d}
+              {!x.ok && (() => {
+                const fix = sloQuickFix(x.id, nodes, edges, sim, target)
+                return fix ? <button className="btn prr-fix" onClick={() => onFix(fix)}>⚡ Quick fix</button> : null
+              })()}
+            </span>
           </div>
         ))}
       </div>
