@@ -2176,6 +2176,18 @@ try {
       check('the revenue model is honestly labeled with its basis',
         (/Authored model|Archetype model/.test(roi().textContent)) && !!roi().querySelector('.roi-basis'));
       check('the not-a-forecast note is present', /not a forecast/i.test(roi().textContent));
+      // ── the SLO tab, driven while the sim is still on ──────────────────────
+      await goTab('SLO');
+      const slo = () => doc.querySelector('.slo');
+      check('the SLO tab shows budget, burn and the review', !!slo() &&
+        /Error budget \/ month/.test(slo().textContent) && /Burn rate/.test(slo().textContent) && /Production Readiness Review/.test(slo().textContent));
+      check('the review renders its gates with verdict marks', slo().querySelectorAll('.prr-row').length >= 5 && !!slo().querySelector('.slo-verdict'));
+      const before = slo().textContent.match(/([\d.]+) min/)?.[1];
+      click([...slo().querySelectorAll('.slo-pick .btn')].find(b => b.textContent.includes('99.99')));
+      await wait(150);
+      const after = slo().textContent.match(/([\d.]+) min/)?.[1];
+      check('tightening the target shrinks the budget live', before === '43.2' && after === '4.3');
+      await goTab('ROI');
       // executive framing: one sentence for the board, P&L for the CFO, risk for the CTO
       check('the board gets one plain-English sentence', /For the board:/.test(roi().textContent));
       check('the CFO view prices downtime in revenue',
@@ -2290,7 +2302,7 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all sixteen tabs are tabs', tabBtns.length === 16);
+    check('all seventeen tabs are tabs', tabBtns.length === 17);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',
@@ -3304,6 +3316,30 @@ try {
         const s3 = sim3(t.nodes, t.edges, t.rps, new Set());
         const r = roiFor(t, cr3(t.nodes, s3, 1), t.rps);
         return r.revPerM > r.costPerM * 100 && r.marginPct > 99;
+      })());
+    }
+
+    // ── SLO math and the readiness review ────────────────────────────────────
+    {
+      const { sloReport } = await import(pathToFileURL(path.join(root, 'src/slo.js')).href);
+      const mk = (success, avail) => ({ successRate: success, sysAvail: avail, p99: 120, stats: { a: { in: 100 } } });
+      const n2 = [{ id: 'a', type: 'app', label: 'API', replicas: 2 }, { id: 'g', type: 'gateway', label: 'GW', replicas: 2 }, { id: 'm', type: 'monitor', label: 'Mon', replicas: 1 }];
+      const r999 = sloReport(n2, [], mk(1, 0.9999), 0.999);
+      check('three nines buys a 43.2-minute monthly budget', Math.abs(r999.budgetMin - 43.2) < 0.01);
+      check('a 1% failure rate burns a 99.9% budget at 10×, gone in ~3 days', (() => {
+        const r = sloReport(n2, [], mk(0.99, 0.9999), 0.999);
+        return Math.abs(r.burn - 10) < 0.01 && Math.abs(r.exhaustDays - 3) < 0.01;
+      })());
+      check('a clean design passes the readiness review', r999.ready === true);
+      check('a SPOF taking live traffic blocks the review with its name', (() => {
+        const n1 = [{ id: 'a', type: 'app', label: 'Lonely API', replicas: 1 }, { id: 'g', type: 'gateway', label: 'GW', replicas: 2 }, { id: 'm', type: 'monitor', label: 'Mon', replicas: 1 }];
+        const r = sloReport(n1, [], mk(1, 0.9999), 0.999);
+        const row = r.prr.find(x => /single point of failure/i.test(x.t));
+        return r.ready === false && row.ok === false && /Lonely API/.test(row.d);
+      })());
+      check('an architecture below target fails structurally even when live traffic succeeds', (() => {
+        const r = sloReport(n2, [], mk(1, 0.995), 0.9999);
+        return r.ready === false && r.prr.some(x => /cannot reach/.test(x.d));
       })());
     }
 
