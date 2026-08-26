@@ -2195,11 +2195,15 @@ try {
           const before2 = failing().length;
           const btn = failing().map(r => r.querySelector('.prr-fix')).find(Boolean);
           check('a failing gate offers its ⚡ Quick fix', !!btn);
+          check('the button discloses its plan before the click',
+            /Will /.test(btn.closest('.prr-row').querySelector('.prr-plan')?.textContent || '') &&
+            (btn.getAttribute('title') || '').startsWith('Will '));
           click(btn);
           await wait(400);
           check('the fix mutates the canvas and the review re-evaluates greener', failing().length < before2);
         } else {
           check('a failing gate offers its ⚡ Quick fix', true);
+          check('the button discloses its plan before the click', true);
           check('the fix mutates the canvas and the review re-evaluates greener', true);
         }
       }
@@ -3430,6 +3434,15 @@ try {
         return f && f.nodes.every(n => n.replicas >= 2);
       })());
       check('a fix that makes no sense for the graph returns null instead of pretending', sloQuickFix('door', [{ id: 'a', type: 'app', label: 'A', replicas: 1, x: 1, y: 1 }], [], { stats: {} }) === null);
+      check('every fix carries a precise plan the button can show before the click', (() => {
+        const ns = [{ id: 'a', type: 'app', label: 'Lonely API', replicas: 1, x: 1, y: 1 }];
+        const sp = sloQuickFix('spof', ns, [], { stats: { a: { in: 10 } } });
+        const obsF = sloQuickFix('obs', ns, [], { stats: {} });
+        const doorF = sloQuickFix('door', [{ id: 'u', type: 'client', label: 'U', replicas: 1, x: 40, y: 200 }, ...ns], [['u', 'a']], { stats: {} });
+        const resimStub = () => ({ p99: 120, successRate: 1, stats: { a: { in: 5000, util: 0.6 } } });
+        const tailF = sloQuickFix('tail', [{ id: 'a', type: 'app', label: 'API', replicas: 2, x: 1, y: 1 }], [], { p99: 9000, successRate: 0.9, stats: { a: { in: 5000, util: 1.4 } } }, 0.999, resimStub);
+        return /Lonely API 1→2/.test(sp.plan) && /monitoring tier/i.test(obsF.plan) && /LB behind the clients/.test(doorF.plan) && /API 2→\d+/.test(tailF.plan);
+      })());
     }
 
     // ── the acronym glossary: complete, unique, honest ───────────────────────

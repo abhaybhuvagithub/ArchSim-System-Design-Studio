@@ -41,6 +41,19 @@ export function sloReport(nodes, edges, sim, target = 0.999) {
 // recomputes and the review re-evaluates live - the fix must EARN the green.
 const nodeAvail = (n) => 1 - Math.pow(1 - (CATALOG[n.type]?.avail ?? 0.999), n.replicas || 1)
 
+// Human preview of a mutation: exact replica deltas and any added nodes, so
+// the button can say precisely what one click will do before it is clicked.
+function planFor(before, afterNodes) {
+  const prev = new Map(before.map(n => [n.id, n]))
+  const parts = []
+  for (const n of afterNodes) {
+    const p = prev.get(n.id)
+    if (!p) parts.push(`+ ${n.label}`)
+    else if ((n.replicas || 1) !== (p.replicas || 1)) parts.push(`${n.label} ${p.replicas || 1}→${n.replicas || 1}`)
+  }
+  return parts.join(', ')
+}
+
 export function sloQuickFix(id, nodes, edges, sim, target = 0.999, resim = null) {
   const hot = (nid) => (sim?.stats?.[nid]?.in || 0) > 0
   const bump = (pred, extra = 1) => nodes.map(n => pred(n) ? { ...n, replicas: (n.replicas || 1) + extra } : n)
@@ -49,7 +62,8 @@ export function sloQuickFix(id, nodes, edges, sim, target = 0.999, resim = null)
     const spofs = nodes.filter(n => !['client', 'cdn', 'blob', 'dns'].includes(n.type) && (n.replicas || 1) === 1 && hot(n.id))
     if (!spofs.length) return null
     const ids = new Set(spofs.map(n => n.id))
-    return { nodes: bump(n => ids.has(n.id)), note: `⚡ Added a failover replica to ${spofs.map(n => n.label).join(', ')} — no more single points of failure.` }
+    const fixed = bump(n => ids.has(n.id))
+    return { nodes: fixed, plan: `Will add a failover replica: ${planFor(nodes, fixed)}`, note: `⚡ Added a failover replica to ${spofs.map(n => n.label).join(', ')} — no more single points of failure.` }
   }
   if (id === 'door') {
     const clients = nodes.filter(n => n.type === 'client')
@@ -60,11 +74,11 @@ export function sloQuickFix(id, nodes, edges, sim, target = 0.999, resim = null)
     const cids = new Set(clients.map(n => n.id))
     const rewired = edges.map(e => cids.has(e[0]) ? [lb.id, e[1]] : e)
     const inbound = clients.map(c => [c.id, lb.id])
-    return { nodes: [...nodes, lb], edges: [...inbound, ...rewired.filter(e => e[0] !== e[1])], note: '⚡ Inserted a load balancer behind the clients — one front door for limits, auth and shedding.' }
+    return { nodes: [...nodes, lb], edges: [...inbound, ...rewired.filter(e => e[0] !== e[1])], plan: 'Will insert an LB behind the clients and route their traffic through it', note: '⚡ Inserted a load balancer behind the clients — one front door for limits, auth and shedding.' }
   }
   if (id === 'obs') {
     const y = Math.max(...nodes.map(n => n.y), 200) + 90
-    return { nodes: [...nodes, { id: 'mon-fix', type: 'monitor', label: 'Monitoring (added)', x: 160, y, replicas: 1 }], note: '⚡ Added a monitoring tier — wire your services to it as they grow; the next incident should be seen, not felt.' }
+    return { nodes: [...nodes, { id: 'mon-fix', type: 'monitor', label: 'Monitoring (added)', x: 160, y, replicas: 1 }], plan: 'Will add a monitoring tier node (wire services in as you grow)', note: '⚡ Added a monitoring tier — wire your services to it as they grow; the next incident should be seen, not felt.' }
   }
   if (id === 'struct') {
     let ns = nodes.map(n => ({ ...n }))
@@ -77,7 +91,7 @@ export function sloQuickFix(id, nodes, edges, sim, target = 0.999, resim = null)
       const weakest = takers.reduce((w, n) => nodeAvail(n) < nodeAvail(w) ? n : w)
       ns = ns.map(n => n.id === weakest.id ? { ...n, replicas: (n.replicas || 1) + 1 } : n)
     }
-    return { nodes: ns, note: '⚡ Raised replicas where availability was thinnest until the architecture clears the target structurally.' }
+    return { nodes: ns, plan: `Will raise replicas where thinnest: ${planFor(nodes, ns)}`, note: '⚡ Raised replicas where availability was thinnest until the architecture clears the target structurally.' }
   }
   if (id === 'burn' || id === 'tail') {
     // Convergent by construction: sizing today's hotspot moves the load to
@@ -126,12 +140,17 @@ export function sloQuickFix(id, nodes, edges, sim, target = 0.999, resim = null)
       const sat = nodes.filter(n => (stats[n.id]?.util || 0) > 0.85)
       if (!sat.length) return null
       const tset = new Set(sat.map(n => n.id))
-      return { nodes: nodes.map(n => tset.has(n.id) ? { ...n, replicas: Math.max((n.replicas || 1) + 1, Math.ceil((stats[n.id]?.in || 0) / ((CATALOG[n.type]?.cap || 1000) * 0.7))) } : n), note: `⚡ Sized ${sat.map(n => n.label).join(', ')} toward ~70% utilization.` }
+      const sized = nodes.map(n => tset.has(n.id) ? { ...n, replicas: Math.max((n.replicas || 1) + 1, Math.ceil((stats[n.id]?.in || 0) / ((CATALOG[n.type]?.cap || 1000) * 0.7))) } : n)
+      return { nodes: sized, plan: `Will resize: ${planFor(nodes, sized)}`, note: `⚡ Sized ${sat.map(n => n.label).join(', ')} toward ~70% utilization.` }
     }
     if (!touched.size) return null
     const names = [...touched.values()].join(', ')
     const done = passes(cur)
-    return { nodes: ns, note: done
+    const delta = planFor(nodes, ns)
+    return { nodes: ns, plan: done
+      ? `Will resize for the load: ${delta}`
+      : `Will resize as far as replicas help (${delta}) — ~${Math.round(cur.p99)}ms of chain depth will remain`,
+      note: done
       ? `⚡ Sized ${names} until the gate cleared (~70% utilization targets) — queueing delay is what was eating the tail.`
       : `⚡ Sized ${names} as far as replicas help — the remaining latency lives in chain depth (${Math.round(cur.p99)}ms across the hops), which is a design conversation, not a slider.` }
   }

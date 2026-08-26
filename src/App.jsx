@@ -1494,6 +1494,13 @@ function AcronymsTab() {
 // run before green-lighting a launch.
 function SLOTab({ nodes, edges, sim, simOn, onFix, resim }) {
   const [target, setTarget] = useState(0.999)
+  const fixes = useMemo(() => {
+    if (!simOn || !nodes.length) return {}
+    const r = sloReport(nodes, edges, sim, target)
+    const out = {}
+    for (const row of r.prr) if (!row.ok) out[row.id] = sloQuickFix(row.id, nodes, edges, sim, target, resim)
+    return out
+  }, [nodes, edges, sim, simOn, target, resim])
   if (!nodes.length) {
     return <section className="slo"><h3>🎯 SLO & Error Budget</h3>
       <p className="muted">Load a design — the SLO view reads its structure and live behavior.</p></section>
@@ -1524,10 +1531,12 @@ function SLOTab({ nodes, edges, sim, simOn, onFix, resim }) {
           <div key={i} className={`prr-row ${x.ok ? 'ok' : 'no'}`}>
             <span className="prr-mark">{x.ok ? '✓' : '✗'}</span>
             <span><b>{x.t}.</b> {x.d}
-              {!x.ok && (() => {
-                const fix = sloQuickFix(x.id, nodes, edges, sim, target, resim)
-                return fix ? <button className="btn prr-fix" onClick={() => onFix(fix)}>⚡ Quick fix</button> : null
-              })()}
+              {!x.ok && fixes[x.id] && (
+                <>
+                  <button className="btn prr-fix" title={fixes[x.id].plan} onClick={() => onFix(fixes[x.id])}>⚡ Quick fix</button>
+                  <span className="prr-plan muted">→ {fixes[x.id].plan}</span>
+                </>
+              )}
             </span>
           </div>
         ))}
