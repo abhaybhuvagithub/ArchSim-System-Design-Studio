@@ -39,7 +39,6 @@ const AUTHORED = {
   'ChatGPT': { revPerM: 12000, model: 'subscription + API', basis: 'Plus subscriptions and API tokens against expensive inference; margin is a race between pricing and GPU cost per token.' },
   'Online Chess': { revPerM: 25, model: 'freemium', basis: 'A few % convert to ~$5/mo memberships against millions of free moves.' },
   'LeetCode (Online Judge)': { revPerM: 400, model: 'premium', basis: '~$35/mo premium; judging is the cost center, browsing is the funnel.' },
-  'Tinder': { revPerM: 300, model: 'freemium + boosts', basis: 'Payers ~5% at ~$15/mo plus a-la-carte boosts, against heavy free swipe volume.' },
   'Strava': { revPerM: 120, model: 'subscription', basis: '~$12/mo from a ~10% payer base; uploads and feeds are mostly free-tier traffic.' },
   'Ad Click Aggregator': { revPerM: 50000, model: 'platform take', basis: 'The counted clicks ARE the billing: platform margin on ad spend per thousand clicks dwarfs infra by orders of magnitude.' },
   'FB Live Comments': { revPerM: 5, model: 'engagement', basis: 'Comments monetize indirectly through watch time and gifting slices.' },

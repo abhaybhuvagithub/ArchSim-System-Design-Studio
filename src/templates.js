@@ -1638,21 +1638,6 @@ export const TEMPLATES = [
     'Every decision lands on the spend stream — analytics and alerts are downstream, never inline',
   ], 'Unicorns · USA'),
 // ── Interview classics ────────────────────────────────────────────────────
-  T('Tinder', 'Swipes at scale: geo decks, match detection', 8000, [
-    ['c', 'client', 'Users', 40, 240], ['cdn', 'cdn', 'CDN', 160, 240],
-    ['lb', 'lb', 'LB', 280, 240], ['gw', 'gateway', 'API GW', 400, 240, 3],
-    ['rec', 'app', 'Rec Deck', 540, 120, 4], ['geo', 'geoidx', 'Geo Shards', 700, 80, 3],
-    ['prof', 'app', 'Profiles', 540, 240, 4], ['pdb', 'nosql', 'Profile Store', 700, 200, 3],
-    ['sw', 'app', 'Swipe Svc', 540, 360, 5], ['scache', 'cache', 'Swipe Cache', 700, 320, 3],
-    ['k', 'kafka', 'Swipe Stream', 540, 460], ['mw', 'worker', 'Match Detect', 680, 440, 3],
-    ['mdb', 'sql', 'Matches', 800, 400, 2], ['pn', 'push', 'Match Push', 800, 480],
-  ], [['c','cdn'],['cdn','lb'],['lb','gw'],['gw','rec'],['rec','geo'],['rec','pdb'],['gw','prof'],['prof','pdb'],['gw','sw'],['sw','scache'],['sw','k'],['k','mw'],['mw','mdb'],['mw','pn']], [
-    'The deck is precomputed: candidates come from geo shards filtered by preferences, never a live radius query per swipe',
-    'Swipes are write-heavy and disposable until they match — cache-first, stream to storage',
-    'Match detection is a lookup: did the other side already swipe right? The swipe cache answers in one read',
-    'A match is the money moment: transactional row, push to both phones within a second',
-    'Geo sharding follows cities, and hot cities (density) are the capacity plan',
-  ], 'Interview classics'),
   T('LeetCode (Online Judge)', 'Untrusted code, fair verdicts, live contests', 5000, [
     ['c', 'client', 'Coders', 40, 240], ['cdn', 'cdn', 'CDN', 160, 240],
     ['lb', 'lb', 'LB', 280, 240], ['gw', 'gateway', 'API GW', 400, 240, 2],
