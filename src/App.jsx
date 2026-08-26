@@ -1210,7 +1210,7 @@ export default function App() {
           ) : tab === 'roi' ? (
             <ROITab template={template} cost={cost} rps={rps} simOn={simOn} sim={sim} nodes={nodes} />
           ) : tab === 'slo' ? (
-            <SLOTab nodes={nodes} edges={edges} sim={sim} simOn={simOn}
+            <SLOTab nodes={nodes} edges={edges} sim={sim} simOn={simOn} resim={(ns) => simulate(ns, edges, rps, downSet, fx)}
               onFix={(fix) => { setNodes(fix.nodes); if (fix.edges) setEdges(fix.edges); notify(fix.note, 'info') }} />
           ) : tab === 'acr' ? (
             <AcronymsTab />
@@ -1492,7 +1492,7 @@ function AcronymsTab() {
 // The SLO tab: pick a target, see the error budget it buys, watch the live
 // burn rate, and run the Production Readiness Review a Staff+ engineer would
 // run before green-lighting a launch.
-function SLOTab({ nodes, edges, sim, simOn, onFix }) {
+function SLOTab({ nodes, edges, sim, simOn, onFix, resim }) {
   const [target, setTarget] = useState(0.999)
   if (!nodes.length) {
     return <section className="slo"><h3>🎯 SLO & Error Budget</h3>
@@ -1525,7 +1525,7 @@ function SLOTab({ nodes, edges, sim, simOn, onFix }) {
             <span className="prr-mark">{x.ok ? '✓' : '✗'}</span>
             <span><b>{x.t}.</b> {x.d}
               {!x.ok && (() => {
-                const fix = sloQuickFix(x.id, nodes, edges, sim, target)
+                const fix = sloQuickFix(x.id, nodes, edges, sim, target, resim)
                 return fix ? <button className="btn prr-fix" onClick={() => onFix(fix)}>⚡ Quick fix</button> : null
               })()}
             </span>

@@ -41,7 +41,7 @@ export function sloReport(nodes, edges, sim, target = 0.999) {
 // recomputes and the review re-evaluates live - the fix must EARN the green.
 const nodeAvail = (n) => 1 - Math.pow(1 - (CATALOG[n.type]?.avail ?? 0.999), n.replicas || 1)
 
-export function sloQuickFix(id, nodes, edges, sim, target = 0.999) {
+export function sloQuickFix(id, nodes, edges, sim, target = 0.999, resim = null) {
   const hot = (nid) => (sim?.stats?.[nid]?.in || 0) > 0
   const bump = (pred, extra = 1) => nodes.map(n => pred(n) ? { ...n, replicas: (n.replicas || 1) + extra } : n)
 
@@ -68,32 +68,72 @@ export function sloQuickFix(id, nodes, edges, sim, target = 0.999) {
   }
   if (id === 'struct') {
     let ns = nodes.map(n => ({ ...n }))
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < 32; i++) {
+      const engineOk = resim ? (resim(ns).sysAvail ?? 1) >= target : null
       const takers = ns.filter(n => hot(n.id) && !['client'].includes(n.type))
       if (!takers.length) return null
       const composed = takers.reduce((a, n) => a * nodeAvail(n), 1)
-      if (composed >= target) break
+      if (engineOk === true || (engineOk === null && composed >= target)) break
       const weakest = takers.reduce((w, n) => nodeAvail(n) < nodeAvail(w) ? n : w)
       ns = ns.map(n => n.id === weakest.id ? { ...n, replicas: (n.replicas || 1) + 1 } : n)
     }
     return { nodes: ns, note: '⚡ Raised replicas where availability was thinnest until the architecture clears the target structurally.' }
   }
   if (id === 'burn' || id === 'tail') {
-    const stats = sim?.stats || {}
-    const sat = nodes.filter(n => (stats[n.id]?.util || 0) > 0.85)
-    if (sat.length) {
-      const ns = nodes.map(n => {
+    // Convergent by construction: sizing today's hotspot moves the load to
+    // the next tier, so a single pass leaves the gate red and the button
+    // begging for more clicks. Instead, iterate against the real simulator
+    // (resim) until THIS gate passes — one click, however many rounds.
+    let ns = nodes.map(n => ({ ...n }))
+    let cur = sim
+    const touched = new Map()
+    const passes = (s2) => id === 'tail'
+      ? (s2.p99 > 0 && s2.p99 < 2000)
+      : (Math.max(0, 1 - (s2.successRate ?? 1)) / (1 - target) <= 1)
+    // The trap this loop must beat: while an upstream tier is choked, every
+    // downstream node reports a small, throttled inflow — sizing to that
+    // number chases a mirage one tier per click. So: size multiplicatively
+    // wherever util is saturated (the observed inflow is a floor, not the
+    // demand), re-simulate, and only stop on the gate passing or a genuine
+    // stall — never on one flat round.
+    let stall = 0
+    let best = id === 'tail' ? (cur?.p99 ?? Infinity) : -(cur?.successRate ?? 0)
+    const FIXABLE = n => n.type !== 'client'   // everything server-side is legitimately scalable
+    for (let round = 0; round < 48 && resim; round++) {
+      if (passes(cur)) break
+      const stats = cur?.stats || {}
+      const sat = ns.filter(n => FIXABLE(n) && (stats[n.id]?.util || 0) > 0.85)
+      const targets = sat.length ? sat : [ns.filter(n => stats[n.id] && FIXABLE(n)).sort((a, b) => (stats[b.id]?.util || 0) - (stats[a.id]?.util || 0))[0]].filter(Boolean)
+      if (!targets.length) break
+      const tset = new Set(targets.map(n => n.id))
+      ns = ns.map(n => {
+        if (!tset.has(n.id)) return n
         const st = stats[n.id]
-        if (!st || st.util <= 0.85) return n
         const cap = CATALOG[n.type]?.cap || 1000
-        const need = Math.max((n.replicas || 1) + 1, Math.ceil(st.in / (cap * 0.7)))
+        const r = n.replicas || 1
+        const need = Math.max(r + 1, st ? Math.ceil(st.in / (cap * 0.7)) : r + 1, (st?.util || 0) >= 1 ? r * 2 : 0)
+        touched.set(n.id, n.label)
         return { ...n, replicas: need }
       })
-      return { nodes: ns, note: `⚡ Sized ${sat.map(n => n.label).join(', ')} for the load (targeting ~70% utilization) — queueing delay is what was eating the tail.` }
+      cur = resim(ns)
+      const metric = id === 'tail' ? cur.p99 : -(cur.successRate ?? 0)
+      if (metric < best - Math.abs(best) * 0.005) { best = metric; stall = 0 } else { stall++ }
+      if (stall >= 3) break   // three flat rounds: replicas genuinely stopped helping
     }
-    const hottest = nodes.filter(n => stats[n.id]).sort((a, b) => (stats[b.id]?.util || 0) - (stats[a.id]?.util || 0))[0]
-    if (!hottest) return null
-    return { nodes: bump(n => n.id === hottest.id), note: `⚡ Added a replica to ${hottest.label}, the hottest component — if p99 stays high, the latency now lives in chain depth, which is a design conversation, not a slider.` }
+    if (!resim) {
+      // no simulator handed in (older caller): fall back to one honest pass
+      const stats = sim?.stats || {}
+      const sat = nodes.filter(n => (stats[n.id]?.util || 0) > 0.85)
+      if (!sat.length) return null
+      const tset = new Set(sat.map(n => n.id))
+      return { nodes: nodes.map(n => tset.has(n.id) ? { ...n, replicas: Math.max((n.replicas || 1) + 1, Math.ceil((stats[n.id]?.in || 0) / ((CATALOG[n.type]?.cap || 1000) * 0.7))) } : n), note: `⚡ Sized ${sat.map(n => n.label).join(', ')} toward ~70% utilization.` }
+    }
+    if (!touched.size) return null
+    const names = [...touched.values()].join(', ')
+    const done = passes(cur)
+    return { nodes: ns, note: done
+      ? `⚡ Sized ${names} until the gate cleared (~70% utilization targets) — queueing delay is what was eating the tail.`
+      : `⚡ Sized ${names} as far as replicas help — the remaining latency lives in chain depth (${Math.round(cur.p99)}ms across the hops), which is a design conversation, not a slider.` }
   }
   return null
 }
