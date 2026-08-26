@@ -618,4 +618,175 @@ export default {
   },
 },
 
+
+'Object Storage (S3)': {
+  meta: 'Cloud business - storage - hard - durability is arithmetic',
+  overview: 'Design the bucket itself: a metadata store that maps keys to shard locations, a placement service that decides where bytes live, erasure-coded storage pods, and a repair loop that rebuilds lost shards before a second failure can land. The request path is boring on purpose; the durability math is the product.',
+  scope: 'PUT/GET/LIST, metadata, placement, erasure coding, repair, and the per-prefix throughput contract. Multi-region replication, lifecycle tiering and billing are below the line.',
+  fr: {
+    core: ['PUT and GET objects by key with strong read-after-write on new keys', 'LIST by prefix, ordered', 'Survive disk, host and rack loss with no data loss', 'Emit an event per mutation'],
+    out: ['Cross-region replication', 'Storage classes and lifecycle', 'Static website hosting'],
+  },
+  nfr: {
+    core: ['Eleven nines of durability - engineered, then continuously re-earned by repair speed', 'Per-prefix request throughput is a stated contract, not a surprise', 'GET p99 in low tens of ms for hot metadata', 'The metadata tier survives being 1000x smaller than the data it indexes'],
+    out: ['Sub-ms latency - that is the cache in front, not the store'],
+  },
+  nums: [['11 nines', 'durability target - about one object lost per 10M objects per 10K years'], ['k+m', 'erasure shards: any k of k+m rebuild the object'], ['per prefix', 'where the throughput contract lives'], ['minutes', 'repair budget after a disk dies']],
+  entities: [
+    ['ObjectMeta', 'key -> version, size, checksum, shard map - one point lookup per GET'],
+    ['Shard', 'one erasure fragment on one pod; k of k+m reconstruct'],
+    ['PlacementPolicy', 'spread shards across pods, racks and heat - space is easy, heat is the game'],
+    ['RepairTask', 'a dead shard with a deadline - the durability promise made operational'],
+  ],
+  apiIntro: 'The S3 API is the de facto standard, so the interface is a given; the design freedom is entirely behind it.',
+  api: [
+    { dir: '->', name: 'PUT /{bucket}/{key}', body: 'bytes + checksum\n-> 200 { version, etag } after k+m shards land' },
+    { dir: '->', name: 'GET /{bucket}/{key}', body: '-> bytes streamed from any k shards; metadata lookup first' },
+    { dir: '->', name: 'GET /{bucket}?prefix=', body: '-> ordered keys - a range scan on the metadata KV' },
+  ],
+  dives: [
+    {
+      title: 'Durability as arithmetic: erasure coding plus a repair deadline', focus: ['pods', 'rep', 'plc'],
+      blocks: [
+        ['p', 'Replication triples your bill; erasure coding does not. Split an object into k data shards plus m parity shards - any k reconstruct it - and spread them across pods in different racks. Durability then has two knobs: how many simultaneous failures m tolerates, and how fast repair rebuilds a lost shard before the next failure arrives.'],
+        ['bul', [
+          'k=8, m=4 survives any four shard losses at 1.5x storage overhead - versus 3x for triple replication.',
+          'The repair loop is the durability engine: a dead disk starts a countdown, and rebuild speed - not shard count - is what the nines actually rest on.',
+          'Checksums travel with every shard; scrubbers read cold data on a schedule so bit rot is found while repair is still cheap.',
+        ]],
+        ['warn', 'Durability calculated at design time and never re-earned is fiction. Slow repair quietly converts eleven nines into five - the number to watch is shards-at-risk-minutes, and the SLO tab thinking applies to it directly.'],
+      ],
+    },
+    {
+      title: 'The metadata KV: tiny, and the entire hot path', focus: ['meta', 'fe', 'cache'],
+      blocks: [
+        ['p', 'Every GET is one metadata point-lookup then parallel shard reads; every LIST is a prefix range scan. So the metadata store is a partitioned, replicated KV holding key -> shard map, roughly a thousandth of the data size and a hundred percent of the latency budget.'],
+        ['bul', [
+          'Partition metadata by key range so LIST stays a single-partition scan; hot prefixes are the famous footgun - the per-prefix contract exists because a partition has a ceiling.',
+          'New-key read-after-write falls out of writing metadata last: shards land, then the map, so a visible key always resolves.',
+          'The hot object cache in front serves the skew: the head of the distribution never touches pods at all.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Key-value metadata plus replicated blobs behind an API.',
+    senior: 'Erasure coding with placement across failure domains, repair as the durability engine, prefix-partitioned metadata with the throughput contract stated.',
+    staff: 'Size the repair fleet against disk failure rates to defend the nines, design the hot-prefix mitigation story, and make the event stream exactly-once so downstream lifecycle and replication can trust it.',
+  },
+},
+
+'Serverless Platform (Lambda)': {
+  meta: 'Cloud business - compute - hard - selling milliseconds with nothing to manage',
+  overview: 'Design the function runner: an invoke front that answers in milliseconds, a scheduler placing calls onto warm microVM sandboxes, a fleet that boots more when arrival rate says so, and strict per-invoke isolation because neighbors share hardware. The whole business is amortizing the cold-start tax across a warm pool.',
+  scope: 'Sync and async invokes, scheduling, warm pools, the microVM fleet and code distribution. Runtimes catalogue, VPC networking and per-account limits are below the line.',
+  fr: {
+    core: ['Invoke a function synchronously and return its result', 'Queue async invokes with retries and a DLQ', 'Scale concurrency with arrival rate, to zero when idle', 'Bill per request and per ms of execution'],
+    out: ['Long-running jobs - that is a different product', 'GPU functions', 'Cross-cloud portability'],
+  },
+  nfr: {
+    core: ['Warm invoke overhead in single-digit ms; cold starts bounded and rare', 'Hard isolation between tenants sharing a host', 'A sandbox crash costs one invoke, never a neighbor', 'Honest concurrency limits per account - noisy neighbors stay theoretical'],
+    out: ['Bare-metal latency - the microVM boundary is the price of the product'],
+  },
+  nums: [['~125ms', 'a microVM boot - the irreducible part of a cold start'], ['1 invoke', 'per sandbox at a time - concurrency = warm sandboxes'], ['ms', 'the billing grain'], ['0', 'acceptable cross-tenant memory sharing']],
+  entities: [
+    ['Function', 'code + config + limits; versions are immutable'],
+    ['Sandbox', 'one microVM bound to one function version, warm between invokes'],
+    ['Invoke', 'one request through one sandbox: placed, executed, billed'],
+    ['WarmPool', 'per-function count of ready sandboxes - the cold-start amortizer'],
+  ],
+  apiIntro: 'One verb sells the product; everything else is management plane.',
+  api: [
+    { dir: '->', name: 'POST /functions/{name}/invoke', body: '{ payload }\n-> 200 result | 202 queued (async) | 429 concurrency limit' },
+    { dir: '->', name: 'PUT /functions/{name}', body: '{ codeRef, memory, timeout } -> new immutable version' },
+  ],
+  dives: [
+    {
+      title: 'The cold-start ledger: warm pools as the whole business', focus: ['ctrl', 'wp', 'sbx'],
+      blocks: [
+        ['p', 'A cold start pays microVM boot plus runtime init plus code load; a warm invoke pays almost nothing. The scheduler therefore keeps a per-function warm pool sized by recent arrival rate: place onto warm first, boot on miss, retire idle sandboxes to zero. The margin of the platform is exactly how often it predicts arrivals correctly.'],
+        ['bul', [
+          'Placement is bin-packing with a heat term: fill hosts without correlating one customer\'s spike into another\'s latency.',
+          'Scale-to-zero is the pricing promise and the engineering constraint - the first invoke after silence always pays the boot, so pre-warm on deploy and on schedule hints.',
+          'Async invokes drain from the queue into the same fleet at lower priority - one capacity pool, two SLOs.',
+        ]],
+        ['warn', 'A warm pool sized on averages melts under bursts: arrival spikes are exactly when cold boots are slowest to help. Size on p95 arrival rate and let the queue absorb what the pool cannot.'],
+      ],
+    },
+    {
+      title: 'Isolation you can sell: one microVM per concurrent invoke', focus: ['sbx', 'code'],
+      blocks: [
+        ['p', 'Multi-tenant compute is only a business if the boundary is credible. Containers share a kernel; microVMs (Firecracker-class) give each concurrent invoke its own minimal virtual machine at ~125ms boot and tiny overhead - the sandbox capacity numbers in this canvas ARE that isolation tax, honestly priced.'],
+        ['bul', [
+          'One function version per sandbox, reused across invokes of the same function - warm state is a feature and a bounded risk.',
+          'Code and layers pull from the blob store once per sandbox, then cache locally - deploy storms hit the code store, not the invoke path.',
+          'The blast radius contract: a crash kills one invoke; an escape attempt meets a VM boundary, not a namespace.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'An API that runs code in containers with a queue for async.',
+    senior: 'Warm-pool scheduling against arrival rate, microVM isolation with the cold-start tax stated, one fleet serving sync and async at different priorities.',
+    staff: 'Design the predictive warm-pool policy and its failure under bursts, the per-account fairness system, and the billing pipeline that meters milliseconds exactly-once at platform scale.',
+  },
+},
+
+'CDN (Edge Network)': {
+  meta: 'Cloud business - network - medium - the hit ratio is the product',
+  overview: 'Design the CDN itself: anycast steers every eyeball to the nearest PoP, two cache tiers keep misses off customer origins, and a purge system broadcasts invalidations to every PoP in seconds. The product is a ratio - every point of cache hit rate is origin traffic the customer never pays for.',
+  scope: 'Anycast routing, PoP caching, origin shield, config and purge propagation. TLS termination details, WAF rules and video-specific delivery are below the line.',
+  fr: {
+    core: ['Serve cached content from the nearest PoP', 'Collapse PoP misses onto an origin shield before the customer origin', 'Propagate config changes and purges globally in seconds', 'Report hit ratio and egress per customer'],
+    out: ['Edge compute - a sibling product on the same PoPs', 'DDoS scrubbing specifics', 'Private backbone economics'],
+  },
+  nfr: {
+    core: ['A PoP failure reroutes by anycast withdrawal - users never see it', 'Purge lands globally in seconds, or stale content becomes a support ticket', 'Origin sees one fetch per object per shield, not one per PoP', 'PoPs run unattended in hostile colos - loss of any one is routine'],
+    out: ['Strong consistency between PoPs - caches are eventual by nature and by design'],
+  },
+  nums: [['~95%+', 'a healthy hit ratio on static content'], ['1 fetch', 'per object per shield on a miss storm'], ['seconds', 'the purge propagation budget'], ['dozens-hundreds', 'of PoPs, each expendable']],
+  entities: [
+    ['PoP', 'an edge site: cache fleet + anycast announcement, disposable as a unit'],
+    ['CacheEntry', 'object + headers + TTL + surrogate keys for purging'],
+    ['CustomerConfig', 'origin, rules, cache keys - versioned and broadcast'],
+    ['Purge', 'a surrogate-key tombstone racing user traffic to every PoP'],
+  ],
+  apiIntro: 'The data plane speaks plain HTTP; the control plane is where the API lives.',
+  api: [
+    { dir: '->', name: 'GET {any customer URL}', body: 'served by the nearest PoP; miss -> shield -> origin, then cached' },
+    { dir: '->', name: 'POST /purge', body: '{ surrogateKeys | urls }\n-> 202, globally effective in seconds' },
+    { dir: '->', name: 'PUT /config/{site}', body: 'versioned rules -> broadcast to all PoPs, atomic per version' },
+  ],
+  dives: [
+    {
+      title: 'Two tiers and a promise: shield economics', focus: ['pc', 'shield', 'orig'],
+      blocks: [
+        ['p', 'With hundreds of PoPs, a cold object would otherwise hit the customer origin hundreds of times - once per PoP. The origin shield is a designated mid-tier: PoP misses collapse onto it, it fetches once, and every PoP fills from that single copy. Request coalescing at both tiers turns a miss storm into one origin fetch.'],
+        ['bul', [
+          'Shield placement is a routing choice: pick a PoP near the origin so the long haul happens once, on the fat pipe.',
+          'Coalescing (one in-flight fetch per key, everyone else waits on it) is the same cache-stampede defense the Redis template teaches - at planetary scale.',
+          'Hit ratio is tiered honestly: edge hit, shield hit, origin fetch - customers pay for the third, so the dashboard leads with it.',
+        ]],
+      ],
+    },
+    {
+      title: 'Purge: a broadcast racing the truth', focus: ['cfg', 'k', 'pop'],
+      blocks: [
+        ['p', 'A purge is a promise that stale content dies everywhere in seconds. Implement it as a tombstone on a fanout stream every PoP consumes: content is tagged with surrogate keys at fill time, and a purge publishes the key - each PoP invalidates locally, no central coordination on the hot path.'],
+        ['bul', [
+          'Soft purge (mark stale, revalidate on next hit) keeps serving during origin trouble; hard purge is for legal and secrets.',
+          'A PoP that was offline replays the stream from its last offset on rejoin - purges are a log, not an RPC, precisely so absence is survivable.',
+          'Config versions ride the same stream: a PoP is either fully on version N or N+1, never a mix of rules.',
+        ]],
+        ['warn', 'Purge by URL alone cannot invalidate variants (compressed, per-device, per-header). Surrogate keys attached at fill time are the only purge primitive that scales - retrofitting them later means a full cache flush per mistake.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'Geo-routed caches in front of origins with TTLs.',
+    senior: 'Anycast PoPs, shield-tier collapse with request coalescing, purge as a replayable fanout log with surrogate keys.',
+    staff: 'Design the anycast withdrawal and capacity-spill story for PoP loss, the purge SLO measurement itself, and the hit-ratio economics that decide where the next PoP gets built.',
+  },
+},
+
 }

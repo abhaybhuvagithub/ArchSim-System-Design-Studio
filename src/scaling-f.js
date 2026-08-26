@@ -189,4 +189,56 @@ export default {
   wall: { t: 'The astrologers are human', d: 'Software scales sessions; it cannot scale the supply of trusted astrologers or the minutes in their day. Past matching efficiency and queue fairness, growth is recruiting and retaining the humans - marketplace operations, not architecture - and peak demand on a festival day meets a hard ceiling of available consultation hours.' },
 },
 
+
+'Object Storage (S3)': {
+  constraint: 'Requests are the easy axis - the store must scale durability itself: more disks means more failures per hour, and the repair fleet has to outrun them forever.',
+  ladder: [
+    ['1 PB', '~1K rps', 'Metadata in one partitioned KV, k+m coding, a modest repair fleet. The math already matters.'],
+    ['50 PB', '~10K rps', 'Placement goes heat-aware; hot prefixes get sharded key advice; scrubbers cycle cold data continuously.'],
+    ['500 PB', '~40K rps', 'Metadata partitions split by range with per-prefix contracts enforced; repair fleet sized against fleet-wide disk mortality, not incidents.'],
+    ['5 EB', '~200K rps', 'Cells: independent metadata+pod clusters behind one namespace, so blast radius and repair math stay per-cell while the API stays one bucket world.'],
+  ],
+  levers: [
+    { t: 'Erasure-code, then defend the code with repair speed', d: 'k+m across failure domains sets the theoretical nines; shards-at-risk-minutes sets the real ones. Size repair for disk mortality at fleet scale.', n: ['pods', 'rep'] },
+    { t: 'Partition metadata by key range, contract by prefix', d: 'LIST stays single-partition, and the throughput ceiling becomes a stated per-prefix contract customers can design around.', n: ['meta', 'fe'] },
+    { t: 'Cache the head of the distribution', d: 'Object access is brutally skewed - a hot cache in front means pods serve the long tail while the top keys never touch disk.', n: ['cache'] },
+    { t: 'Make mutations a stream', d: 'Every PUT/DELETE emits once onto the event stream; repair, lifecycle and replication become consumers instead of scanners.', n: ['k', 'rep'] },
+  ],
+  wall: { t: 'Physics and mortality', d: 'At exabyte scale the fleet loses disks every hour as a statistical certainty, and repair bandwidth competes with customer traffic on the same networks. Past cells and smarter placement, the wall is capital: durability is ultimately bought in racks, power and replacement drives - the arithmetic just decides how efficiently.' },
+},
+
+'Serverless Platform (Lambda)': {
+  constraint: 'Every concurrent invoke is a live microVM - the platform scales by predicting arrivals well enough that the cold-start tax stays rare while idle sandboxes stay cheap.',
+  ladder: [
+    ['10K invokes/day', '~1 rps', 'A small warm pool per active function; cold starts common and tolerated.'],
+    ['10M invokes/day', '~120 rps', 'Arrival-rate-driven pools; placement gets heat-aware; async and sync split priorities on one fleet.'],
+    ['1B invokes/day', '~12K rps', 'Predictive pre-warming from schedules and traffic patterns; per-account fairness enforced; code distribution cached per host.'],
+    ['100B invokes/day', '~1M rps', 'Cellular fleets per region; the scheduler itself shards by function hash; billing metering becomes its own exactly-once pipeline.'],
+  ],
+  levers: [
+    { t: 'Size warm pools on p95 arrivals, not averages', d: 'Bursts arrive exactly when boots help least. Overshoot warm capacity slightly and let the async queue absorb the rest.', n: ['ctrl', 'wp', 'q'] },
+    { t: 'One fleet, two priorities', d: 'Sync invokes preempt; async drains opportunistically. Utilization stays high without selling the latency SLO twice.', n: ['sbx', 'q'] },
+    { t: 'Cache code per host', d: 'Deploy storms hit the blob store once per host, not once per sandbox - boots then pay only runtime init.', n: ['code', 'sbx'] },
+    { t: 'Shard the scheduler by function', d: 'Placement state partitions cleanly on function hash, so the control plane scales the same way the data plane does.', n: ['ctrl'] },
+  ],
+  wall: { t: 'The cold start is irreducible', d: 'Warm pools amortize the boot tax; they cannot delete it. The first invoke after silence always pays ~125ms plus runtime init, and hardware-level isolation is the reason the product is sellable at all - past prediction and pre-warming, the remaining latency is the price of the trust boundary itself.' },
+},
+
+'CDN (Edge Network)': {
+  constraint: 'The product is a ratio: hit rate against origin fetches. Scaling means more PoPs in more cities without the miss traffic, purge lag or config drift growing with them.',
+  ladder: [
+    ['1 city', '~1K rps', 'One PoP, one cache tier, TTLs doing the work. The origin still feels weather.'],
+    ['20 PoPs', '~20K rps', 'Origin shield collapses misses; purge becomes a fanout stream; anycast handles PoP loss by withdrawal.'],
+    ['100 PoPs', '~60K rps', 'Tiered fills between nearby PoPs; surrogate-key purging; config versions atomic per PoP.'],
+    ['300+ PoPs', '~500K rps', 'Regional shield layers, capacity-aware anycast that spills load to neighbors, and PoP builds decided by hit-ratio economics per city.'],
+  ],
+  levers: [
+    { t: 'Shield the origin, coalesce the storm', d: 'PoP misses collapse onto a shield near the origin; one in-flight fetch per key. A thousand cold PoPs cost the customer one fetch.', n: ['shield', 'pc'] },
+    { t: 'Purge as a replayable log', d: 'Surrogate-key tombstones on a stream every PoP consumes - offline PoPs replay on rejoin, so correctness never depends on an RPC landing everywhere.', n: ['cfg', 'k', 'pop'] },
+    { t: 'Let anycast be the failover', d: 'A sick PoP withdraws its route and the internet reroutes in seconds - no health-check choreography, no user-visible incident.', n: ['gslb', 'pop'] },
+    { t: 'Spend capex where the ratio says', d: 'Each candidate city has a computable value: eyeballs times miss latency times egress saved. Build PoPs by that math, not by map aesthetics.', n: ['pop'] },
+  ],
+  wall: { t: 'Peering and the speed of light', d: 'Past enough PoPs, latency is set by physics and interconnection politics: you cannot cache your way around an ocean, and the next win is private backbone and peering agreements - negotiated infrastructure, not software. The marginal PoP eventually adds operational surface faster than it adds hit ratio.' },
+},
+
 }
