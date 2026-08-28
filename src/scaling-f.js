@@ -241,4 +241,39 @@ export default {
   wall: { t: 'Peering and the speed of light', d: 'Past enough PoPs, latency is set by physics and interconnection politics: you cannot cache your way around an ocean, and the next win is private backbone and peering agreements - negotiated infrastructure, not software. The marginal PoP eventually adds operational surface faster than it adds hit ratio.' },
 },
 
+
+'LLM API Platform (FastAPI)': {
+  constraint: 'The provider is slow, expensive and rate-limited; users are none of those. Everything scales around that mismatch - the queue absorbs it, the workers meter it, Redis streams across it.',
+  ladder: [
+    ['1K req/day', '~1 rps', 'One FastAPI pod calling the provider directly. Fine until the first burst.'],
+    ['100K req/day', '~10 rps', 'The queue arrives: accept-enqueue-stream, workers sized to the rate-limit tier, results through Redis.'],
+    ['5M req/day', '~300 rps', 'Per-key quotas and fairness; provider tiers negotiated; token budgets enforced per request; usage pipeline exactly-once.'],
+    ['50M req/day', '~1.5K rps', 'Multi-provider routing with failover, semantic caching in front of generation, and worker fleets per model class - the queue pattern unchanged.'],
+  ],
+  levers: [
+    { t: 'Accept fast, answer through the queue', d: 'The API returns a handle in ms; the queue absorbs bursts; drain rate equals what the provider tier allows. Wait time becomes arithmetic you can show users.', n: ['api', 'q', 'lw'] },
+    { t: 'Stream through Redis, not sockets to workers', d: 'Workers write tokens; any API replica serves any stream by replay-then-follow. Workers stay stateless and horizontal.', n: ['cache', 'api', 'lw'] },
+    { t: 'Size the fleet from rate-limit math', d: 'Requests-per-minute and tokens-per-minute per tier, divided by per-request cost, times a safety factor. CPU graphs lie here.', n: ['lw', 'prov'] },
+    { t: 'Budget every request', d: 'Max tokens, max wall clock, per-key quotas checked at accept - a runaway prompt dies at its cap, not on your invoice.', n: ['api', 'guard'] },
+  ],
+  wall: { t: 'The provider IS the ceiling', d: 'Past clean queueing and multi-provider routing, throughput is bought, not engineered: higher rate tiers, reserved capacity, or your own GPUs. The architecture above the model can be perfect and the tokens-per-second still belongs to someone else - the wall is a contract negotiation, then a capex decision.' },
+},
+
+'Agentic Workflow (Tools)': {
+  constraint: 'Each task is a loop of expensive model calls with side effects - scaling means more concurrent loops without losing budget enforcement, auditability, or the human gate on irreversible actions.',
+  ladder: [
+    ['100 tasks/day', '~1 rps', 'One orchestrator, a handful of tools, approvals over chat. The schemas already matter.'],
+    ['10K tasks/day', '~15 rps', 'Orchestrators shard by task; sandbox pool warms; memory becomes retrieval; loop caps and audit trails formalize.'],
+    ['500K tasks/day', '~150 rps', 'Risk-tiered autonomy per tool; approval queues with SLAs; token spend per tenant metered; observation-injection defenses standard.'],
+    ['5M tasks/day', '~1.5K rps', 'Fleets per task class, replayable audit at scale, and policy engines deciding autonomy grades - the loop itself never changed.'],
+  ],
+  levers: [
+    { t: 'Shard by task, keep loops single-owner', d: 'A task lives on one orchestrator: no distributed loop state, clean audit, trivial replay. Scale is more orchestrators, not smarter ones.', n: ['agent'] },
+    { t: 'Contracts before execution', d: 'JSON-schema validation turns hallucinated calls into correctable observations instead of executions - the cheapest safety in the design.', n: ['tools', 'agent'] },
+    { t: 'Sandbox the creativity', d: 'Code tools get a disposable microVM with no credentials and an allowlisted network; the agent explores, the blast radius does not.', n: ['sbx'] },
+    { t: 'Retrieve memory, never replay it', d: 'Embed observations, fetch what is relevant per step. Context windows are a budget; retrieval keeps long tasks affordable.', n: ['mem', 'agent'] },
+  ],
+  wall: { t: 'Trust grows slower than capability', d: 'Models improve monthly; the set of actions an organization will let them take unsupervised grows yearly. Past the engineering, scale is a governance problem: every widening of autonomy is a policy decision with an incident budget - and the approval gate, not the GPU, sets the real throughput of consequential work.' },
+},
+
 }

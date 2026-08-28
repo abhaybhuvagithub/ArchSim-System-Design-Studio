@@ -77,6 +77,8 @@ const P = {
   push: { cls: 'vendor', refs: [R.fcm], basis: 'Platform push gateways (FCM/APNs) absorb enormous volume; the modeled cap reflects per-connection send throughput and provider batching guidance rather than any hard limit.' },
   scheduler: { cls: 'vendor', refs: [R.airflow], basis: 'Orchestrator scheduling loops (Airflow-class) documentedly handle task dispatch in the hundreds-to-thousands/s range per scheduler; the figure models dispatch, not the work itself.' },
   secrets: { cls: 'vendor', refs: [R.vault], basis: 'Secret reads from a Vault-class cluster serve in low ms from memory with documented per-node throughput in the thousands/s; unseal and audit-log costs bound writes lower.' },
+  fastapi: { cls: 'benchmark', refs: [R.tfb], basis: 'Async Python (FastAPI/uvicorn-class) sits mid-table in TechEmpower for full-framework workloads; the per-replica figure models IO-bound endpoints doing real validation and a couple of awaited downstream calls - CPU-bound work halves it.' },
+  llmworker: { cls: 'vendor', refs: [R.anthropic, R.openai], basis: 'Worker throughput here is provider rate-limit arithmetic, not compute: a production tier sustains tens of requests per second per worker identity, with latency dominated by output tokens. Batching and streaming shift the experience, not the ceiling.' },
   edge: { cls: 'vendor', refs: [R.cf], basis: 'Edge function platforms document sub-ms cold starts for isolates and very high per-PoP request rates; the figure models one PoP running light request-time compute.' },
 }
 

@@ -1831,4 +1831,30 @@ T('Object Storage (S3)', 'Design the bucket: metadata, placement, erasure-coded 
     'The hit ratio IS the product: every point of hit rate is origin egress the customer does not pay',
     'PoPs are cattle in hostile places - built to lose power, peering or a whole city without customers noticing',
   ], 'Cloud business'),
+T('LLM API Platform (FastAPI)', 'The production LLM stack: async API, queue, worker fleet, provider', 900, [
+    ['u', 'client', 'Clients', 40, 240], ['lb', 'lb', 'LB', 160, 240],
+    ['api', 'fastapi', 'FastAPI Fleet', 290, 240, 3], ['auth', 'micro', 'Auth (JWT)', 290, 120, 2],
+    ['cache', 'cache', 'Redis (results + rate)', 440, 140, 3], ['q', 'queue', 'Task Queue', 440, 300, 2],
+    ['lw', 'llmworker', 'LLM Workers', 590, 300, 24], ['prov', 'llm', 'Model Provider', 740, 300, 18],
+    ['guard', 'guard', 'Guardrails', 590, 180, 2], ['obs', 'otel', 'Telemetry', 740, 140, 2],
+  ], [['u','lb'],['lb','api'],['api','auth'],['api','cache'],['api','q'],['q','lw'],['lw','guard'],['lw','prov'],['lw','obs']], [
+    'Accept fast, answer slow: the API validates, enqueues and returns a stream handle in milliseconds - the queue absorbs what the provider cannot',
+    'Results and rate-limit state live in Redis: the worker writes tokens there, the API streams them out over SSE',
+    'Worker throughput is rate-limit arithmetic - size the fleet from provider tier math, not CPU graphs',
+    'Guardrails wrap the model both ways: prompt-injection in, PII and policy out',
+    'Every request carries a Pydantic contract in and a token-usage record out - billing and evals ride the same telemetry',
+  ], 'GenAI'),
+  T('Agentic Workflow (Tools)', 'Agents that plan, call tools, and know when to stop', 150, [
+    ['u', 'client', 'Users', 40, 240], ['gw', 'gateway', 'API GW', 170, 240, 2],
+    ['agent', 'aiagent', 'Agent Orchestrator', 320, 240, 5], ['llm', 'llm', 'Reasoning LLM', 480, 140, 8],
+    ['tools', 'micro', 'Tool Registry', 480, 300, 3], ['sbx', 'sandbox', 'Code Sandbox', 620, 300, 10],
+    ['mem', 'vector', 'Agent Memory', 480, 400, 2], ['guard', 'guard', 'Guardrails', 320, 120, 2],
+    ['hitl', 'app', 'Approval Gate', 620, 140, 2],
+  ], [['u','gw'],['gw','agent'],['agent','guard'],['agent','llm'],['agent','tools'],['tools','sbx'],['agent','mem'],['agent','hitl']], [
+    'An agent is a loop with a budget: plan, call a tool, observe, repeat - with hard caps on steps, tokens and wall clock',
+    'Tool calls are typed contracts (JSON schema), not string hopes - the registry validates before anything executes',
+    'Code tools run in microVM sandboxes: the agent is creative, the blast radius is not',
+    'Memory is retrieval, not accumulation: fetch what is relevant, never replay the whole history into the context window',
+    'Irreversible actions route through a human approval gate - autonomy is graded, not granted',
+  ], 'GenAI'),
 ]

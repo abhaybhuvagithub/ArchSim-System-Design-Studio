@@ -142,15 +142,17 @@ export const CATALOG = {
   push:         { name: 'Push / SMS / Email', glyph: '📮', color: '#eab308', cap: 20000, lat: 120, avail: 0.999, desc: 'Third-party delivery. Rate-limited by the provider, and every send needs an idempotency key.' },
   containerreg: { name: 'Container Registry', glyph: '🐳', color: '#64748b', cap: 5000, lat: 20, avail: 0.9999, desc: 'Image storage on the deploy path. Rarely the bottleneck until every node pulls at once.' },
   bastion:      { name: 'Bastion / Jump Host', glyph: '🚪', color: '#a855f7', cap: 500, lat: 10, avail: 0.999, desc: 'The single audited way into a private network. Every session recorded.' },
+  fastapi: { name: 'FastAPI (Async Python)', glyph: '⚡', color: '#009688', cap: 2200, lat: 22, avail: 0.9995, desc: 'Async Python API tier: Pydantic validation, DI, OAuth2/JWT, SSE streaming, OpenAPI for free. IO-bound concurrency without threads.' },
+  llmworker: { name: 'LLM Worker', glyph: '🦾', color: '#d946ef', cap: 55, lat: 950, avail: 0.999, desc: 'Queue-draining async caller of model providers: batching, retries with backoff, token streaming back through cache or socket. Throughput is rate-limit math, not CPU.' },
 }
 
 export const PALETTE_GROUPS = [
   { label: 'Traffic',       types: ['client', 'dns', 'gslb', 'waf', 'cdn', 'edge', 'lb', 'gateway', 'k8sgw', 'grpcgw', 'graphql', 'ratelimiter', 'bff', 'tenant'] },
-  { label: 'Compute',       types: ['sandbox', 'transcode', 'web', 'app', 'micro', 'grpc', 'ws', 'worker', 'scheduler', 'k8s'] },
+  { label: 'Compute',       types: ['sandbox', 'transcode', 'web', 'app', 'fastapi', 'micro', 'grpc', 'ws', 'worker', 'scheduler', 'k8s'] },
   { label: 'Storage',       types: ['geoidx', 'graph', 'cache', 'sql', 'nosql', 'search', 'blob', 'backup'] },
   { label: 'Async',         types: ['push', 'queue', 'kafka', 'mq', 'esb', 'saga'] },
   { label: 'Data',          types: ['batch', 'stream', 'cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
-  { label: 'AI / ML',       types: ['featurestore', 'ml', 'embed', 'vector', 'llm', 'guard', 'agentgraph', 'finetune', 'llmobs', 'gemini3', 'gemini2', 'notebooklm', 'imagen', 'veo', 'astra', 'mariner', 'gemmaos', 'aiagent'] },
+  { label: 'AI / ML',       types: ['llmworker', 'featurestore', 'ml', 'embed', 'vector', 'llm', 'guard', 'agentgraph', 'finetune', 'llmobs', 'gemini3', 'gemini2', 'notebooklm', 'imagen', 'veo', 'astra', 'mariner', 'gemmaos', 'aiagent'] },
   { label: 'Google Cloud',  types: ['vertexai', 'duetai', 'beam', 'antigravity'] },
   { label: 'Observability', types: ['tsdb', 'otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
   { label: 'Security',      types: ['bastion', 'iam', 'secrets', 'hsm', 'pii', 'audit', 'siem'] },
