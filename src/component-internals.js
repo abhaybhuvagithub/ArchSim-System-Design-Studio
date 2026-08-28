@@ -47,6 +47,18 @@ export const COMPONENT_INTERNALS = {
   },
 
   // Compute
+  fastapi: {
+    algorithm: 'Async event loop (uvicorn/uvloop) + dependency-injected handlers',
+    dataStructure: 'Pydantic models as request/response contracts, DI container, middleware stack, connection pools',
+    internal: 'Each request parses into a typed Pydantic model, flows through middleware (auth, rate limit, tracing), awaits IO-bound work on the event loop, and streams responses via SSE or WebSocket. OpenAPI schema generated from the types.',
+    mechanism: 'Concurrency without threads: thousands of in-flight awaits per worker process. JWT validated in a dependency; background tasks handed off post-response; exception handlers turn failures into typed error bodies.',
+  },
+  llmworker: {
+    algorithm: 'Queue consumer + rate-limit governor + token streamer',
+    dataStructure: 'In-flight job map, per-provider token buckets, retry state with backoff, batch accumulator',
+    internal: 'Pulls a job, checks the provider token bucket, sends the completion request, streams tokens into the result store as they arrive, marks done with a usage record. Retries with exponential backoff on 429/5xx, idempotent on job id.',
+    mechanism: 'Throughput is governed, not raced: the bucket refills at the rate-limit tier and workers block on it, so the provider never sees a thundering herd. Batching groups small prompts when the model supports it.',
+  },
   app: {
     algorithm: 'Request handler + state machine',
     dataStructure: 'In-process cache, connection pools to databases, error queue',

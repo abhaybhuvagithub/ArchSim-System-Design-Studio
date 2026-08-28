@@ -2670,6 +2670,13 @@ try {
     // Inspector controls: select a datastore on the canvas and drive them.
     // The inspector renders behind the Capacity tab, and every other tab
     // clears the selection on the way out.
+    // The sweep leaves the LAST template loaded, which may have no classic
+    // datastore at all (the agentic template ended that lottery). Load one
+    // that definitely does, so this section tests the controls, not the
+    // picker ordering.
+    sel.value = [...sel.options].find((o) => o.textContent.includes('WhatsApp')).value;
+    sel.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await wait(250);
     click(byText('.tabs button', 'Capacity'));
     await wait(150);
     const gs = [...doc.querySelectorAll('svg g.node')];
@@ -2695,6 +2702,7 @@ try {
       await wait(150);
       check('leaderless reveals the quorum inputs', doc.querySelectorAll('.ddia-quorum input').length === 3);
       const qi = () => [...doc.querySelectorAll('.ddia-quorum input')];
+      typeInto(qi()[0], '3'); await wait(80);   // pin n so w=1,r=1 is genuinely broken regardless of the node's replicas
       typeInto(qi()[1], '1'); await wait(80);
       typeInto(qi()[2], '1'); await wait(150);
       check('a broken quorum is called out as bad in the inspector',

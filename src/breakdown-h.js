@@ -789,4 +789,119 @@ export default {
   },
 },
 
+
+'LLM API Platform (FastAPI)': {
+  meta: 'GenAI - platform - medium-hard - accept fast, answer slow',
+  overview: 'The production shape of nearly every LLM product: an async Python API that validates and enqueues in milliseconds, a worker fleet that drains the queue against provider rate limits, and Redis carrying both results and rate state so tokens can stream back over SSE while the worker is still generating. The whole design exists because the provider is slow, expensive and rate-limited - and users are none of those things.',
+  scope: 'The request lifecycle from validated input to streamed tokens, queue-worker sizing, rate limiting, guardrails and usage telemetry. Model choice, fine-tuning and RAG retrieval are separate templates.',
+  fr: {
+    core: ['Accept a completion request, validate it (Pydantic contract), return a stream handle fast', 'Stream tokens to the client over SSE as the worker produces them', 'Enforce per-key rate limits and quotas', 'Record token usage per request for billing and evals'],
+    out: ['Retrieval (see the RAG template)', 'Fine-tuning pipelines', 'Multi-provider routing'],
+  },
+  nfr: {
+    core: ['API p99 in tens of ms - the slow part happens behind the queue', 'No request lost between accept and answer: the queue is durable, the worker idempotent', 'Provider outages degrade to honest 503s with retry-after, never to silent hangs', 'A runaway prompt cannot exhaust the fleet - budgets per request, per key, per tenant'],
+    out: ['Sub-second completions - physics and the provider own that'],
+  },
+  nums: [['ms', 'accept-to-handle at the API'], ['~1s+', 'first token, provider-dependent'], ['rate-limit tier', 'what actually sizes the worker fleet'], ['tokens', 'the billing and budgeting unit']],
+  entities: [
+    ['CompletionJob', 'validated prompt + params + owner key; idempotency key = job id'],
+    ['StreamState', 'tokens so far + done flag in Redis - the bridge between worker and SSE'],
+    ['ApiKey', 'identity, quota, rate state - checked at the edge, settled in telemetry'],
+    ['UsageRecord', 'tokens in/out, model, latency - one per job, feeding billing and evals'],
+  ],
+  apiIntro: 'The contract is async by design: POST returns a handle immediately; the stream endpoint replays and then follows.',
+  api: [
+    { dir: '->', name: 'POST /v1/completions', body: '{ prompt, params }\n-> 202 { jobId, stream: /v1/stream/{jobId} } | 429 quota' },
+    { dir: '<-', name: 'GET /v1/stream/{jobId} (SSE)', body: 'data: {token}\n... data: [DONE] - replays from Redis, then follows live' },
+    { dir: '->', name: 'GET /v1/jobs/{jobId}', body: '-> { status, usage } - the non-streaming truth' },
+  ],
+  dives: [
+    {
+      title: 'Accept fast, answer slow: the queue is the product', focus: ['api', 'q', 'lw', 'cache'],
+      blocks: [
+        ['p', 'The API does three cheap things - validate, authorize, enqueue - and returns a handle. Workers drain the queue at exactly the rate the provider allows, writing tokens into Redis as they arrive; the SSE endpoint replays what exists and follows what comes. Client experience decouples from provider behavior: bursts queue instead of failing, and a provider hiccup shows as delay, not loss.'],
+        ['bul', [
+          'Backpressure is a number, not a vibe: queue depth over drain rate is your wait time - show it, and shed with 429 + retry-after past a threshold.',
+          'Worker idempotency rides the job id: a retried job overwrites its own stream state, never doubles a completion or a bill.',
+          'Streaming through Redis (not worker-to-client sockets) means workers stay stateless and any API replica can serve any stream.',
+        ]],
+        ['warn', 'Calling the provider synchronously from the API thread is the classic first version - it works until the first burst, then every slow completion holds an API worker hostage and p99 explodes. The queue is not an optimization; it is the architecture.'],
+      ],
+    },
+    {
+      title: 'Sizing by rate-limit arithmetic, guarding both directions', focus: ['lw', 'prov', 'guard'],
+      blocks: [
+        ['p', 'The worker fleet is sized by provider math, not CPU: tier limit in requests-per-minute and tokens-per-minute, divided by per-request cost, times a safety factor. CPU graphs will look idle while the real ceiling - the rate limit - is saturated.'],
+        ['bul', [
+          'Budget per request before it runs: max tokens, max tool depth, max wall clock - a runaway prompt dies at its cap, not at your invoice.',
+          'Guardrails wrap both directions: prompt-injection and jailbreak screens on the way in, PII and policy filters on the way out - and the filter result lands in telemetry.',
+          'Usage records are exactly-once by job id and reconciled daily against the provider bill - the platform that cannot explain its invoice has no margin.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'An API in front of an LLM with a queue somewhere.',
+    senior: 'Accept-enqueue-stream with Redis as the token bridge, worker fleet sized from rate-limit arithmetic, budgets per request and key, guardrails both directions.',
+    staff: 'Design the degraded modes (provider brownout, queue backlog, poison prompts), the exactly-once usage pipeline that survives retries, and the multi-tenant fairness story when one key floods the queue.',
+  },
+},
+
+'Agentic Workflow (Tools)': {
+  meta: 'GenAI - agents - hard - autonomy is graded, not granted',
+  overview: 'An agent is a loop: the model proposes an action, typed tools execute it, observations return, repeat - under hard budgets for steps, tokens and time. The engineering is everything around the model: schema-validated tool calls, sandboxed execution for code, retrieval-shaped memory, and a human gate in front of anything irreversible.',
+  scope: 'The plan-act-observe loop, tool registry and contracts, sandboxed execution, memory retrieval and approval flow. Model training and the tools own internals are out.',
+  fr: {
+    core: ['Run multi-step tasks: the model selects tools, the system executes and feeds back observations', 'Validate every tool call against its JSON schema before execution', 'Persist and retrieve task memory across steps', 'Route irreversible actions through human approval'],
+    out: ['Multi-agent swarms', 'Tool marketplaces', 'Model choice and routing'],
+  },
+  nfr: {
+    core: ['Bounded always: steps, tokens, wall clock and spend per task have hard caps', 'A malicious or hallucinated tool call cannot escape the schema or the sandbox', 'Every step is auditable: prompt, call, observation, decision - replayable end to end', 'Approval-gated actions fail closed when the human never answers'],
+    out: ['Sub-second task completion - agents trade latency for capability by design'],
+  },
+  nums: [['3-15', 'typical tool-loop steps before answer or cap'], ['1 schema', 'per tool - the contract that makes calls executable'], ['~125ms', 'sandbox boot when a code tool fires'], ['100%', 'of irreversible actions behind the gate']],
+  entities: [
+    ['Task', 'goal + budgets + status; the unit of audit and billing'],
+    ['Step', 'one loop turn: model output, validated call, observation'],
+    ['Tool', 'name + JSON schema + executor + risk class (auto vs approval)'],
+    ['Approval', 'a pending irreversible action awaiting a human - expiring, fail-closed'],
+  ],
+  apiIntro: 'Tasks are asynchronous conversations with an audit trail; the stream shows the loop thinking.',
+  api: [
+    { dir: '->', name: 'POST /tasks', body: '{ goal, budgets? }\n-> 202 { taskId, stream }' },
+    { dir: '<-', name: 'GET /tasks/{id}/stream (SSE)', body: 'step events: plan, tool_call, observation, approval_needed, done' },
+    { dir: '->', name: 'POST /approvals/{id}', body: '{ decision: approve | deny } - the human half of the loop' },
+  ],
+  dives: [
+    {
+      title: 'The loop with a budget: contracts before execution', focus: ['agent', 'llm', 'tools'],
+      blocks: [
+        ['p', 'The orchestrator owns the loop, the model only proposes. Each turn: assemble context (goal, recent steps, retrieved memory), get the models next action, validate it against the tools JSON schema, execute, append the observation. Budgets are checked every turn - steps, tokens, spend, clock - and the loop exits with its best answer when any cap trips.'],
+        ['bul', [
+          'Schema validation is the firewall: an unparseable or off-contract call becomes an error observation the model can correct - never an execution.',
+          'The registry declares risk per tool: read-only tools auto-run; mutating ones log; irreversible ones stop the loop at the approval gate.',
+          'Loop detection is cheap and vital: the same call with the same args twice is a nudge; three times ends the task honestly.',
+        ]],
+        ['warn', 'The failure mode is not the model going rogue - it is the loop with no exit: an agent burning tokens on a task it cannot finish. Budgets are not safety theater; they are the product working as designed.'],
+      ],
+    },
+    {
+      title: 'Blast radius engineering: sandbox, memory, and the human gate', focus: ['sbx', 'mem', 'hitl', 'guard'],
+      blocks: [
+        ['p', 'Code tools execute in microVM sandboxes - the agent can be creative because the blast radius is one disposable VM with no credentials and an allowlisted network. Memory is retrieval-shaped: embed and store observations, fetch only what is relevant to the current step, and never replay whole histories into the context window.'],
+        ['bul', [
+          'The sandbox boot (~125ms) is the price of trying arbitrary code safely - the same isolation tax the serverless template prices.',
+          'Approvals fail closed: an expired request denies, a denied action returns to the loop as an observation the model must plan around.',
+          'Guardrails screen the agents inputs and outputs like any LLM app - plus one more: tool observations are untrusted input too (a scraped page can carry an injection aimed at the loop).',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'An LLM that can call functions in a while loop.',
+    senior: 'Schema-validated tools with risk classes, budget-bounded loop with detection, sandboxed code execution, retrieval memory, fail-closed approvals.',
+    staff: 'Design the audit-and-replay system, the injection story for untrusted observations, and the graded-autonomy policy that decides which actions ever leave the approval gate.',
+  },
+},
+
 }
