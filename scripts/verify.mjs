@@ -2262,6 +2262,8 @@ try {
       const ms = () => doc.querySelector('.mastery');
       check('the mastery hub renders all eleven areas with a progress bar',
         ms().querySelectorAll('.ms-area').length === 11 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every comparison table arrives expanded — the table IS the mastery',
+        [...ms().querySelectorAll('details.ms-cmp')].every(d => d.hasAttribute('open')));
       check('comparison tables live inside the items, in this same tab',
         ms().querySelectorAll('details.ms-cmp').length >= 15);
       {
