@@ -113,7 +113,22 @@ export function futureReady(nodes, edges, sim, resim, target = 0.999) {
   }
   if (!ns.some(n => ['monitor', 'otel', 'tsdb'].includes(n.type))) {
     const obs = sloQuickFix('obs', ns, es, cur, target, null)
-    if (obs) { ns = obs.nodes; steps.push('observability tier'); cur = resim(ns, es) }
+    if (obs) {
+      ns = obs.nodes
+      // Wire it in — an unconnected monitor observes nothing. Telemetry flows
+      // from the front door plus the two busiest service tiers; the sizing and
+      // SPOF passes below then right-size what these edges now feed.
+      const mon = ns.find(n => n.id === 'mon-fix')
+      const door2 = ns.find(n => n.type === 'gateway' || n.type === 'lb')
+      const busiest = ns
+        .filter(n => FIXABLE(n) && n.id !== mon.id && n.id !== door2?.id && !['cdn', 'blob', 'dns'].includes(n.type))
+        .sort((a, b) => (cur?.stats?.[b.id]?.in || 0) - (cur?.stats?.[a.id]?.in || 0))
+        .slice(0, 2)
+      const sources = [door2, ...busiest].filter(Boolean)
+      for (const src of sources) es.push(mkEdge(src.id, mon.id))
+      steps.push(`observability tier (fed by ${sources.map(n => n.label).join(', ')})`)
+      cur = resim(ns, es)
+    }
   }
   const guards = insertGuards(ns, es)
   if (guards) { ns = guards.nodes; es = guards.edges; steps.push(`guardrails on ${guards.added.join(', ')}`); cur = resim(ns, es) }

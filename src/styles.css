@@ -1766,3 +1766,11 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .prr-plan { display: block; font-size: 12px; margin-top: 4px; }
 .fr-ok { border-color: rgba(52,199,89,.55); }
 .fr-go { border-color: var(--accent); }
+
+/* ── Future-ready card in the Improve tab ──────────────────────────────── */
+.future-card { border: 1px solid var(--accent); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; background: rgba(91,140,255,.07); }
+.future-card.ok { border-color: rgba(52,199,89,.55); background: rgba(52,199,89,.08); }
+.future-h { font-weight: 700; font-size: 13px; }
+.future-p { font-size: 12.5px; margin: 6px 0 0; }
+.future-list { margin: 8px 0 10px; padding-left: 18px; font-size: 12.5px; line-height: 1.6; }
+.future-go { border-color: var(--accent); font-weight: 600; }

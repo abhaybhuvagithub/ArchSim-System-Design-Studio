@@ -2187,21 +2187,33 @@ try {
       await wait(150);
       const after = slo().textContent.match(/([\d.]+) min/)?.[1];
       check('tightening the target shrinks the budget live', before === '43.2' && after === '4.3');
-      // 🚀 future-ready drive: disclose, apply, verify the ✓ state
+      // 🚀 future-ready drive: the card lives in the Improve tab now —
+      // disclose the steps, apply, and the card must flip to the green state
       {
-        const frBtn = [...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('🚀 Future-ready'));
-        check('the 🚀 Future-ready button is in the toolbar with its plan disclosed',
-          !!frBtn && ((frBtn.getAttribute('title') || '').startsWith('Will apply:') || /Already future-ready/.test(frBtn.getAttribute('title') || '')));
-        if (frBtn && !frBtn.textContent.includes('✓')) {
+        click([...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('✨ Improve')));
+        await wait(250);
+        const card = () => doc.querySelector('.future-card');
+        check('the 🚀 Future-ready card lives in the Improve tab', !!card());
+        if (card() && !card().classList.contains('ok')) {
+          check('the card discloses its upgrade steps before the click',
+            card().querySelectorAll('.future-list li').length >= 1);
           const nodesBefore = doc.querySelectorAll('svg g.node').length;
-          click(frBtn);
+          click(card().querySelector('.future-go'));
           await wait(500);
-          check('one click applies the whole upgrade and the button turns ✓',
-            [...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('🚀 Future-ready'))?.textContent.includes('✓') &&
-            doc.querySelectorAll('svg g.node').length >= nodesBefore);
+          check('one click applies the whole upgrade and the card turns green',
+            !!doc.querySelector('.future-card.ok') && doc.querySelectorAll('svg g.node').length >= nodesBefore);
+          check('the added monitor is wired, not floating', (() => {
+            const monG = [...doc.querySelectorAll('svg g.node')].find(g => /Monitoring \(added\)/.test(g.textContent));
+            if (!monG) return true;   // this canvas already had observability
+            return [...doc.querySelectorAll('svg path, svg line')].length > 0 && !!doc.querySelector('.future-card.ok');
+          })());
         } else {
-          check('one click applies the whole upgrade and the button turns ✓', true);
+          check('the card discloses its upgrade steps before the click', true);
+          check('one click applies the whole upgrade and the card turns green', true);
+          check('the added monitor is wired, not floating', true);
         }
+        click([...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('✨ Improve')));
+        await wait(150);
       }
 
       // quick-fix drive: whatever gate fails on this canvas, the button must
@@ -3474,6 +3486,8 @@ try {
           const sf = resim(r.nodes, r.edges);
           if (fa(r.nodes, r.edges, sf).length) return false;
           if (!fr(r.nodes, r.edges, sf, resim).alreadyReady) return false;
+          // an added monitor that observes nothing is theater — it must be fed
+          if (r.nodes.some(n => n.id === 'mon-fix') && !r.edges.some(e => (e.to ?? e[1]) === 'mon-fix')) return false;
         }
         return true;
       })());

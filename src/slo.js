@@ -81,7 +81,20 @@ export function sloQuickFix(id, nodes, edges, sim, target = 0.999, resim = null)
   }
   if (id === 'obs') {
     const y = Math.max(...nodes.map(n => n.y), 200) + 90
-    return { nodes: [...nodes, { id: 'mon-fix', type: 'monitor', label: 'Monitoring (added)', x: 160, y, replicas: 1 }], plan: 'Will add a monitoring tier node (wire services in as you grow)', note: '⚡ Added a monitoring tier — wire your services to it as they grow; the next incident should be seen, not felt.' }
+    const mon = { id: 'mon-fix', type: 'monitor', label: 'Monitoring (added)', x: 160, y, replicas: 2 }
+    const eFrom2 = e => Array.isArray(e) ? e[0] : e.from
+    const eTo2 = e => Array.isArray(e) ? e[1] : e.to
+    const mkE2 = (from, to) => Array.isArray(edges[0] || [0]) ? [from, to] : { id: `${from}->${to}`, from, to, label: '' }
+    const door3 = nodes.find(n => n.type === 'gateway' || n.type === 'lb')
+    const busiest = nodes
+      .filter(n => n.type !== 'client' && n.id !== door3?.id && !['cdn', 'blob', 'dns', 'monitor', 'otel', 'tsdb'].includes(n.type))
+      .sort((a, b) => (sim?.stats?.[b.id]?.in || 0) - (sim?.stats?.[a.id]?.in || 0))
+      .slice(0, 2)
+    const sources = [door3, ...busiest].filter(Boolean)
+    const newEdges = [...edges, ...sources.map(src => mkE2(src.id, mon.id))]
+    return { nodes: [...nodes, mon], edges: newEdges,
+      plan: `Will add a monitoring tier fed by ${sources.map(n => n.label).join(', ')}`,
+      note: `⚡ Added a monitoring tier wired to ${sources.map(n => n.label).join(', ')} — the next incident should be seen, not felt.` }
   }
   if (id === 'struct') {
     let ns = nodes.map(n => ({ ...n }))
