@@ -1576,6 +1576,25 @@ function CmdK({ onClose, onTemplate, onTab, onPractice }) {
   )
 }
 
+// Expanded by default — the table IS the mastery — but a collapse must stick:
+// a bare `open` prop would snap shut tables back open on every state change.
+function MsCompare({ cmp }) {
+  const [open, setOpen] = useState(true)
+  return (
+    <details className="ms-cmp" open={open} onToggle={e => setOpen(e.target.open)}>
+      <summary>⇄ Compare</summary>
+      <table>
+        <thead><tr><th></th>{cmp.cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+        <tbody>
+          {cmp.rows.map((r, ri) => (
+            <tr key={ri}><td className="ms-dim">{r[0]}</td>{r.slice(1).map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  )
+}
+
 function MasteryTab({ onGo }) {
   const [done, setDone] = useState(readMastery)
   const [ui, setUi] = useState(readMasteryUI)
@@ -1613,19 +1632,7 @@ function MasteryTab({ onGo }) {
                 <div className="ms-body">
                   <div className="ms-t">{x.t}</div>
                   <div className="ms-d">{x.d}</div>
-                  {MASTERY_CMP[x.id] && (
-                    <details className="ms-cmp">
-                      <summary>⇄ Compare</summary>
-                      <table>
-                        <thead><tr><th></th>{MASTERY_CMP[x.id].cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
-                        <tbody>
-                          {MASTERY_CMP[x.id].rows.map((r, ri) => (
-                            <tr key={ri}><td className="ms-dim">{r[0]}</td>{r.slice(1).map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </details>
-                  )}
+                  {MASTERY_CMP[x.id] && <MsCompare cmp={MASTERY_CMP[x.id]} />}
                   <div className="ms-go">
                     <button className="btn" onClick={() => onGo(x.go)}>▶ Practice{x.go.tpl ? `: ${x.go.tpl}` : ''}</button>
                     <span className="ms-do muted">{x.go.do}</span>
