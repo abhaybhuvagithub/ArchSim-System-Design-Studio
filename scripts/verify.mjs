@@ -2250,6 +2250,33 @@ try {
         acr().querySelectorAll('.acr-row').length >= 10 && [...acr().querySelectorAll('.acr-c')].every(el => el.textContent === 'Security & Identity'));
       click([...acr().querySelectorAll('.acr-cats .btn')].find(b => b.textContent === 'All'));
       await wait(120);
+      // ── the mastery hub, driven ────────────────────────────────────────────
+      await goTab('Mastery');
+      const ms = () => doc.querySelector('.mastery');
+      check('the mastery hub renders all eleven areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 11 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      const firstBox = ms().querySelector('.ms-check input');
+      firstBox.click();
+      await wait(150);
+      check('checking a concept moves progress and persists',
+        /1 of \d+ mastered/.test(ms().textContent) && (win.localStorage.getItem('archsim.mastery.v1') || '').includes('sql-nosql'));
+      firstBox.click();
+      await wait(120);
+      const goBtn = [...ms().querySelectorAll('.ms-go .btn')].find(b => b.textContent.includes('Rate Limiter'));
+      click(goBtn);
+      await wait(300);
+      check('Practice loads the exact template and lands on its tab',
+        /Rate Limiter/.test(doc.querySelector('.tpl-header')?.textContent || '') &&
+        byText('.tabs button', 'Breakdown')?.className.includes('on'));
+      // The exec-ROI checks right after this need the non-internal WhatsApp
+      // canvas back on the ROI tab — restore exactly what they had before
+      // this drive swapped the template.
+      {
+        const selM = [...doc.querySelectorAll('select')].find((x) => [...x.options].some((o) => o.textContent.includes('WhatsApp')));
+        selM.value = [...selM.options].find((o) => o.textContent.includes('WhatsApp')).value;
+        selM.dispatchEvent(new win.Event('change', { bubbles: true }));
+        await wait(250);
+      }
       await goTab('ROI');
       // executive framing: one sentence for the board, P&L for the CFO, risk for the CTO
       check('the board gets one plain-English sentence', /For the board:/.test(roi().textContent));
@@ -2365,7 +2392,7 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all eighteen tabs are tabs', tabBtns.length === 18);
+    check('all nineteen tabs are tabs', tabBtns.length === 19);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',
@@ -3523,6 +3550,30 @@ try {
       check('glossary text is straight-ASCII quoted', !/[\u2018\u2019\u201C\u201D]/.test(src2));
       check('the studio staples are all present',
         ['CAP', 'CQRS', 'SLO', 'SPOF', 'RAG', 'WAL', 'DLQ', 'MRR', 'P99'].every(a => seen.has(a)));
+    }
+
+    // ── the 80/20 mastery curriculum: complete and honestly wired ────────────
+    {
+      const M = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+      const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
+      const names = new Set(T5.map(t => t.name));
+      const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about']);
+      check('the curriculum covers exactly the eleven canonical areas', M.MASTERY.length === 11);
+      check('the curriculum carries at least thirty tracked concepts', M.MASTERY_TOTAL >= 30);
+      const ids = M.MASTERY.flatMap(a => a.items.map(x => x.id));
+      check('every concept id is unique', new Set(ids).size === ids.length);
+      const bad = [];
+      for (const a of M.MASTERY) for (const x of a.items) {
+        if (!x.t || !x.d || x.d.length < 60) bad.push(x.id + ':thin');
+        if (!x.go || !x.go.do || x.go.do.length < 30) bad.push(x.id + ':no-exercise');
+        if (x.go.tpl && !names.has(x.go.tpl)) bad.push(x.id + ':ghost-tpl(' + x.go.tpl + ')');
+        if (x.go.tab && !validTabs.has(x.go.tab)) bad.push(x.id + ':ghost-tab(' + x.go.tab + ')');
+      }
+      check('every concept teaches (60+ char line), exercises (30+ chars), and points at real surfaces' + (bad.length ? ' — ' + bad.slice(0, 4).join(', ') : ''), bad.length === 0);
+      check('all eleven canonical topics are present by name', (() => {
+        const titles = M.MASTERY.map(a => a.title).join(' | ');
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles);
+      })());
     }
 
     // ── traffic slider reaches internet scale and stays readable ─────────────
