@@ -45,7 +45,7 @@ import { PRO_ENABLED, PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, s
 import { roiFor } from './roi.js'
 import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
-import { futureReady, futureAudit } from './future.js'
+import { futureSuggestions } from './future.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -177,9 +177,9 @@ export default function App() {
   const sim = useMemo(() => simulate(nodes, edges, rps, downSet, fx), [nodes, edges, rps, downSet, fx])
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
-  const future = useMemo(() => {
-    if (!nodes.length) return null
-    try { return futureReady(nodes, edges, sim, (n2, e2) => simulate(n2, e2 || edges, rps, downSet, fx)) } catch { return null }
+  const frSugs = useMemo(() => {
+    if (!nodes.length) return []
+    try { return futureSuggestions(nodes, edges, sim, (n2, e2) => simulate(n2, e2 || edges, rps, downSet, fx)) } catch { return [] }
   }, [nodes, edges, sim, rps, downSet, fx])
   const cost = useMemo(() => costReport(nodes, sim, cloudInfo.mult), [nodes, sim, cloudInfo])
   const baseSim = useMemo(() => (faults.length ? simulate(nodes, edges, rps) : sim), [faults, nodes, edges, rps, sim])
@@ -840,15 +840,6 @@ export default function App() {
           title="Review the design and suggest components to add, wired in automatically">
           ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
         </button>
-        <button className={`btn ${future?.alreadyReady ? 'fr-ok' : 'fr-go'}`}
-          title={future ? future.plan : 'Load a design first'}
-          disabled={!future}
-          onClick={() => {
-            if (!future || future.alreadyReady) { notify('🚀 Already future-ready — every gate on the audit is green.', 'info'); return }
-            setNodes(future.nodes); setEdges(future.edges); notify(future.note, 'info')
-          }}>
-          🚀 Future-ready{future && !future.alreadyReady ? ` (${future.steps.length})` : future?.alreadyReady ? ' ✓' : ''}
-        </button>
         <button className={`btn ${explain != null ? 'active' : ''}`} data-tour="explain"
           onClick={() => setExplain(v => (v == null ? (explainList.length ? 0 : null) : null))}
           title="Walk the design hop by hop, in the same ①②③ order as the step badges">
@@ -1249,11 +1240,8 @@ export default function App() {
             <Learn done={doneSteps} nodes={nodes} />
           ) : tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
-              onHover={setHover} empty={nodes.length === 0} future={future}
-              onFutureReady={() => {
-                if (!future || future.alreadyReady) return
-                setNodes(future.nodes); setEdges(future.edges); notify(future.note, 'info')
-              }} />
+              onHover={setHover} empty={nodes.length === 0} futureSugs={frSugs}
+              onApplyFuture={(fix) => { setNodes(fix.nodes); if (fix.edges) setEdges(fix.edges); notify(fix.note, 'info') }} />
           ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} cloud={cloud} cloudMult={cloudInfo.mult} onShowDetails={setDetailsNode} />
             : selEdgeObj ? (
               <EdgeInspector e={selEdgeObj} nodes={nodes} sim={sim} step={stepMap[selEdgeObj.id]}
@@ -2393,25 +2381,10 @@ function EdgeInspector({ e, nodes, sim, step, setEdges, onDelete }) {
   )
 }
 
-function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty, future = null, onFutureReady = () => {} }) {
+function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty, futureSugs = [], onApplyFuture = () => {} }) {
   const actionable = sugs.filter(s => s.apply)
   return (
     <section>
-      {future && (
-        <div className={`future-card ${future.alreadyReady ? 'ok' : ''}`}>
-          <div className="future-h">🚀 Future-ready{future.alreadyReady ? ' — this design already clears the bar' : ` — ${future.steps.length} upgrade${future.steps.length === 1 ? '' : 's'} to the growth-stage bar`}</div>
-          {future.alreadyReady ? (
-            <p className="future-p">Front door, observability, no SPOFs, guarded AI, capacity headroom and 99.9% availability: every gate on the audit is green.</p>
-          ) : (
-            <>
-              <ul className="future-list">
-                {future.steps.map((st, i2) => <li key={i2}>{st}</li>)}
-              </ul>
-              <button className="btn future-go" onClick={onFutureReady}>🚀 Apply all — make it future-ready</button>
-            </>
-          )}
-        </div>
-      )}
       <h3>Architecture review</h3>
       {empty ? (
         <div className="empty">Load a template or drop a few components in, then come back — the review looks at what is missing, what is saturated, and what has no redundancy at the current traffic level.</div>
@@ -2433,6 +2406,18 @@ function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty, future = 
               ⚡ Quick fix all {actionable.length}
             </button>
           )}
+          {futureSugs.map(s => (
+            <div key={s.id} className={`sug ${s.severity}`}>
+              <div className="sug-t">
+                <span>{s.icon} {s.title}</span>
+                <span className={`pill ${s.severity === 'high' ? 'bad' : 'warn'}`}>{s.severity}</span>
+              </div>
+              <div className="sug-d">{s.detail}</div>
+              <button className="btn quick" style={{ marginTop: 7 }} onClick={() => onApplyFuture(s.fix)}>
+                ⚡ Quick fix
+              </button>
+            </div>
+          ))}
           {sugs.map(s => (
             <div key={s.id} className={`sug ${s.severity}`}>
               <div className="sug-t">
