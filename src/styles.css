@@ -1764,3 +1764,5 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .acr-c { font-size: 12px; margin-left: 6px; }
 .prr-fix { margin-left: 8px; font-size: 12px; padding: 2px 9px; border-color: var(--accent); }
 .prr-plan { display: block; font-size: 12px; margin-top: 4px; }
+.fr-ok { border-color: rgba(52,199,89,.55); }
+.fr-go { border-color: var(--accent); }

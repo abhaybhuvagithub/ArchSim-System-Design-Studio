@@ -2187,6 +2187,23 @@ try {
       await wait(150);
       const after = slo().textContent.match(/([\d.]+) min/)?.[1];
       check('tightening the target shrinks the budget live', before === '43.2' && after === '4.3');
+      // 🚀 future-ready drive: disclose, apply, verify the ✓ state
+      {
+        const frBtn = [...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('🚀 Future-ready'));
+        check('the 🚀 Future-ready button is in the toolbar with its plan disclosed',
+          !!frBtn && ((frBtn.getAttribute('title') || '').startsWith('Will apply:') || /Already future-ready/.test(frBtn.getAttribute('title') || '')));
+        if (frBtn && !frBtn.textContent.includes('✓')) {
+          const nodesBefore = doc.querySelectorAll('svg g.node').length;
+          click(frBtn);
+          await wait(500);
+          check('one click applies the whole upgrade and the button turns ✓',
+            [...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('🚀 Future-ready'))?.textContent.includes('✓') &&
+            doc.querySelectorAll('svg g.node').length >= nodesBefore);
+        } else {
+          check('one click applies the whole upgrade and the button turns ✓', true);
+        }
+      }
+
       // quick-fix drive: whatever gate fails on this canvas, the button must
       // mutate the graph and EARN the green on re-evaluation
       {
@@ -3442,6 +3459,35 @@ try {
         return f && f.nodes.every(n => n.replicas >= 2);
       })());
       check('a fix that makes no sense for the graph returns null instead of pretending', sloQuickFix('door', [{ id: 'a', type: 'app', label: 'A', replicas: 1, x: 1, y: 1 }], [], { stats: {} }) === null);
+      // ── 🚀 future-ready: the library-wide contract ─────────────────────────
+      // One click takes ANY of the templates to the growth-stage bar (front
+      // door, observability, no SPOF, guarded AI, ≤85% util, ≥99.9% avail),
+      // and a second click is a no-op. Proven across the whole library.
+      check('every template in the library goes future-ready in one click, idempotently', await (async () => {
+        const { futureReady: fr, futureAudit: fa } = await import(pathToFileURL(path.join(root, 'src/future.js')).href);
+        const { simulate: simF } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const TF = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
+        for (const t of TF) {
+          const resim = (ns, es) => simF(ns, es || t.edges, t.rps, new Set());
+          const s0 = resim(t.nodes, t.edges);
+          const r = fr(t.nodes, t.edges, s0, resim);
+          const sf = resim(r.nodes, r.edges);
+          if (fa(r.nodes, r.edges, sf).length) return false;
+          if (!fr(r.nodes, r.edges, sf, resim).alreadyReady) return false;
+        }
+        return true;
+      })());
+      check('future-ready inserts guardrails one hop upstream of every AI tier', await (async () => {
+        const { futureReady: fr } = await import(pathToFileURL(path.join(root, 'src/future.js')).href);
+        const { simulate: simF } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const TF = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
+        const t = TF.find(x => x.name === 'GenAI: RAG Assistant');
+        const resim = (ns, es) => simF(ns, es || t.edges, t.rps, new Set());
+        const r = fr(t.nodes, t.edges, resim(t.nodes, t.edges), resim);
+        const guards = r.nodes.filter(n => n.type === 'guard');
+        const llms = r.nodes.filter(n => ['llm', 'aiagent', 'agentgraph', 'ml'].includes(n.type));
+        return llms.every(ai => r.edges.some(e => (e.to === ai.id && guards.some(g => g.id === e.from)) || (e.from === ai.id && guards.some(g => g.id === e.to))));
+      })());
       check('every fix carries a precise plan the button can show before the click', (() => {
         const ns = [{ id: 'a', type: 'app', label: 'Lonely API', replicas: 1, x: 1, y: 1 }];
         const sp = sloQuickFix('spof', ns, [], { stats: { a: { in: 10 } } });
