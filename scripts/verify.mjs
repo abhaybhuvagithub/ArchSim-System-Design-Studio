@@ -1696,7 +1696,15 @@ try {
 
     // Four faults that leave the node running — the hard kind.
     const dist = FAULTS.filter(f => f.group === 'Distributed');
-    check('the four distributed faults are wired into the chaos engine', dist.length === 4);
+    check('the five distributed faults are wired into the chaos engine', dist.length === 5);
+    check('the retry storm duplicates demand in the real simulator', await (async () => {
+      const { simulate: simR } = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+      const nodes = [{ id: 'c', type: 'client', label: 'C', x: 0, y: 0 }, { id: 'l', type: 'ledger', label: 'L', x: 1, y: 0, replicas: 2 }];
+      const edges = [{ id: 'c->l', from: 'c', to: 'l', label: '' }];
+      const storm = simR(nodes, edges, 1000, new Set(), { node: { l: { dup: 0.4 } } });
+      const base = simR(nodes, edges, 1000, new Set());
+      return storm.stats.l.dupIn === 400 && storm.stats.l.util > base.stats.l.util;
+    })());
     check('Distributed is an offered fault group', FAULT_GROUPS.includes('Distributed'));
     for (const id of ['splitbrain', 'clockskew', 'pause', 'asymmetric'])
       check('fault "' + id + '" exists with a working effect', (() => {
@@ -2868,6 +2876,44 @@ try {
 
   // ── map: land, replicas and editing ────────────────────────────────────────
   {
+      // ── money-movement controls: idempotency, commit mode, and the storm ──
+      {
+        // walk to the ledger node (WhatsApp has none — load Card Payments)
+        const selL = [...doc.querySelectorAll('select')].find((x) => [...x.options].some((o) => o.textContent.includes('Card Payments')));
+        selL.value = [...selL.options].find((o) => o.textContent.includes('Card Payments')).value;
+        selL.dispatchEvent(new win.Event('change', { bubbles: true }));
+        await wait(250);
+        let idemSel = null
+        for (const g of [...doc.querySelectorAll('svg g.node')]) {
+          g.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+          await wait(80);
+          const f = [...doc.querySelectorAll('.field')].find(x => x.querySelector('label')?.textContent === 'Idempotency');
+          if (f) { idemSel = f.querySelector('select'); break }
+        }
+        check('ledger nodes expose Idempotency and Commit mode controls',
+          !!idemSel && !![...doc.querySelectorAll('.field')].find(x => x.querySelector('label')?.textContent === 'Commit mode'));
+        if (idemSel) {
+          idemSel.value = 'off';
+          idemSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+          await wait(150);
+          check('idempotency-off warns about the trap even before any storm',
+            /that is the trap/i.test([...doc.querySelectorAll('.ddia-verdict')].map(x => x.textContent).join(' ')));
+          const cm = [...doc.querySelectorAll('.field')].find(x => x.querySelector('label')?.textContent === 'Commit mode').querySelector('select');
+          cm.value = 'batch';
+          cm.dispatchEvent(new win.Event('change', { bubbles: true }));
+          await wait(150);
+          check('batched commits price the loss window in entries at this traffic',
+            /Loss window at this traffic/.test([...doc.querySelectorAll('.ddia-verdict')].map(x => x.textContent).join(' ')));
+          cm.value = 'each'; cm.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(80);
+          const idemSel2 = [...doc.querySelectorAll('.field')].find(x => x.querySelector('label')?.textContent === 'Idempotency')?.querySelector('select');
+          idemSel2.value = 'on'; idemSel2.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(80);
+        }
+        // restore WhatsApp for the sections downstream that expect it
+        selL.value = [...selL.options].find((o) => o.textContent.includes('WhatsApp')).value;
+        selL.dispatchEvent(new win.Event('change', { bubbles: true }));
+        await wait(250);
+      }
+
       // ── the two new live controls: cache write policy, LB balancing ────────
       {
         // cache node: WhatsApp has one — walk nodes until Write policy appears

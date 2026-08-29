@@ -6,7 +6,7 @@ import { physicalEffects, capacitySplit, effectiveCapacity, readFractionOf } fro
 // fx (optional) carries injected chaos: per-node capacity/latency/drop multipliers,
 // a set of severed edge ids, and a global traffic multiplier.
 export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null) {
-  const NOFX = { capMul: 1, latMul: 1, drop: 0, noCache: false }
+  const NOFX = { capMul: 1, latMul: 1, drop: 0, noCache: false, dup: 0 }
   const fxOf = id => (fx?.node?.[id] ? { ...NOFX, ...fx.node[id] } : NOFX)
   const isCut = e => !!fx?.cut?.has(e.id)
   totalRps = totalRps * (fx?.rpsMul || 1)
@@ -45,10 +45,13 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
     const split = capacitySplit(n, spec.cap, Math.max(replicas, 0), n.replication)
     const rawCap = spec.source ? Infinity : effectiveCapacity(split.readCap, split.writeCap, readMix)
     const capacity = rawCap === Infinity ? Infinity : rawCap * f.capMul
-    const faultDrop = inRps * f.drop                       // lost before any work happens
-    const offered = inRps - faultDrop
+    // Retry storms duplicate demand: the node sees more than true traffic,
+    // and everything downstream of it inherits the duplicates too.
+    const inflated = inRps * (1 + (f.dup || 0))
+    const faultDrop = inflated * f.drop                    // lost before any work happens
+    const offered = inflated - faultDrop
     const processed = Math.min(offered, capacity)
-    const dropped = inRps - processed
+    const dropped = Math.max(0, offered - processed)
     const util = capacity === Infinity ? 0 : capacity === 0 ? (offered > 0 ? 999 : 0) : offered / capacity
     // M/M/1-flavoured queueing delay
     const qFactor = util >= 1 ? 20 : 1 / Math.max(0.05, 1 - util)
@@ -59,6 +62,7 @@ export function simulate(nodes, edges, totalRps, downSet = new Set(), fx = null)
     if (f.capMul < 1) avail *= (0.5 + 0.5 * f.capMul)
     stats[id] = {
       in: inRps, processed, dropped, util, latency, avail, replicas,
+      dupIn: inflated - inRps,
       readMix, readCap: split.readCap, writeCap: split.writeCap, writesScale: split.writesScale,
       down: isDown, faulted: f !== NOFX, faultDrop,
     }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.0 — 2026-08-29
+- 🔁 New chaos fault: **Retry Storm** — duplicate delivery as real simulator physics (`dup` inflates demand at the target and cascades downstream)
+- 📒 Money-movement controls on every ledger: **Idempotency** on/off and **Commit mode** (fsync-each vs batched) with live verdicts — a storm on an idempotency-off ledger shows phantom entries per second; batched commits price their loss window in entries at current traffic
+- 🇮🇳 **UPI Switch (NPCI)** template — the switch's seat: debit/credit legs, the DEEMED state and reversal choreography, per-bank breakers, net settlement; wall: the slowest bank is the product ceiling
+
 ## 1.7.0 — 2026-08-29
 - 💳 Fintech core: 📒 Ledger (Double-Entry) component — append-only, fsync-bound on purpose — plus two authored templates: **Card Payments (Auth + Settlement)** (auth is a promise in 150ms, settlement is money moving in T+1 netted batches, reconciliation as the immune system) and **Fraud Detection (Real-time)** (scoring inside a 50ms latency loan, model-plus-rules veto, chargeback labels weeks late, adversarial by nature)
 - 🔤 Fintech acronym set: UPI, NPCI, IMPS, PCI DSS, PAN, KYC, AML, ISO 8583, T+1, DeFi — plus Ask-AI answers for settlement, double-entry, and tokenization
