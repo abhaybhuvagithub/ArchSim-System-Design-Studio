@@ -303,3 +303,36 @@ export const DDIA_FAULTS = [
     teaches: 'Failure detectors disagree about who is alive, and a system that votes can end up with two answers. Timeouts cannot distinguish this from a slow node.',
   },
 ]
+
+// ── cache write policies (the interview trio, live) ────────────────────────
+export const WRITE_POLICY = {
+  through: {
+    label: 'Write-through',
+    blurb: 'Every write lands in the cache AND the store before the client hears OK. Reads never see a value the database lacks, writes pay both latencies, and a crash loses nothing - the safe default.',
+  },
+  back: {
+    label: 'Write-back',
+    blurb: 'Writes hit the cache and return; the store is updated later in batches. Write latency drops to memory speed and write load on the database collapses - and every dirty entry is data that exists nowhere durable yet.',
+    warn: 'The loss window is real: a cache node dying takes its unflushed writes with it. Write-back is only honest with a durable log or replicated cache underneath - and a stated tolerance for losing the last few seconds.',
+  },
+  around: {
+    label: 'Write-around',
+    blurb: 'Writes go straight to the store; the cache fills only when something is read. Write-heavy, rarely-read data stops churning the cache - at the price of a guaranteed miss on the first read after every write.',
+  },
+}
+
+// ── load-balancing algorithms ───────────────────────────────────────────────
+export const LB_ALGO = {
+  rr: {
+    label: 'Round-robin',
+    blurb: 'Each request goes to the next replica in the circle. Dead simple, perfectly even for uniform work - and blind to the fact that some requests are ten times heavier than others.',
+  },
+  leastconn: {
+    label: 'Least connections',
+    blurb: 'New requests go to the replica with the fewest in-flight ones. Slow requests stop stacking on one box, which is exactly what round-robin gets wrong under mixed workloads.',
+  },
+  chash: {
+    label: 'Consistent hashing',
+    blurb: 'A key hashes to a point on a ring and sticks to the same replica - caches stay warm, sessions stay local, shards stay stable. The famous property: resizing the fleet moves only ~1/N of the keys, not all of them.',
+  },
+}

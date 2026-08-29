@@ -2769,6 +2769,7 @@ try {
       check('fixing the quorum clears the warning',
         !!doc.querySelector('.ddia-verdict.good') && !doc.querySelector('.ddia-verdict.bad'));
       repSel.value = 'leader';
+      /* two-controls drive runs after this block — see below */
       repSel.dispatchEvent(new win.Event('change', { bubbles: true }));
       await wait(150);
       check('leaving leaderless hides the quorum inputs',
@@ -2792,6 +2793,50 @@ try {
 
   // ── map: land, replicas and editing ────────────────────────────────────────
   {
+      // ── the two new live controls: cache write policy, LB balancing ────────
+      {
+        // cache node: WhatsApp has one — walk nodes until Write policy appears
+        let wpSel = null
+        for (const g of [...doc.querySelectorAll('svg g.node')]) {
+          g.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+          await wait(80);
+          const f = [...doc.querySelectorAll('.field')].find(x => x.querySelector('label')?.textContent === 'Write policy');
+          if (f) { wpSel = f.querySelector('select'); break }
+        }
+        check('cache nodes expose the Write policy control with the full trio', !!wpSel && wpSel.options.length === 3);
+        if (wpSel) {
+          wpSel.value = 'back';
+          wpSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+          await wait(150);
+          check('write-back surfaces the loss-window warning live',
+            /loss window/i.test([...doc.querySelectorAll('.ddia-verdict')].map(x => x.textContent).join(' ')));
+          wpSel = [...doc.querySelectorAll('.field')].find(x => x.querySelector('label')?.textContent === 'Write policy')?.querySelector('select');
+          wpSel.value = 'through';
+          wpSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+          await wait(100);
+        }
+        // lb node: Balancing control + consistent-hash resize math
+        let lbSel = null
+        for (const g of [...doc.querySelectorAll('svg g.node')]) {
+          g.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+          await wait(80);
+          const f = [...doc.querySelectorAll('.field')].find(x => x.querySelector('label')?.textContent === 'Balancing');
+          if (f) { lbSel = f.querySelector('select'); break }
+        }
+        check('balancer nodes expose the Balancing control with all three algorithms', !!lbSel && lbSel.options.length === 3);
+        if (lbSel) {
+          lbSel.value = 'chash';
+          lbSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+          await wait(150);
+          check('consistent hashing computes the resize math for this exact tier',
+            /remaps only ~\d+% of keys/.test([...doc.querySelectorAll('.ddia-verdict')].map(x => x.textContent).join(' ')));
+        }
+      }
+
+      // hand back a clean selection state for the map + later sections
+      doc.querySelector('svg').dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      await wait(120);
+
     click(byText('.tabs button', 'Map'));
     await wait(250);
     const place = [...doc.querySelectorAll('.map .field select')][0];
@@ -3570,6 +3615,16 @@ try {
         if (x.go.tab && !validTabs.has(x.go.tab)) bad.push(x.id + ':ghost-tab(' + x.go.tab + ')');
       }
       check('every concept teaches (60+ char line), exercises (30+ chars), and points at real surfaces' + (bad.length ? ' — ' + bad.slice(0, 4).join(', ') : ''), bad.length === 0);
+      check('the write-policy trio and balancing algorithms are authored, not stubs', await (async () => {
+        const D = await import(pathToFileURL(path.join(root, 'src/ddia.js')).href);
+        const wpOk = ['through', 'back', 'around'].every(k => D.WRITE_POLICY[k]?.blurb?.length > 80) && /loss window/.test(D.WRITE_POLICY.back.warn || '');
+        const lbOk = ['rr', 'leastconn', 'chash'].every(k => D.LB_ALGO[k]?.blurb?.length > 80) && /1\/N/.test(D.LB_ALGO.chash.blurb);
+        return wpOk && lbOk;
+      })());
+      check('Ask AI can define the remaining prose-only gaps (GraphQL, write policies, vector clocks, redundancy shapes)', await (async () => {
+        const asst = fs.readFileSync(path.join(root, 'src/assistant.js'), 'utf8');
+        return ['graphql', 'write-back', 'vector clock', 'active-active'].every(t => asst.includes(`'${t}':`));
+      })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
         return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles);
