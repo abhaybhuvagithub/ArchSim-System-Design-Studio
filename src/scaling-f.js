@@ -276,4 +276,39 @@ export default {
   wall: { t: 'Trust grows slower than capability', d: 'Models improve monthly; the set of actions an organization will let them take unsupervised grows yearly. Past the engineering, scale is a governance problem: every widening of autonomy is a policy decision with an incident budget - and the approval gate, not the GPU, sets the real throughput of consequential work.' },
 },
 
+
+'Card Payments (Auth + Settlement)': {
+  constraint: 'Auth scales like a read path with a hard deadline; settlement scales like a data pipeline with a hard deadline of a different kind - the clearing window. The ledger refuses to scale like either, on purpose.',
+  ladder: [
+    ['1K txns/day', '~0.1 rps', 'One gateway, one ledger table, manual recon in a spreadsheet. The double-entry discipline still applies.'],
+    ['100K txns/day', '~5 rps', 'Tokenization moves to the HSM; capture goes through a log; recon becomes a daily job with an exceptions queue.'],
+    ['10M txns/day', '~300 rps', 'Ledger partitions by account; netting per counterparty; stand-in rules negotiated; recon drift alerts in items, not rupees.'],
+    ['500M txns/day', '~10K rps', 'Multi-region auth with regional ledgers and a global recon plane - UPI-scale territory, where the batch windows themselves become the bottleneck.'],
+  ],
+  levers: [
+    { t: 'Tokenize at the edge', d: 'The PAN stops at the HSM; everything downstream carries tokens. PCI scope shrinks from the fleet to the vault, and every service audit gets lighter.', n: ['hsm', 'gw'] },
+    { t: 'Capture through a log, settle in batches', d: 'Auth stays synchronous; money movement drains asynchronously into netted clearing files. The log absorbs spikes the batch window smooths.', n: ['k', 'settle'] },
+    { t: 'Partition the ledger by account, never by time', d: 'Account-keyed partitions keep every balance projection single-shard; time-keyed ones scatter an account\'s history across the world.', n: ['led'] },
+    { t: 'Reconcile continuously, not monthly', d: 'Daily three-way matching bounds drift to one day\'s blast radius. The exceptions queue is the real product of this lever.', n: ['recon'] },
+  ],
+  wall: { t: 'The clearing window is not yours', d: 'Past your own architecture, settlement speed belongs to networks, banking hours, and regulation. Real-time settlement exists (UPI proved it) but arrives by industry plumbing, not by your redesign - the wall is institutional, and the engineering answer is to make T+1 boringly, provably correct.' },
+},
+
+'Fraud Detection (Real-time)': {
+  constraint: 'Latency is rented from the auth path, labels arrive weeks late, and the adversary adapts in days. Scale means more scores per second WITHOUT loosening any of those three screws.',
+  ladder: [
+    ['10K txns/day', '~0.5 rps', 'Hard rules only - velocity ceilings and blocklists. A model without labels is a coin flip with confidence.'],
+    ['1M txns/day', '~30 rps', 'First model ships behind the rules; velocity counters move to Redis; chargebacks start flowing into a real label store.'],
+    ['50M txns/day', '~1.5K rps', 'Feature store splits online/offline with parity tests; per-merchant thresholds; review queues sized to human capacity.'],
+    ['1B txns/day', '~30K rps', 'Model tiers (cheap screen, expensive escalation), regional scoring, decay monitoring paging before precision falls - card-network scale.'],
+  ],
+  levers: [
+    { t: 'Split feature freshness', d: 'Velocity in cache (seconds-fresh, write-heavy), profiles in the feature store (hours-fresh, read-only). One deadline, two supply chains.', n: ['vel', 'fs'] },
+    { t: 'Rules hold the veto', d: 'Explainable declines for regulators, instant deploys against active attacks - the rules engine is the fast loop the model cannot be.', n: ['rules'] },
+    { t: 'Tier the models', d: 'A cheap model screens everything; the expensive one runs on the suspicious slice. Budget spent where uncertainty lives.', n: ['ml'] },
+    { t: 'Protect the feedback loop', d: 'Chargeback labels are the scarcest asset in the design - exactly-once into the label store, feature parity between train and serve, decay alarms on both.', n: ['k', 'train'] },
+  ],
+  wall: { t: 'The adversary retrains faster than you', d: 'Fraud is the one workload where the input distribution studies YOUR output. Every threshold leaks through probing; every model decays on contact; labels lag by weeks while attacks pivot in days. Past all architecture, the moat is loop speed - and the honest ceiling is that you are pricing fraud, not eliminating it: the steady state is basis points, chosen on purpose.' },
+},
+
 }

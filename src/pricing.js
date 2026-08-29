@@ -31,7 +31,8 @@ export const VERIFIED = {
   dns:  'Route 53: $0.50 per hosted zone per month, $0.40 per million queries',
   lb:   'ALB: $0.0225 per hour plus $0.008 per LCU-hour, folded into one rate here',
   app:  'EC2 m5.large on demand: $0.096 per hour',
-  fastapi: 'ECS Fargate task (1 vCPU) or m5.large slice: about $0.096 per hour',
+  ledger: 'db.r5.large-class + io2 volume: about $0.29 per hour before storage',
+    fastapi: 'ECS Fargate task (1 vCPU) or m5.large slice: about $0.096 per hour',
   llmworker: 'Small consumer pod (t3.small-class): about $0.048 per hour; the model provider bill rides the LLM node',
   blob: 'S3 Standard: $0.023 per GB-month, priced here at roughly 1 TB',
 }
@@ -92,7 +93,8 @@ export const RATES = {
   // compute
   web:         { hourly: 0.085, base: 0,    perM: 0,    note: 'general-purpose instance per replica' },
   app:         { hourly: 0.096, base: 0,    perM: 0,    note: 'general-purpose instance per replica' },
-  fastapi:     { hourly: 0.096, base: 0,    perM: 0,    note: 'async Python pod per replica (general-purpose instance)' },
+  ledger:      { hourly: 0.29,  base: 0,    perM: 0,    note: 'db-class instance per replica; io2-grade storage is where the money goes' },
+    fastapi:     { hourly: 0.096, base: 0,    perM: 0,    note: 'async Python pod per replica (general-purpose instance)' },
   llmworker:   { hourly: 0.048, base: 0,    perM: 0,    note: 'small consumer pod per worker - the provider bill is the real cost, priced on the llm node' },
   micro:       { hourly: 0.08,  base: 0,    perM: 0,    note: 'container task per replica' },
   grpc:        { hourly: 0.08,  base: 0,    perM: 0,    note: 'container task per replica, same footprint as a microservice' },
