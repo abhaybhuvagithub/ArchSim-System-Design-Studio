@@ -47,6 +47,8 @@ import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { futureSuggestions } from './future.js'
 import { MASTERY, MASTERY_TOTAL, MASTERY_CMP, readMastery, writeMastery, shuffleMastery, readMasteryUI, writeMasteryUI } from './mastery.js'
+import { encodeShare, decodeShare, hasSharedDesign } from './share.js'
+import { VERSION } from './version.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -99,7 +101,23 @@ export default function App() {
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
   const [tourAt, setTourAt] = useState(null)
-  const [onboard, setOnboard] = useState(true)   // greets every page load; Skip just closes it for this session
+  const [onboard, setOnboard] = useState(() => !hasSharedDesign())   // greets every page load unless a shared design arrived in the URL; Skip just closes it for this session
+  const [cmdk, setCmdk] = useState(false)
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setCmdk(v => !v) }
+      if (e.key === 'Escape') setCmdk(false)   // fallback when focus wandered; the input's own handler stops propagation first
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  useEffect(() => {
+    const shared = decodeShare(window.location.hash)
+    if (!shared) return
+    setNodes(shared.nodes); setEdges(shared.edges); setRps(shared.rps)
+    notify('🔗 Opened a shared design — every knob is yours now.', 'info')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [license, setLicenseState] = useState(getLicense)
   const [pricing, setPricing] = useState(null)   // null | { want?: template }
   const [flow, setFlow] = useState('all')
@@ -811,6 +829,21 @@ export default function App() {
           onActivated={() => { setLicenseState(getLicense()); }}
           onRemoved={() => { clearLicense(); setLicenseState(null) }} />
       )}
+      {cmdk && (
+        <CmdK
+          onClose={() => setCmdk(false)}
+          onTemplate={(i) => { loadTemplate(String(i)); setCmdk(false) }}
+          onTab={(id) => { setTab(id); setSel(null); setCmdk(false) }}
+          onPractice={(go) => {
+            if (go.tpl) { const i = TEMPLATES.findIndex(t2 => t2.name === go.tpl); if (i >= 0) loadTemplate(String(i)) }
+            if (go.tab) setTab(go.tab)
+            setCmdk(false)
+          }}
+        />
+      )}
+      <div className="version-tag">
+        v{VERSION} · <a href="https://github.com/abhaybhuvagithub/ArchSim-System-Design-Studio/blob/main/CHANGELOG.md" target="_blank" rel="noreferrer">changelog</a>
+      </div>
       {onboard && (
         <Onboarding
           onClose={() => setOnboard(false)}
@@ -840,6 +873,25 @@ export default function App() {
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} data-tour="improve" onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
           title="Review the design and suggest components to add, wired in automatically">
           ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
+        </button>
+        <button className="btn" data-tour="share" title="Put this exact design into the URL and copy the link"
+          onClick={() => {
+            if (!nodes.length) { notify('Nothing to share yet — draw or load a design first.', 'info'); return }
+            const payload = encodeShare(nodes, edges, rps)
+            window.location.hash = 'd=' + payload
+            const url = window.location.href
+            const copied = () => notify('🔗 Link copied — it opens on exactly this design.', 'info')
+            const fallback = () => {
+              try {
+                const ta = document.createElement('textarea')
+                ta.value = url; document.body.appendChild(ta); ta.select()
+                document.execCommand('copy'); document.body.removeChild(ta); copied()
+              } catch { notify('🔗 The URL now holds this design — copy it from the address bar.', 'info') }
+            }
+            if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(copied, fallback)
+            else fallback()
+          }}>
+          🔗 Share
         </button>
         <button className={`btn ${explain != null ? 'active' : ''}`} data-tour="explain"
           onClick={() => setExplain(v => (v == null ? (explainList.length ? 0 : null) : null))}
@@ -909,7 +961,7 @@ export default function App() {
         </Menu>
 
         <button className="btn" data-tour="help" onClick={() => setTourAt(0)}
-          title="Replay the guided walkthrough of the app">? Guide</button>
+          title="Replay the guided walkthrough of the app">Guide/Tour</button>
         {PRO_ENABLED && <button className={`btn ${license ? 'pro-on' : 'pro-cta'}`} onClick={() => setPricing({})}
           title={license ? `ArchSim Pro active (${license.plan}${license.lifetime ? ' — lifetime' : ' until ' + license.expires})` : 'Unlock all 89 designs with every breakdown and scaling playbook'}>
           {license ? 'PRO ✓' : '⭐ Pro'}</button>}
@@ -1467,6 +1519,63 @@ function About() {
 // The 80/20 mastery hub: eleven areas that carry most interviews, each item
 // one teaching line plus a concrete exercise wired into the studio. Progress
 // is a checkbox you earn, persisted locally.
+// ⌘K / Ctrl+K: one keystroke to anywhere — load a template, jump to a tab,
+// or open a mastery concept where it is practiced. Ranked by prefix match.
+function CmdK({ onClose, onTemplate, onTab, onPractice }) {
+  const [q, setQ] = useState('')
+  const [idx, setIdx] = useState(0)
+  const inputRef = useRef(null)
+  useEffect(() => { inputRef.current?.focus() }, [])
+  const results = useMemo(() => {
+    const tabDefs = [
+      ['capacity', 'Capacity'], ['breakdown', 'Breakdown'], ['scale', 'Scale it'], ['chaos', 'Chaos'],
+      ['slo', 'SLO'], ['roi', 'ROI'], ['acr', 'Acronyms'], ['mastery', 'Mastery'], ['improve', 'Improve'],
+      ['learn', 'Learn'], ['interview', 'Interview'], ['cost', 'Cost'], ['compare', 'Compare'], ['about', 'About'],
+    ]
+    const pool = [
+      ...TEMPLATES.map((t, i) => ({ kind: 'Load', label: t.name, run: () => onTemplate(i) })),
+      ...tabDefs.map(([id, label]) => ({ kind: 'Go to', label, run: () => onTab(id) })),
+      ...MASTERY.flatMap(a => a.items.map(x => ({ kind: 'Practice', label: x.t, run: () => onPractice(x.go) }))),
+    ]
+    const needle = q.trim().toLowerCase()
+    if (!needle) return pool.slice(0, 12)
+    const scored = pool
+      .map(r => {
+        const hay = r.label.toLowerCase()
+        const s2 = hay.startsWith(needle) ? 0 : hay.includes(needle) ? 1 : 2
+        return { ...r, s2 }
+      })
+      .filter(r => r.s2 < 2)
+      .sort((a, b) => a.s2 - b.s2 || a.label.length - b.label.length)
+    return scored.slice(0, 12)
+  }, [q, onTemplate, onTab, onPractice])
+  const clampedIdx = Math.min(idx, Math.max(0, results.length - 1))
+  const onKey = (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); setIdx(i => Math.min(i + 1, results.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); setIdx(i => Math.max(i - 1, 0)) }
+    else if (e.key === 'Enter' && results[clampedIdx]) { e.preventDefault(); e.stopPropagation(); results[clampedIdx].run() }
+    else if (e.key === 'Escape') { e.stopPropagation(); onClose() }
+  }
+  return (
+    <div className="cmdk-overlay" onClick={onClose}>
+      <div className="cmdk" role="dialog" aria-label="Command palette" onClick={e => e.stopPropagation()}>
+        <input ref={inputRef} value={q} placeholder="Load a template, jump to a tab, practice a concept…"
+          onChange={e => { setQ(e.target.value); setIdx(0) }} onKeyDown={onKey} />
+        <ul>
+          {results.map((r, i) => (
+            <li key={r.kind + r.label} className={i === clampedIdx ? 'on' : ''}
+              onMouseEnter={() => setIdx(i)} onClick={r.run}>
+              <span className="cmdk-kind">{r.kind}</span> {r.label}
+            </li>
+          ))}
+          {!results.length && <li className="cmdk-empty">Nothing matches — try a template or tab name.</li>}
+        </ul>
+        <div className="cmdk-hint">↑↓ navigate · Enter run · Esc close</div>
+      </div>
+    </div>
+  )
+}
+
 function MasteryTab({ onGo }) {
   const [done, setDone] = useState(readMastery)
   const [ui, setUi] = useState(readMasteryUI)
@@ -2954,6 +3063,10 @@ function Tour({ at, setAt, setTab, loadTemplate, ready }) {
   useEffect(() => {
     if (at == null) return
     const onKey = e => {
+      // the ⌘K palette owns the keyboard while it is open — a tour that
+      // advances (and loads templates!) under an open palette is chaos
+      if (document.querySelector('.cmdk')) return
+
       if (e.key === 'Escape') { e.preventDefault(); end() }
       else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); next() }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); prev() }

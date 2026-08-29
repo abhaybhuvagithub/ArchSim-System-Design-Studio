@@ -1808,3 +1808,19 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .ms-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; user-select: none; }
 .ms-opt input { width: 15px; height: 15px; }
 .ms-reveal { font-size: 12.5px; margin: 2px 0 6px; border-style: dashed; }
+
+/* ── ⌘K command palette ────────────────────────────────────────────────── */
+.cmdk-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; justify-content: center; padding-top: 12vh; }
+.cmdk { width: min(560px, 92vw); align-self: flex-start; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 24px 70px rgba(0,0,0,.45); overflow: hidden; }
+.cmdk input { width: 100%; box-sizing: border-box; border: none; outline: none; background: transparent; color: inherit; font-size: 15px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.cmdk ul { list-style: none; margin: 0; padding: 6px; max-height: 46vh; overflow-y: auto; }
+.cmdk li { padding: 8px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; display: flex; align-items: baseline; gap: 8px; }
+.cmdk li.on { background: rgba(91,140,255,.14); }
+.cmdk-kind { font-size: 12px; font-weight: 700; color: var(--accent); min-width: 58px; text-transform: uppercase; letter-spacing: .04em; }
+.cmdk-empty { color: var(--muted, #8a97ad); cursor: default; }
+.cmdk-hint { font-size: 12px; padding: 8px 14px; border-top: 1px solid var(--border); opacity: .75; }
+
+/* ── version stamp ─────────────────────────────────────────────────────── */
+.version-tag { position: fixed; right: 10px; bottom: 8px; font-size: 12px; opacity: .55; z-index: 5; }
+.version-tag a { color: inherit; }
+.version-tag:hover { opacity: .9; }

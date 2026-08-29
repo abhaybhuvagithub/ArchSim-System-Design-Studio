@@ -1965,8 +1965,8 @@ try {
     check('skipping records that onboarding has been seen', !!win.localStorage.getItem('archsim.onboarded.v1'));
     // By request: the wizard is a start screen — it opens on EVERY page load
     // (hard refresh included), not once-ever. Skip only closes the session.
-    check('the wizard opens on every page load, not once-ever',
-      /const \[onboard, setOnboard\] = useState\(true\)/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
+    check('the wizard opens on every page load — except when a shared design arrives',
+      /useState\(\(\) => !hasSharedDesign\(\)\)/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
     check('the traffic step defaults to 1M rps (viral)',
       /useState\('viral'\)/.test(fs.readFileSync(path.join(root, 'src/onboarding.jsx'), 'utf8')));
     // The wizard's cloud step offers every cloud the app itself supports.
@@ -2757,6 +2757,44 @@ try {
     // Inspector controls: select a datastore on the canvas and drive them.
     // The inspector renders behind the Capacity tab, and every other tab
     // clears the selection on the way out.
+    // ── ⌘K command palette drive ──────────────────────────────────────────
+    {
+      win.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+      await wait(200);
+      check('Ctrl+K opens the command palette', !!doc.querySelector('.cmdk input'));
+      typeInto(doc.querySelector('.cmdk input'), 'online che');
+      await wait(200);
+      const items = [...doc.querySelectorAll('.cmdk li')];
+      check('the palette ranks the template by prefix', items.length > 0 && /Online Chess/.test(items[0].textContent));
+      doc.querySelector('.cmdk input').dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await wait(300);
+      check('Enter loads the chosen template and closes the palette',
+        /Online Chess/.test(doc.querySelector('.tpl-header')?.textContent || '') && !doc.querySelector('.cmdk'));
+      win.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+      await wait(150);
+      win.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+      await wait(150);
+      check('Ctrl+K toggles the palette closed without running anything', !doc.querySelector('.cmdk'));
+    }
+
+    // ── 🔗 share drive: the URL becomes the design ────────────────────────
+    {
+      const shareBtn = [...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('🔗 Share'));
+      check('the Share button is in the toolbar', !!shareBtn);
+      click(shareBtn);
+      await wait(250);
+      check('sharing writes the design into the URL hash', win.location.hash.startsWith('#d='));
+      const SH2 = await import(pathToFileURL(path.join(root, 'src/share.js')).href);
+      const decoded = SH2.decodeShare(win.location.hash);
+      check('the shared hash decodes back to the canvas on screen',
+        !!decoded && decoded.nodes.length === doc.querySelectorAll('svg g.node').length);
+      win.location.hash = '';
+    }
+    check('the version stamp is on screen and links to the changelog', (() => {
+      const tag = doc.querySelector('.version-tag');
+      return !!tag && /v\d+\.\d+\.\d+/.test(tag.textContent) && /CHANGELOG\.md/.test(tag.querySelector('a')?.getAttribute('href') || '');
+    })());
+
     // The sweep leaves the LAST template loaded, which may have no classic
     // datastore at all (the agentic template ended that lottery). Load one
     // that definitely does, so this section tests the controls, not the
@@ -3631,6 +3669,48 @@ try {
         ['CAP', 'CQRS', 'SLO', 'SPOF', 'RAG', 'WAL', 'DLQ', 'MRR', 'P99'].every(a => seen.has(a)));
     }
 
+    // ── production polish: CI, docs, link previews, share codec, version ─────
+    {
+      const ci = fs.readFileSync(path.join(root, '.github/workflows/verify.yml'), 'utf8');
+      check('CI runs the build and the full suite on every push',
+        /npm run build/.test(ci) && /node scripts\/verify\.mjs/.test(ci) && /branches: \[main\]/.test(ci));
+      const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+      check('the README opens with the CI badge and the live link',
+        readme.includes('actions/workflows/verify.yml/badge.svg') &&
+        readme.includes('https://abhaybhuvagithub.github.io/ArchSim-System-Design-Studio/') &&
+        readme.includes('SIMULATOR.md'));
+      const simdoc = fs.readFileSync(path.join(root, 'SIMULATOR.md'), 'utf8');
+      check('SIMULATOR.md documents the real formulas, not marketing',
+        simdoc.includes('1 − (1 − availPerReplica) ^ replicas') && /M\/M\/1/.test(simdoc) &&
+        simdoc.includes('p99 = p50 × (2.4 + 2.6 × busiestUtil)') && /deliberately is not/.test(simdoc));
+      const chlog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
+      const ver = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+      check('the changelog leads with the current package version', chlog.includes('## ' + ver));
+      const V = await import(pathToFileURL(path.join(root, 'src/version.js')).href);
+      check('the footer version matches package.json', V.VERSION === ver);
+      const idx = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+      check('link previews are wired: OG title, absolute OG image, twitter card, favicon',
+        idx.includes('og:title') && idx.includes('https://abhaybhuvagithub.github.io/ArchSim-System-Design-Studio/og.png') &&
+        idx.includes('summary_large_image') && idx.includes('favicon.svg'));
+      check('the OG card and favicon actually exist in public/',
+        fs.statSync(path.join(root, 'public/og.png')).size > 20000 && fs.existsSync(path.join(root, 'public/favicon.svg')));
+      const SH = await import(pathToFileURL(path.join(root, 'src/share.js')).href);
+      const T6 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
+      check('the share codec round-trips a design losslessly', (() => {
+        const t = T6.find(x => x.name === 'Chat (WhatsApp)');
+        const encd = SH.encodeShare(t.nodes, t.edges, t.rps);
+        if (/[+/=]/.test(encd)) return false;   // must be URL-safe
+        const back = SH.decodeShare('#d=' + encd);
+        if (!back || back.rps !== t.rps) return false;
+        if (back.nodes.length !== t.nodes.length || back.edges.length !== t.edges.length) return false;
+        const n0 = t.nodes[0], b0 = back.nodes.find(n => n.id === n0.id);
+        return !!b0 && b0.type === n0.type && b0.replicas === n0.replicas &&
+          back.edges.every(e => e.from && e.to);
+      })());
+      check('a garbled share hash degrades to null, never a crash',
+        SH.decodeShare('#d=%%%not-base64%%%') === null && SH.decodeShare('') === null);
+    }
+
     // ── the 80/20 mastery curriculum: complete and honestly wired ────────────
     {
       const M = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
@@ -3934,9 +4014,9 @@ try {
     const triggers = [...doc.querySelectorAll('.toolbar .menu > button')];
     check('the toolbar has View, Design and Configuration menus',
       ['View', 'Design', 'Configuration'].every(l => triggers.some(b => b.textContent.trim().startsWith(l))));
-    check('the guide button says Guide, not Tour', (() => {
+    check('the guide button is labelled Guide/Tour', (() => {
       const b = doc.querySelector('[data-tour="help"]');
-      return !!b && /Guide/.test(b.textContent) && !/Tour/.test(b.textContent);
+      return !!b && b.textContent.trim() === 'Guide/Tour';
     })());
     check('every menu trigger declares itself as one',
       triggers.length >= 3 && triggers.every(b => b.getAttribute('aria-haspopup') === 'menu' && b.hasAttribute('aria-expanded')));
@@ -4004,6 +4084,11 @@ try {
     check('every tour step finds its target in the mounted app' +
       (missing.length ? ' — missing: ' + missing.map(m => `${m.id} (${m.target})`).join(', ') : ''),
       missing.length === 0);
+    check('the tour covers the modern studio: SLO, ROI, Mastery, Acronyms, Share, ⌘K', (() => {
+      const ids = t.TOUR_STEPS.map(x => x.id);
+      return ['slo', 'roi', 'mastery', 'acronyms', 'share', 'cmdk'].every(id => ids.includes(id));
+    })());
+    check('the share step points at a real anchor', !!doc.querySelector('[data-tour="share"]'));
     check('stepsFor keeps every step when the full layout is present',
       t.stepsFor(doc).length === t.TOUR_STEPS.length);
     check('steps that name a tab name one that exists',
