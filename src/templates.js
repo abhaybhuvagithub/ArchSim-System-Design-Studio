@@ -1857,4 +1857,32 @@ T('LLM API Platform (FastAPI)', 'The production LLM stack: async API, queue, wor
     'Memory is retrieval, not accumulation: fetch what is relevant, never replay the whole history into the context window',
     'Irreversible actions route through a human approval gate - autonomy is graded, not granted',
   ], 'GenAI'),
+T('Card Payments (Auth + Settlement)', 'Authorization is a promise in milliseconds; settlement is money moving in batches', 900, [
+    ['u', 'client', 'Merchants', 40, 240], ['gw', 'gateway', 'Payment Gateway', 170, 240, 3],
+    ['auth', 'micro', 'Auth Service', 310, 180, 4], ['hsm', 'hsm', 'HSM (Tokens/PIN)', 310, 60, 2],
+    ['net', 'micro', 'Card Network (sim)', 450, 180, 3], ['iss', 'app', 'Issuer Decisioning', 590, 180, 4],
+    ['k', 'kafka', 'Capture Log', 310, 340, 2], ['settle', 'worker', 'Settlement Batch', 460, 340, 3],
+    ['led', 'ledger', 'Ledger', 610, 340, 3], ['recon', 'worker', 'Reconciliation', 460, 450, 2],
+    ['obs', 'otel', 'Telemetry', 740, 240, 2],
+  ], [['u','gw'],['gw','auth'],['auth','hsm'],['auth','net'],['net','iss'],['gw','k'],['k','settle'],['settle','led'],['k','recon'],['settle','obs']], [
+    'Two phases, two truths: auth holds funds in ~150ms and promises nothing final; settlement moves real money in T+1 batches through clearing and netting',
+    'The PAN never touches your app servers - the HSM tokenizes at the edge, and PCI scope shrinks to the vault',
+    'The ledger is append-only double-entry: corrections are reversing entries, so the history IS the audit',
+    'Netting is the quiet miracle: ten thousand transactions between two banks settle as one transfer',
+    'Reconciliation is the immune system - your ledger vs the network file vs the bank statement, three-way matched daily',
+  ], 'India · fintech'),
+  T('Fraud Detection (Real-time)', 'Score every transaction inside the auth path - against an adversary who learns', 1200, [
+    ['u', 'client', 'Auth Stream', 40, 240], ['gw', 'gateway', 'Ingest GW', 170, 240, 3],
+    ['vel', 'cache', 'Velocity Counters', 320, 130, 3], ['fs', 'featurestore', 'Feature Store', 320, 250, 2],
+    ['ml', 'ml', 'Model Scorer', 470, 190, 6], ['rules', 'micro', 'Rules Engine', 610, 190, 3],
+    ['case', 'app', 'Case Management', 750, 130, 2], ['sql', 'sql', 'Case DB', 750, 250, 2],
+    ['k', 'kafka', 'Label/Feedback Log', 470, 380, 2], ['train', 'worker', 'Training Pipeline', 620, 380, 2],
+    ['obs', 'otel', 'Telemetry', 750, 380, 2],
+  ], [['u','gw'],['gw','vel'],['gw','fs'],['gw','ml'],['ml','rules'],['rules','case'],['case','sql'],['gw','k'],['k','train'],['rules','obs']], [
+    'The whole system lives inside a ~50ms budget in someone else\'s auth path - every feature fetch is a latency loan',
+    'Velocity counters are write-heavy cache work: transactions per card per minute, incremented on every event, read on every score',
+    'The model suggests, the rule decides: regulators want declines you can explain, so the rules engine holds the veto',
+    'Labels arrive weeks late as chargebacks - the feedback log is the slowest, most valuable pipe in the design',
+    'Thresholds are the business: a false positive insults a customer and loses the sale; a false negative is the loss itself',
+  ], 'India · fintech'),
 ]

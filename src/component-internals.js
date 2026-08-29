@@ -47,7 +47,13 @@ export const COMPONENT_INTERNALS = {
   },
 
   // Compute
-  fastapi: {
+  ledger: {
+    algorithm: 'Append-only log + double-entry invariant',
+    dataStructure: 'Immutable entry pairs (debit, credit), running balances as materialized views, idempotency-key index',
+    internal: 'Every money movement inserts exactly two rows that sum to zero - nothing is ever updated or deleted. Balances are projections rebuilt from entries; corrections are new reversing entries, so the history IS the audit.',
+    mechanism: 'Idempotency key checked before insert: a retried payment lands on its existing entries, never doubles. Commits are fsynced individually - the durability is the product, which is why the cap reads like a database from 2005.',
+  },
+    fastapi: {
     algorithm: 'Async event loop (uvicorn/uvloop) + dependency-injected handlers',
     dataStructure: 'Pydantic models as request/response contracts, DI container, middleware stack, connection pools',
     internal: 'Each request parses into a typed Pydantic model, flows through middleware (auth, rate limit, tracing), awaits IO-bound work on the event loop, and streams responses via SSE or WebSocket. OpenAPI schema generated from the types.',

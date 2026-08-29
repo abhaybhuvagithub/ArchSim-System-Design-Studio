@@ -12,6 +12,17 @@ export const ACRONYM_CATS = {
 }
 
 export const ACRONYMS = [
+  { a: 'UPI', f: 'Unified Payments Interface', d: 'India\'s real-time account-to-account rail: a phone number or VPA resolves to a bank account, and money moves in seconds, 24x7 - the system that made T+1 look optional. See the BHIM template.', c: 'business' },
+  { a: 'NPCI', f: 'National Payments Corporation of India', d: 'The umbrella operator behind UPI, IMPS, RuPay and AePS - the institutional plumbing that turns payment rails into public infrastructure.', c: 'business' },
+  { a: 'IMPS', f: 'Immediate Payment Service', d: 'The 24x7 instant-transfer rail that predates UPI - same real-time money movement, bank-account addressing instead of VPAs.', c: 'business' },
+  { a: 'PCI DSS', f: 'Payment Card Industry Data Security Standard', d: 'The rulebook for anyone who touches card numbers. The engineering translation: tokenize at the edge so raw PANs stop at the HSM, and your audit scope shrinks from the fleet to the vault.', c: 'security' },
+  { a: 'PAN', f: 'Primary Account Number', d: 'The 16 digits on the card - the thing your systems must never store raw. Everything downstream of the HSM carries a token instead.', c: 'security' },
+  { a: 'KYC', f: 'Know Your Customer', d: 'Identity verification before an account exists: documents, liveness, sanctions screening. Upstream of every fintech flow in this studio, and the reason onboarding is a pipeline, not a form.', c: 'security' },
+  { a: 'AML', f: 'Anti-Money Laundering', d: 'The transaction-monitoring obligation: pattern detection, threshold reports, suspicious-activity filings. Fraud detection\'s sibling with a regulator as the customer.', c: 'security' },
+  { a: 'ISO 8583', f: 'ISO 8583 message format', d: 'The wire format of card authorization - the bitmap-and-fields protocol every gateway speaks to every network. Predates JSON by decades and outlives most things built on JSON.', c: 'business' },
+  { a: 'T+1', f: 'Trade/Transaction date plus one day', d: 'The settlement clock: money authorized today moves tomorrow, in netted batches through clearing windows. The Card Payments template is built around this gap.', c: 'business' },
+  { a: 'DeFi', f: 'Decentralized Finance', d: 'Financial primitives (lending, exchange, derivatives) as smart contracts - settlement in seconds, counterparty risk replaced by code risk. The trade is the whole story.', c: 'business' },
+
   { a: 'RPS', f: 'Requests Per Second', d: 'The load unit of this whole studio - every capacity number, cost figure and ROI line is denominated in it.', c: 'traffic' },
   { a: 'QPS', f: 'Queries Per Second', d: 'RPS wearing a database hat; interviewers use the two interchangeably.', c: 'traffic' },
   { a: 'P99', f: '99th Percentile latency', d: 'The experience of your unluckiest 1% - tails, not averages, are what users call slow.', c: 'traffic' },

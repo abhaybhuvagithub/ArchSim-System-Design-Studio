@@ -904,4 +904,118 @@ export default {
   },
 },
 
+
+'Card Payments (Auth + Settlement)': {
+  meta: 'Fintech - payments core - hard - two phases, two truths',
+  overview: 'Card payments are two systems wearing one API. Authorization is a real-time promise: in ~150ms the network asks the issuer whether funds exist and places a hold - nothing final happens. Settlement is the money actually moving: captures batched into clearing files, netted between banks, posted to an append-only ledger, and reconciled against what the network says happened. Most payment outages are auth problems; most payment disasters are settlement problems discovered on day three.',
+  scope: 'The auth path (tokenization, network, issuer), the settlement pipeline (capture, clearing, netting, ledger, reconciliation), and idempotent money movement. Card-present EMV cryptography, disputes, and FX are out.',
+  fr: {
+    core: ['Authorize a payment in under 200ms with a hold on issuer funds', 'Capture and settle authorized payments in daily clearing cycles', 'Record every movement as balanced double-entry ledger rows', 'Reconcile internal ledger against network clearing files daily'],
+    out: ['Chargebacks and disputes (a workflow system of its own)', 'FX and multi-currency settlement', 'Card issuing'],
+  },
+  nfr: {
+    core: ['A retried request can never move money twice - idempotency keys on every mutation', 'The ledger is append-only: corrections are reversing entries, never edits', 'Auth availability is revenue: every minute down is checkout abandoned', 'PCI scope stays inside the vault - raw PANs never reach application servers'],
+    out: ['Real-time settlement - T+1 batches are the industry floor, not a bug'],
+  },
+  nums: [['~150ms', 'auth round trip through network and issuer'], ['T+1', 'settlement cycle - money moves tomorrow'], ['2 rows', 'every movement: one debit, one credit, sum zero'], ['3-way', 'daily match: ledger vs network file vs bank statement']],
+  entities: [
+    ['Payment', 'the merchant-facing object: auth -> captured -> settled, with an idempotency key from birth'],
+    ['Token', 'the HSM-issued stand-in for a PAN - what your systems are allowed to remember'],
+    ['LedgerEntry', 'immutable debit or credit; balances are projections over these, never columns'],
+    ['ClearingBatch', 'the day\'s captures, netted per counterparty, shipped as a file the network signs'],
+  ],
+  apiIntro: 'The API is honest about the two phases: auth returns fast with a hold, capture is the promise to settle, and status tells you which truth you are looking at.',
+  api: [
+    { dir: '->', name: 'POST /payments (Idempotency-Key: k)', body: '{ token, amount }\n-> 201 { id, status: authorized, hold } in ~150ms' },
+    { dir: '->', name: 'POST /payments/{id}/capture', body: '-> 202 { status: capture_pending } - joins tonight\'s clearing batch' },
+    { dir: '<-', name: 'GET /payments/{id}', body: '-> { status: authorized | captured | settled | reversed, ledger: [entries] }' },
+  ],
+  dives: [
+    {
+      title: 'The auth path: a promise in 150 milliseconds', focus: ['gw', 'auth', 'hsm', 'net', 'iss'],
+      blocks: [
+        ['p', 'The gateway tokenizes first: the PAN goes to the HSM and never returns - your services carry tokens, and PCI scope collapses from the whole fleet to one hardware vault. Auth then races the network: risk checks, issuer decisioning, and a funds hold, all inside the timeout a checkout page will tolerate.'],
+        ['bul', [
+          'Stand-in rules are the availability trick: when the issuer times out, the network can approve small amounts on its behalf - bounded risk traded for uptime.',
+          'The hold is not money: it expires (usually 7 days), and capturing more than the hold is a different, slower conversation.',
+          'Idempotency starts here: the same key replays the same auth result, so a merchant retry storm cannot double-hold a card.',
+        ]],
+      ],
+    },
+    {
+      title: 'Settlement: where the money actually moves', focus: ['k', 'settle', 'led', 'recon'],
+      blocks: [
+        ['p', 'Captures stream onto a log; the settlement batch drains it nightly into clearing files. Netting is the quiet miracle - ten thousand transactions between two banks collapse into one transfer. Every movement lands in the ledger as a balanced pair, and reconciliation three-way-matches your ledger, the network file, and the bank statement every day.'],
+        ['bul', [
+          'Append-only is not a style choice: an UPDATEd balance has no history, and money without history is a lawsuit waiting for discovery.',
+          'Recon drift is measured in items and paise - and it compounds silently, which is why it runs daily, not monthly.',
+          'The batch is idempotent by batch-id: a rerun regenerates the same file, byte for byte, or refuses.',
+        ]],
+        ['warn', 'The classic disaster is not auth going down - everyone sees that in seconds. It is settlement drifting quietly: a mapping bug undercounting captures for three days, discovered when the bank statement disagrees. Reconciliation is not bookkeeping; it is the immune system.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A gateway that calls a card network and saves transactions to a database.',
+    senior: 'Tokenize at the edge, auth as a bounded promise with stand-in, capture through a log into netted T+1 clearing, append-only double-entry ledger, daily three-way reconciliation, idempotency on every mutation.',
+    staff: 'Design the recon-drift detection and repair story, the batch idempotency and replay contract, the stand-in risk budget negotiation, and the migration path when a ledger schema must change under money that never stops moving.',
+  },
+},
+
+'Fraud Detection (Real-time)': {
+  meta: 'Fintech - risk/ML - hard - adversarial, inside someone else\'s latency budget',
+  overview: 'A fraud system scores every transaction inside the authorization path - a ~50ms guest in someone else\'s 150ms budget. It blends features nobody can precompute (velocity: how many times has this card transacted in the last minute) with features nobody can compute live (spending profiles from the feature store), runs a model, and then lets a rules engine hold the veto, because regulators want declines a human can explain. And unlike every other ML system in this studio, the adversary reads your behavior and adapts.',
+  scope: 'Real-time scoring in the auth path, velocity features, the model-plus-rules decision, case management, and the chargeback feedback loop. Model training internals and dispute workflows are out.',
+  fr: {
+    core: ['Score every transaction within the auth latency budget', 'Maintain per-card and per-merchant velocity counters updated on every event', 'Route suspicious transactions to declines, step-up auth, or manual review cases', 'Feed chargeback labels back into training'],
+    out: ['Dispute resolution workflow', 'Identity verification (KYC) - upstream of this system'],
+  },
+  nfr: {
+    core: ['p99 score latency under ~50ms - a slow yes is a lost sale', 'Fail open or fail closed is a POLICY decision per merchant tier, not an accident', 'Every decline carries an explainable reason code', 'Feature freshness measured in seconds for velocity, hours for profiles'],
+    out: ['Perfect precision - blocking all fraud is trivial: decline everything. The business lives in the trade-off'],
+  },
+  nums: [['~50ms', 'the scoring budget inside the auth path'], ['seconds', 'velocity feature freshness'], ['weeks', 'label latency - chargebacks arrive that late'], ['bps', 'fraud is measured in basis points of volume']],
+  entities: [
+    ['ScoreRequest', 'transaction context + features assembled at decision time'],
+    ['VelocityCounter', 'sliding-window counts per card/merchant/device - write-heavy cache rows'],
+    ['Decision', 'approve | decline | review, with model score AND the rule that fired'],
+    ['Label', 'the ground truth that arrives weeks late as a chargeback'],
+  ],
+  apiIntro: 'One synchronous call in the auth path; everything else is streams.',
+  api: [
+    { dir: '->', name: 'POST /score', body: '{ txn, card_token, merchant }\n-> 200 { decision, score, reason_code } in <50ms' },
+    { dir: '<-', name: 'POST /labels (async)', body: '{ txn_id, outcome: chargeback | confirmed_good } - weeks later, via the feedback log' },
+  ],
+  dives: [
+    {
+      title: 'Features on a latency loan', focus: ['gw', 'vel', 'fs', 'ml'],
+      blocks: [
+        ['p', 'The scorer assembles two kinds of features under one deadline. Velocity counters live in Redis because they change on every event - transactions per card per minute is unknowable in advance and stale in seconds. Profile features (average ticket, home geography) come from the feature store, precomputed offline and served in single-digit milliseconds. The model sees both; the budget sees everything.'],
+        ['bul', [
+          'Velocity is write-heavy cache work: every transaction increments before anything reads - the counter tier sizes on writes, not reads.',
+          'Feature parity is the silent killer: the training pipeline must compute EXACTLY what the online path computes, or the model is grading a different exam.',
+          'Timeout policy is per-feature: a missing profile degrades the score; a missing velocity counter IS the signal something is flooding.',
+        ]],
+      ],
+    },
+    {
+      title: 'The veto, the loop, and the adversary', focus: ['rules', 'case', 'k', 'train'],
+      blocks: [
+        ['p', 'The model suggests; the rule decides. Regulators and merchants both demand declines that can be explained, so hard rules (sanctioned country, impossible travel, velocity ceiling) hold the veto over any score. Everything flows onto the feedback log - decisions now, chargebacks weeks later - and the training pipeline rebuilds on that lagged truth.'],
+        ['bul', [
+          'Label latency is the moat and the trap: weeks-old ground truth means the model always fights the previous war - fast rules cover the gap.',
+          'The threshold IS the business: each point of recall costs precision, and a false positive is an insulted customer plus a lost sale, forever.',
+          'Case management is where review capacity meets queue theory - route only what humans can actually work, and let thresholds absorb the rest.',
+        ]],
+        ['warn', 'This is adversarial ML: fraudsters probe with small transactions, learn your thresholds, and adapt in days while your labels take weeks. A static model decays on contact. The defense is the loop speed - rules deploy in minutes, models retrain on schedule, and both watch for the decay.'],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'An ML model that flags suspicious transactions.',
+    senior: 'Sub-50ms scoring with split feature freshness (velocity in cache, profiles in the store), model-plus-rules with the explainable veto, per-tier fail-open policy, chargeback feedback loop with feature parity between train and serve.',
+    staff: 'Design for the adversary: threshold strategy as a business negotiation, decay detection and loop speed, review-capacity queueing, and the audit story when a regulator asks why THIS transaction was declined.',
+  },
+},
+
 }

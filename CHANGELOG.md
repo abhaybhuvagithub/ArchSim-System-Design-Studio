@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.0 — 2026-08-29
+- 💳 Fintech core: 📒 Ledger (Double-Entry) component — append-only, fsync-bound on purpose — plus two authored templates: **Card Payments (Auth + Settlement)** (auth is a promise in 150ms, settlement is money moving in T+1 netted batches, reconciliation as the immune system) and **Fraud Detection (Real-time)** (scoring inside a 50ms latency loan, model-plus-rules veto, chargeback labels weeks late, adversarial by nature)
+- 🔤 Fintech acronym set: UPI, NPCI, IMPS, PCI DSS, PAN, KYC, AML, ISO 8583, T+1, DeFi — plus Ask-AI answers for settlement, double-entry, and tokenization
+
 ## 1.6.1 — 2026-08-29
 - 🧮 Mastery grows its 12th area: Back-of-Envelope Math — the latency ladder, throughput rules of thumb quoted from this catalog (suite-enforced against drift), DAU→rps conversion anchors, and the nines as downtime minutes
 - 🚩 One red-flag line per area: the classic way candidates fail it, named

@@ -2244,7 +2244,7 @@ try {
       await goTab('Acronyms');
       const acr = () => doc.querySelector('.acr');
       check('the glossary renders all entries with a live count',
-        acr().querySelectorAll('.acr-row').length >= 80 && /of 9\d/.test(acr().textContent));
+        acr().querySelectorAll('.acr-row').length >= 100 && /of 1\d\d/.test(acr().textContent));
       typeInto(acr().querySelector('.acr-q'), 'cqrs');
       await wait(150);
       check('search is instant and case-insensitive',

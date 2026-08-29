@@ -6,11 +6,11 @@
 
 **Live:** https://abhaybhuvagithub.github.io/ArchSim-System-Design-Studio/
 
-ArchSim is an interactive studio for system design — the skill interviews grade and production punishes. You draw an architecture (or load one of **94 templates**, from URL shorteners to WhatsApp to an LLM API platform), and the studio simulates it live: capacity per tier, utilization, latency with honest tails, composed availability. Then you break it with chaos, judge it against SLOs, price it, and practice defending it.
+ArchSim is an interactive studio for system design — the skill interviews grade and production punishes. You draw an architecture (or load one of **96 templates**, from URL shorteners to WhatsApp to an LLM API platform), and the studio simulates it live: capacity per tier, utilization, latency with honest tails, composed availability. Then you break it with chaos, judge it against SLOs, price it, and practice defending it.
 
 ## The tour
 
-**Build & simulate** — a drag-and-drop canvas over **115 components** with real capacity math. Traffic slider to 100M rps. Every number carries provenance: benchmark, vendor doc, or modeled — with references, and a stated ±40% honesty band.
+**Build & simulate** — a drag-and-drop canvas over **116 components** with real capacity math. Traffic slider to 100M rps. Every number carries provenance: benchmark, vendor doc, or modeled — with references, and a stated ±40% honesty band.
 
 **Break & judge** — chaos engineering (kill nodes, degrade tiers, watch the blast radius), an **SLO tab** with error budgets, burn rates, and a production-readiness review whose failing gates each carry a one-click convergent fix. **⚡ Quick fixes** iterate against the real simulator until their gate passes — and say exactly what they'll do before you click.
 

@@ -31,7 +31,8 @@ export const CLOUD_MAP = {
   // compute
   web: ['EC2 / Elastic Beanstalk', 'Compute Engine / App Engine', 'Virtual Machines / App Service', 'OCI Compute', 'Swift on Server (Vapor)'],
   app: ['EC2 / ECS Fargate', 'Compute Engine / Cloud Run', 'App Service / Container Apps', 'OCI Compute', 'Swift on Server (Vapor)'],
-  fastapi: ['ECS Fargate + ALB', 'Cloud Run', 'Container Apps', 'OCI Container Instances', 'Swift on Server (Vapor)'],
+  ledger: ['Aurora (ledger schema)', 'Cloud Spanner', 'Azure SQL Ledger', 'OCI Base Database', 'CloudKit + CloudKit JS'],
+    fastapi: ['ECS Fargate + ALB', 'Cloud Run', 'Container Apps', 'OCI Container Instances', 'Swift on Server (Vapor)'],
   llmworker: ['SQS consumers on Fargate', 'Cloud Run jobs + Pub/Sub', 'Container Apps + Service Bus', 'OCI Queue consumers', 'Background tasks'],
   micro: ['ECS / EKS', 'GKE / Cloud Run', 'AKS / Container Apps', 'OKE', 'Swift on Server (Vapor)'],
   grpc: ['ECS / EKS with App Mesh', 'GKE with Traffic Director', 'AKS with Dapr/Envoy sidecar', 'OKE with Service Mesh', 'Swift gRPC on Server (Vapor)'],
