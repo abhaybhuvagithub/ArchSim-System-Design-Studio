@@ -1801,3 +1801,10 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .ms-cmp th, .ms-cmp td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
 .ms-cmp th { font-size: 12px; background: rgba(127,140,160,.08); }
 .ms-cmp .ms-dim { font-weight: 600; white-space: nowrap; }
+
+/* ── Mastery study controls ────────────────────────────────────────────── */
+.ms-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 14px; }
+.ms-controls .btn { font-size: 12.5px; }
+.ms-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; user-select: none; }
+.ms-opt input { width: 15px; height: 15px; }
+.ms-reveal { font-size: 12.5px; margin: 2px 0 6px; border-style: dashed; }

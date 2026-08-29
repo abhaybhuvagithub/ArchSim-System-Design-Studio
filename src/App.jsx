@@ -46,7 +46,7 @@ import { roiFor } from './roi.js'
 import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { futureSuggestions } from './future.js'
-import { MASTERY, MASTERY_TOTAL, MASTERY_CMP, readMastery, writeMastery } from './mastery.js'
+import { MASTERY, MASTERY_TOTAL, MASTERY_CMP, readMastery, writeMastery, shuffleMastery, readMasteryUI, writeMasteryUI } from './mastery.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -1469,6 +1469,14 @@ function About() {
 // is a checkbox you earn, persisted locally.
 function MasteryTab({ onGo }) {
   const [done, setDone] = useState(readMastery)
+  const [ui, setUi] = useState(readMasteryUI)
+  const [nonce, setNonce] = useState(0)            // bump = new shuffle
+  const [revealed, setRevealed] = useState(() => new Set())
+  const deck = useMemo(
+    () => (ui.order === 'shuffle' ? shuffleMastery() : MASTERY),
+    [ui.order, nonce]
+  )
+  const setPref = patch => { const next = { ...ui, ...patch }; setUi(next); writeMasteryUI(next) }
   const toggle = (id) => {
     const next = new Set(done)
     if (next.has(id)) next.delete(id); else next.add(id)
@@ -1482,40 +1490,67 @@ function MasteryTab({ onGo }) {
         <div className="ms-bar"><div className="ms-fill" style={{ width: pct + '%' }} /></div>
         <span className="ms-count">{done.size} of {MASTERY_TOTAL} mastered · {pct}%</span>
       </div>
-      {MASTERY.map(area => (
-        <div key={area.id} className="ms-area">
-          <div className="ms-h">{area.icon} {area.title} <span className="muted">{area.items.filter(x => done.has(x.id)).length}/{area.items.length}</span></div>
-          {area.items.map(x => (
-            <div key={x.id} className={`ms-item ${done.has(x.id) ? 'done' : ''}`}>
-              <label className="ms-check">
-                <input type="checkbox" checked={done.has(x.id)} onChange={() => toggle(x.id)} aria-label={`Mark ${x.t} mastered`} />
-              </label>
-              <div className="ms-body">
-                <div className="ms-t">{x.t}</div>
-                <div className="ms-d">{x.d}</div>
-                {MASTERY_CMP[x.id] && (
-                  <details className="ms-cmp">
-                    <summary>⇄ Compare</summary>
-                    <table>
-                      <thead><tr><th></th>{MASTERY_CMP[x.id].cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
-                      <tbody>
-                        {MASTERY_CMP[x.id].rows.map((r, ri) => (
-                          <tr key={ri}><td className="ms-dim">{r[0]}</td>{r.slice(1).map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </details>
-                )}
-                <div className="ms-go">
-                  <button className="btn" onClick={() => onGo(x.go)}>▶ Practice{x.go.tpl ? `: ${x.go.tpl}` : ''}</button>
-                  <span className="ms-do muted">{x.go.do}</span>
+      <div className="ms-controls">
+        <button className="btn" onClick={() => { setPref({ order: 'shuffle' }); setNonce(n => n + 1); setRevealed(new Set()) }}>
+          🔀 Shuffle{ui.order === 'shuffle' ? ' again' : ''}
+        </button>
+        <button className="btn" onClick={() => setPref({ order: ui.order === 'shuffle' ? 'curriculum' : 'shuffle' })}>
+          {ui.order === 'shuffle' ? '📋 Curriculum order' : '🔀 Shuffled order'}
+        </button>
+        <label className="ms-opt"><input type="checkbox" checked={ui.quiz}
+          onChange={e => { setPref({ quiz: e.target.checked }); setRevealed(new Set()) }} /> 🙈 Quiz me — hide the answers</label>
+        <label className="ms-opt"><input type="checkbox" checked={ui.hideMastered}
+          onChange={e => setPref({ hideMastered: e.target.checked })} /> ✅ Hide mastered</label>
+      </div>
+      {deck.map(area => {
+        const items = ui.hideMastered ? area.items.filter(x => !done.has(x.id)) : area.items
+        if (!items.length) return null
+        return (
+          <div key={area.id} className="ms-area">
+            <div className="ms-h">{area.icon} {area.title} <span className="muted">{area.items.filter(x => done.has(x.id)).length}/{area.items.length}</span></div>
+            {items.map(x => {
+              const hidden = ui.quiz && !revealed.has(x.id)
+              return (
+                <div key={x.id} className={`ms-item ${done.has(x.id) ? 'done' : ''}`}>
+                  <label className="ms-check">
+                    <input type="checkbox" checked={done.has(x.id)} onChange={() => toggle(x.id)} aria-label={`Mark ${x.t} mastered`} />
+                  </label>
+                  <div className="ms-body">
+                    <div className="ms-t">{x.t}</div>
+                    {hidden ? (
+                      <button className="btn ms-reveal" onClick={() => setRevealed(r => new Set(r).add(x.id))}>
+                        👁 Reveal — say it out loud first
+                      </button>
+                    ) : (
+                      <>
+                        <div className="ms-d">{x.d}</div>
+                        {MASTERY_CMP[x.id] && (
+                          <details className="ms-cmp">
+                            <summary>⇄ Compare</summary>
+                            <table>
+                              <thead><tr><th></th>{MASTERY_CMP[x.id].cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+                              <tbody>
+                                {MASTERY_CMP[x.id].rows.map((r, ri) => (
+                                  <tr key={ri}><td className="ms-dim">{r[0]}</td>{r.slice(1).map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </details>
+                        )}
+                      </>
+                    )}
+                    <div className="ms-go">
+                      <button className="btn" onClick={() => onGo(x.go)}>▶ Practice{x.go.tpl ? `: ${x.go.tpl}` : ''}</button>
+                      {!hidden && <span className="ms-do muted">{x.go.do}</span>}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ))}
-      <p className="muted ms-note">Checked means you could teach it, not that you clicked it — the boxes are yours to earn. Interview mode grades the same material under pressure.</p>
+              )
+            })}
+          </div>
+        )
+      })}
+      <p className="muted ms-note">Checked means you could teach it, not that you clicked it — the boxes are yours to earn. Quiz mode is the honest version: name the trade-offs out loud, then reveal. Interview mode grades the same material under pressure.</p>
     </section>
   )
 }

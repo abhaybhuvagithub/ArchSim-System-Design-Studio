@@ -2272,13 +2272,47 @@ try {
           [...cmp.querySelectorAll('thead th')].map(t => t.textContent).join('|').includes('Write-back') &&
           cmp.querySelectorAll('tbody tr').length >= 4 && /Memory speed/.test(cmp.textContent));
       }
-      const firstBox = ms().querySelector('.ms-check input');
-      firstBox.click();
+      const itemByText = (t) => [...ms().querySelectorAll('.ms-item')].find(it => it.querySelector('.ms-t')?.textContent.includes(t));
+      const sqlBox = itemByText('Relational vs NoSQL').querySelector('.ms-check input');
+      sqlBox.click();
       await wait(150);
       check('checking a concept moves progress and persists',
         /1 of \d+ mastered/.test(ms().textContent) && (win.localStorage.getItem('archsim.mastery.v1') || '').includes('sql-nosql'));
-      firstBox.click();
+      // hide-mastered filters the checked item out, and back
+      {
+        const hideCb = [...ms().querySelectorAll('.ms-opt')].find(l => /Hide mastered/.test(l.textContent)).querySelector('input');
+        hideCb.click();
+        await wait(150);
+        check('hide-mastered removes exactly the earned items from review', !itemByText('Relational vs NoSQL'));
+        hideCb.click();
+        await wait(150);
+      }
+      itemByText('Relational vs NoSQL').querySelector('.ms-check input').click();
       await wait(120);
+      // quiz mode hides the answers until revealed, per item
+      {
+        const quizCb = [...ms().querySelectorAll('.ms-opt')].find(l => /Quiz me/.test(l.textContent)).querySelector('input');
+        quizCb.click();
+        await wait(150);
+        const item = itemByText('Relational vs NoSQL');
+        check('quiz mode hides teaching lines and comparisons behind Reveal',
+          !item.querySelector('.ms-d') && !item.querySelector('.ms-cmp') && !!item.querySelector('.ms-reveal'));
+        click(item.querySelector('.ms-reveal'));
+        await wait(120);
+        check('revealing one item shows its answer without unhiding the rest',
+          !!itemByText('Relational vs NoSQL').querySelector('.ms-d') &&
+          [...ms().querySelectorAll('.ms-reveal')].length > 0);
+        quizCb.click();
+        await wait(120);
+      }
+      // reshuffle keeps the deck whole
+      {
+        const before4 = ms().querySelectorAll('.ms-item').length;
+        click([...ms().querySelectorAll('.ms-controls .btn')].find(b => b.textContent.includes('Shuffle')));
+        await wait(150);
+        check('reshuffling keeps all areas and items on the table',
+          ms().querySelectorAll('.ms-area').length === 11 && ms().querySelectorAll('.ms-item').length === before4);
+      }
       const goBtn = [...ms().querySelectorAll('.ms-go .btn')].find(b => b.textContent.includes('Rate Limiter'));
       click(goBtn);
       await wait(300);
@@ -3641,6 +3675,19 @@ try {
       check('Ask AI can define the remaining prose-only gaps (GraphQL, write policies, vector clocks, redundancy shapes)', await (async () => {
         const asst = fs.readFileSync(path.join(root, 'src/assistant.js'), 'utf8');
         return ['graphql', 'write-back', 'vector clock', 'active-active'].every(t => asst.includes(`'${t}':`));
+      })());
+      check('shuffle is a permutation — nothing lost, nothing duplicated, order actually varies', (() => {
+        const flat = d => d.flatMap(a => a.items.map(x => x.id));
+        const canon = flat(M.MASTERY);
+        let varied = false;
+        for (let i = 0; i < 3; i++) {
+          const sh = flat(M.shuffleMastery());
+          if (sh.length !== canon.length) return false;
+          if (new Set(sh).size !== sh.length) return false;
+          if ([...sh].sort().join() !== [...canon].sort().join()) return false;
+          if (sh.join() !== canon.join()) varied = true;
+        }
+        return varied;
       })());
       check('the comparison layer is authored, complete and well-shaped', (() => {
         const ids2 = new Set(M.MASTERY.flatMap(a => a.items.map(x => x.id)));
