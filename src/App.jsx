@@ -20,7 +20,7 @@ import { speechSupported, extractSpeech, chunkText, RATES, readRate, saveRate, p
   voicesByLanguage, readVoiceName, saveVoiceName, PROSODY, BLOCK_PAUSE_MS, speakableText } from './speech.js'
 import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
-import { REPLICATION, ISOLATION, PARTITIONING, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
+import { REPLICATION, ISOLATION, PARTITIONING, WRITE_POLICY, LB_ALGO, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
 import { DDIA_TRACK, DDIA_COMPARISONS } from './learn-ddia.js'
 import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from './tour.js'
 import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects, readFractionOf } from './ddia2.js'
@@ -2563,6 +2563,7 @@ function Inspector({ n, sim, setNodes, cloud, cloudMult = 1, onShowDetails }) {
         </div>
       )}
       <ConsistencyFields n={n} setNodes={setNodes} />
+      <BalancingField n={n} setNodes={setNodes} />
       <ServiceFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
       <IdentityFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
       <StreamFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
@@ -2744,6 +2745,26 @@ function CanvasDescription({ nodes, edges, rps, template }) {
 // a store can take; this is where you say what it guarantees.
 const STORE_TYPES = new Set(['sql', 'nosql', 'cache', 'search', 'blob', 'warehouse', 'lake'])
 
+function BalancingField({ n, setNodes }) {
+  if (n.type !== 'lb' && n.type !== 'gateway') return null
+  const set = patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))
+  const algo = n.lbAlgo || 'rr'
+  return (
+    <>
+      <div className="field">
+        <label>Balancing</label>
+        <select value={algo} onChange={e => set({ lbAlgo: e.target.value })}>
+          {Object.keys(LB_ALGO).map(k => <option key={k} value={k}>{LB_ALGO[k].label}</option>)}
+        </select>
+      </div>
+      <div className="ddia-blurb">{LB_ALGO[algo].blurb}</div>
+      {algo === 'chash' && (
+        <div className="ddia-verdict good">Resize math on this tier right now: going from {n.replicas || 1} to {(n.replicas || 1) + 1} replicas remaps only ~{Math.round(100 / ((n.replicas || 1) + 1))}% of keys — round-robin would scatter all of them cold.</div>
+      )}
+    </>
+  )
+}
+
 function ConsistencyFields({ n, setNodes }) {
   if (!STORE_TYPES.has(n.type)) return null
   const set = patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))
@@ -2763,6 +2784,22 @@ function ConsistencyFields({ n, setNodes }) {
         </select>
       </div>
       <div className="ddia-blurb">{REPLICATION[rep.mode]?.blurb}</div>
+
+      {n.type === 'cache' && (() => {
+        const wp = n.writePolicy || 'through'
+        return (
+          <>
+            <div className="field">
+              <label>Write policy</label>
+              <select value={wp} onChange={e => set({ writePolicy: e.target.value })}>
+                {Object.keys(WRITE_POLICY).map(k => <option key={k} value={k}>{WRITE_POLICY[k].label}</option>)}
+              </select>
+            </div>
+            <div className="ddia-blurb">{WRITE_POLICY[wp].blurb}</div>
+            {WRITE_POLICY[wp].warn && <div className="ddia-verdict bad">{WRITE_POLICY[wp].warn}</div>}
+          </>
+        )
+      })()}
 
       {rep.mode === 'leaderless' && (
         <>
