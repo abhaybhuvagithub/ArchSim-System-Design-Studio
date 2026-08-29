@@ -4153,7 +4153,7 @@ try {
       missing.length === 0);
     check('the tour covers the modern studio: SLO, ROI, Mastery, Acronyms, Share, ⌘K', (() => {
       const ids = t.TOUR_STEPS.map(x => x.id);
-      return ['slo', 'roi', 'mastery', 'acronyms', 'share', 'cmdk'].every(id => ids.includes(id));
+      return ['slo', 'roi', 'mastery', 'llm-drills', 'acronyms', 'share', 'cmdk'].every(id => ids.includes(id));
     })());
     check('the share step points at a real anchor', !!doc.querySelector('[data-tour="share"]'));
     check('stepsFor keeps every step when the full layout is present',

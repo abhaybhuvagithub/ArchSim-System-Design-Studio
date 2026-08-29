@@ -139,6 +139,13 @@ export const TOUR_STEPS = [
     tab: 'mastery',
   },
   {
+    id: 'llm-drills',
+    target: null,
+    title: '🤖 Production LLM drills',
+    body: 'Inside Mastery: the ten interview questions that test operating, not knowing - is it retrieval or generation, why the bill tripled, one GPU against a thousand requests, injection with real-world actions. Every drill answers in the shape that gets graded - diagnose, intervene, PROVE - and the suite refuses any playbook that skips the proof step.',
+    tab: 'mastery',
+  },
+  {
     id: 'acronyms',
     target: '[data-tour="tab-acr"]',
     title: 'Acronyms',
