@@ -1973,8 +1973,8 @@ try {
     check('skipping records that onboarding has been seen', !!win.localStorage.getItem('archsim.onboarded.v1'));
     // By request: the wizard is a start screen — it opens on EVERY page load
     // (hard refresh included), not once-ever. Skip only closes the session.
-    check('the wizard opens on every page load — except when a shared design arrives',
-      /useState\(\(\) => !hasSharedDesign\(\)\)/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
+    check('the wizard opens on every page load — except for shared designs and entry deep-links',
+      /useState\(\(\) => !hasSharedDesign\(\) && !hasEntryParams\(\)\)/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
     check('the traffic step defaults to 1M rps (viral)',
       /useState\('viral'\)/.test(fs.readFileSync(path.join(root, 'src/onboarding.jsx'), 'utf8')));
     // The wizard's cloud step offers every cloud the app itself supports.
@@ -3768,6 +3768,16 @@ try {
         const n0 = t.nodes[0], b0 = back.nodes.find(n => n.id === n0.id);
         return !!b0 && b0.type === n0.type && b0.replicas === n0.replicas &&
           back.edges.every(e => e.from && e.to);
+      })());
+      check('entry deep-links parse exactly and reject junk', (() => {
+        const good = SH.parseEntryParams('?tpl=' + encodeURIComponent('Payment System (Stripe-lite)') + '&tab=roi');
+        if (!good || good.tplName !== 'Payment System (Stripe-lite)' || good.tab !== 'roi') return false;
+        if (SH.parseEntryParams('?tab=notatab') !== null && SH.parseEntryParams('?tab=notatab').tab !== null) return false;
+        return SH.parseEntryParams('') === null && SH.parseEntryParams('?utm_source=wa') === null;
+      })());
+      check('an entry deep-link suppresses the wizard like a shared design does', (() => {
+        const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+        return src.includes('!hasSharedDesign() && !hasEntryParams()');
       })());
       check('a garbled share hash degrades to null, never a crash',
         SH.decodeShare('#d=%%%not-base64%%%') === null && SH.decodeShare('') === null);

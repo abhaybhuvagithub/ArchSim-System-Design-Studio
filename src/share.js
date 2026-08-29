@@ -36,3 +36,24 @@ export function decodeShare(hash) {
 
 export const hasSharedDesign = () =>
   typeof window !== 'undefined' && window.location.hash.startsWith('#d=')
+
+// ── entry deep-links ────────────────────────────────────────────────────────
+// ?tpl=<exact template name>&tab=<tab id> lets outreach material land people
+// exactly where the pitch begins - a CFO on the ROI view, a student on
+// Mastery - instead of an engineer's blank canvas. Pure and unit-tested.
+export const ENTRY_TABS = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'slo', 'roi', 'acr', 'mastery', 'improve', 'learn', 'interview', 'cost', 'compare', 'about'])
+
+export function parseEntryParams(search) {
+  try {
+    const p = new URLSearchParams(search || '')
+    const tplName = p.get('tpl') ? decodeURIComponent(p.get('tpl')) : null
+    const tab = p.get('tab') && ENTRY_TABS.has(p.get('tab')) ? p.get('tab') : null
+    if (!tplName && !tab) return null
+    return { tplName, tab }
+  } catch {
+    return null
+  }
+}
+
+export const hasEntryParams = () =>
+  typeof window !== 'undefined' && !!parseEntryParams(window.location.search)
