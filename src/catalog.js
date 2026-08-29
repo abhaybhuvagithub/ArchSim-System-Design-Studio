@@ -148,15 +148,15 @@ export const CATALOG = {
 }
 
 export const PALETTE_GROUPS = [
-  { label: 'Traffic',       types: ['client', 'dns', 'gslb', 'waf', 'cdn', 'edge', 'lb', 'gateway', 'k8sgw', 'grpcgw', 'graphql', 'ratelimiter', 'bff', 'tenant'] },
-  { label: 'Compute',       types: ['sandbox', 'transcode', 'web', 'app', 'fastapi', 'micro', 'grpc', 'ws', 'worker', 'scheduler', 'k8s'] },
+  { label: '🚦 Traffic',       types: ['client', 'dns', 'gslb', 'waf', 'cdn', 'edge', 'lb', 'gateway', 'k8sgw', 'grpcgw', 'graphql', 'ratelimiter', 'bff', 'tenant'] },
+  { label: '🖥️ Compute',       types: ['sandbox', 'transcode', 'web', 'app', 'fastapi', 'micro', 'grpc', 'ws', 'worker', 'scheduler', 'k8s'] },
   { label: 'Storage',       types: ['geoidx', 'graph', 'cache', 'sql', 'ledger', 'nosql', 'search', 'blob', 'backup'] },
-  { label: 'Async',         types: ['push', 'queue', 'kafka', 'mq', 'esb', 'saga'] },
-  { label: 'Data',          types: ['batch', 'stream', 'cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
-  { label: 'AI / ML',       types: ['llmworker', 'featurestore', 'ml', 'embed', 'vector', 'llm', 'guard', 'agentgraph', 'finetune', 'llmobs', 'gemini3', 'gemini2', 'notebooklm', 'imagen', 'veo', 'astra', 'mariner', 'gemmaos', 'aiagent'] },
-  { label: 'Google Cloud',  types: ['vertexai', 'duetai', 'beam', 'antigravity'] },
-  { label: 'Observability', types: ['tsdb', 'otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
-  { label: 'Security',      types: ['bastion', 'iam', 'secrets', 'hsm', 'pii', 'audit', 'siem'] },
+  { label: '📨 Async',         types: ['push', 'queue', 'kafka', 'mq', 'esb', 'saga'] },
+  { label: '💾 Data',          types: ['batch', 'stream', 'cdc', 'etl', 'lake', 'warehouse', 'bi', 'analytics'] },
+  { label: '🤖 AI / ML',       types: ['llmworker', 'featurestore', 'ml', 'embed', 'vector', 'llm', 'guard', 'agentgraph', 'finetune', 'llmobs', 'gemini3', 'gemini2', 'notebooklm', 'imagen', 'veo', 'astra', 'mariner', 'gemmaos', 'aiagent'] },
+  { label: '🌈 Google Cloud',  types: ['vertexai', 'duetai', 'beam', 'antigravity'] },
+  { label: '🩺 Observability', types: ['tsdb', 'otel', 'monitor', 'logs', 'tracing', 'slo', 'alert', 'synthetic', 'apm'] },
+  { label: '🔐 Security',      types: ['bastion', 'iam', 'secrets', 'hsm', 'pii', 'audit', 'siem'] },
   { label: 'Cryptography',  types: ['tls', 'crypto', 'hash', 'digest', 'sign', 'e2ee'] },
   { label: 'Enterprise',    types: ['partner', 'erp', 'crm', 'mainframe', 'mft', 'billing', 'cicd'] },
   { label: 'Quality',       types: ['apitest', 'e2e', 'contract', 'load', 'mock', 'testdata', 'qgate', 'dast', 'devicefarm', 'testops'] },
