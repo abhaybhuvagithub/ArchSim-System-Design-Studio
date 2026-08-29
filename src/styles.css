@@ -1478,7 +1478,9 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .modal-header {
   display: flex; justify-content: space-between; align-items: flex-start;
   padding: 20px; border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, rgba(127,140,160,.06), transparent);
+  /* sticky over scrolling content: the gradient is decoration, var(--bg) is
+     the opaque base that stops the body text bleeding through the title */
+  background: linear-gradient(135deg, rgba(127,140,160,.06), transparent), var(--bg);
   position: sticky; top: 0; z-index: 10;
   gap: 16px;
 }

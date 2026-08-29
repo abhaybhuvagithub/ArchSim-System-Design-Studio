@@ -2160,6 +2160,13 @@ try {
       click(doc.querySelector('.modal-close'));
       await wait(120);
       check('the modal closes cleanly', !doc.querySelector('.modal-content'));
+      // the sticky modal header must be opaque — a transparent header let the
+      // scrolling description bleed through the title once
+      check('the sticky modal header has an opaque base, not just a gradient', (() => {
+        const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+        const m = css.match(/\.modal-header \{[^}]+\}/s);
+        return !!m && /position: sticky/.test(m[0]) && /, var\(--bg\)/.test(m[0]);
+      })());
       await goTab('Breakdown');   // the node click routed to Capacity; restore for the voice checks below
     }
 
