@@ -9,6 +9,7 @@ export const MASTERY_STORE = 'archsim.mastery.v1'
 export const MASTERY = [
   {
     id: 'storage', icon: '🗄️', title: 'Scalable Data Storage',
+    flag: "Choosing the database before the queries - \"we will use Mongo\" with no access pattern named is the classic opening blunder.",
     items: [
       { id: 'sql-nosql', t: 'Relational vs NoSQL', d: 'SQL buys transactions and joins at the cost of a scaling ceiling; NoSQL buys horizontal writes at the cost of your query flexibility. The workload decides, never fashion.', go: { tpl: 'News Feed (Twitter/X)', tab: 'capacity', do: 'Select the SQL and NoSQL nodes - read each 🔍 internals and compare what each store promises.' } },
       { id: 'partitioning', t: 'Partitioning & sharding', d: 'Split data across machines by a key; the key choice decides your hot spots and which queries stay single-shard.', go: { tpl: 'Chat (WhatsApp)', tab: 'capacity', do: 'Select a datastore and switch its Partitioning control - watch what each scheme costs.' } },
@@ -18,6 +19,7 @@ export const MASTERY = [
   },
   {
     id: 'caching', icon: '⚡', title: 'Caching',
+    flag: "A cache with no invalidation story. If you cannot say when entries die, you designed stale data, not speed.",
     items: [
       { id: 'cache-where', t: 'Client vs server vs edge', d: 'Cache as close to the reader as truth allows: browser for the user, CDN for the crowd, Redis for the fleet - each layer answers before the one behind it.', go: { tpl: 'Netflix', tab: 'capacity', do: 'Trace a read: CDN hit, cache hit, origin. Kill the cache with chaos ⚡ and watch the DB inherit the traffic.' } },
       { id: 'cache-strategies', t: 'Write-through / write-back / write-around', d: 'Through writes both places (safe, slower); back writes cache first and flushes later (fast, riskier); around skips the cache so reads warm it (good for write-heavy, rarely-read data).', go: { tpl: 'Redis (Distributed Cache)', tab: 'capacity', do: 'Select the cache node and flip its Write policy control - write-back shows you the loss-window warning live.' } },
@@ -27,6 +29,7 @@ export const MASTERY = [
   },
   {
     id: 'lb', icon: '⚖️', title: 'Load Balancing',
+    flag: "Saying \"add a load balancer\" as if it were the scaling - the LB spreads load; replicas absorb it.",
     items: [
       { id: 'horizontal', t: 'Horizontal scaling', d: 'More replicas behind a balancer beats a bigger box: linear-ish capacity, failure becomes a blip, and the queueing knee moves right.', go: { tpl: 'Ride Sharing (Uber)', tab: 'capacity', do: 'Drag the traffic slider up until a tier saturates, then + replicas and watch p99 fall off the knee.' } },
       { id: 'lb-techniques', t: 'Round-robin vs consistent hashing', d: 'Round-robin spreads load evenly; consistent hashing keeps a key on the same node so caches stay warm and shards stay stable when the fleet changes.', go: { tpl: 'URL Shortener (Bitly)', tab: 'capacity', do: 'Select the LB and switch Balancing to consistent hashing - the verdict computes the resize math for this exact tier.' } },
@@ -35,6 +38,7 @@ export const MASTERY = [
   },
   {
     id: 'async', icon: '📨', title: 'Asynchronous Processing',
+    flag: "\"Just use Kafka\" with no ordering, replay, or consumer-group story - reaching for the log without saying why a log.",
     items: [
       { id: 'brokers', t: 'Queues vs streams', d: 'A queue hands each message to one consumer and forgets; a stream (Kafka-class) is a replayable log many consumers read at their own pace. Delete-on-ack vs retained history is the whole difference.', go: { tpl: 'Ad Click Aggregator', tab: 'breakdown', do: 'Read why the click path is a stream, not a queue - replay is the audit trail.' } },
       { id: 'event-driven', t: 'Event-driven architecture', d: 'Services publish facts instead of calling each other: producers never wait, consumers never block producers, and new consumers arrive without anyone changing.', go: { tpl: 'Payment System (Stripe-lite)', tab: 'breakdown', do: 'Follow the ledger events dive - the saga is choreography over a log.' } },
@@ -43,6 +47,7 @@ export const MASTERY = [
   },
   {
     id: 'rw', icon: '📖', title: 'Database Read & Write Scaling',
+    flag: "Quoting CAP, then designing as if partitions never happen. The theorem is a constraint, not a slide.",
     items: [
       { id: 'read-scaling', t: 'Read replicas', d: 'The leader takes writes, followers serve reads: read capacity multiplies, at the price of replication lag your product must be honest about.', go: { tpl: 'Zomato', tab: 'capacity', do: 'Select the SQL node, set replication to leader-follower, and read the lag warning it surfaces.' } },
       { id: 'write-scaling', t: 'Write scaling & leader election', d: 'Writes shard by key when one leader saturates; each shard elects its own leader, and the election itself needs consensus.', go: { tpl: 'Online Chess', tab: 'breakdown', do: 'Read the game-shard dive: one game, one authority - sharding by the unit of consistency.' } },
@@ -51,6 +56,7 @@ export const MASTERY = [
   },
   {
     id: 'distributed', icon: '🤝', title: 'Distributed Systems Concepts',
+    flag: "Hand-waving \"we will use consensus\" for data that needed none - Raft is for coordination, not your feed.",
     items: [
       { id: 'consensus', t: 'Consensus (Paxos/Raft)', d: 'A quorum of nodes agreeing on one value despite crashes: majority rounds, a leader with a term, and a log everyone replays identically.', go: { tpl: 'Online Chess', tab: 'capacity', do: 'Open the coordination node 🔍 internals - Raft terms and quorum writes are the mechanism section.' } },
       { id: 'conflict', t: 'Conflict resolution', d: 'Concurrent writes need a rule: last-write-wins loses data quietly, vector clocks detect the conflict, CRDTs make merging automatic by construction.', go: { tpl: 'Chat (WhatsApp)', tab: 'acr', do: 'Look up CRDT - then ask the AI when LWW is genuinely fine (more often than purists admit).' } },
@@ -58,6 +64,7 @@ export const MASTERY = [
   },
   {
     id: 'reliability', icon: '🛡️', title: 'Reliability & Failover',
+    flag: "Retries without backoff or a budget - the design that DDoSes itself the moment a dependency blinks.",
     items: [
       { id: 'redundancy', t: 'Active-active vs active-passive', d: 'Active-active serves from every replica and absorbs failure invisibly; active-passive keeps a warm standby and pays a failover pause. The SLO decides which you can afford.', go: { tpl: 'Zerodha (Kite)', tab: 'slo', do: 'Read the SPOF gate, then ⚡ inject a fault and watch the burn card price the difference.' } },
       { id: 'health-checks', t: 'Health checks', d: 'The balancer only routes around what it can detect: shallow checks catch dead processes, deep checks catch lying ones.', go: { tpl: 'Ride Sharing (Uber)', tab: 'chaos', do: 'Kill a replicated node and watch survivors absorb it - that reroute IS the health check working.' } },
@@ -66,6 +73,7 @@ export const MASTERY = [
   },
   {
     id: 'cdn', icon: '🌐', title: 'CDNs',
+    flag: "CDN as decoration: naming it without saying what is cacheable, for how long, and how purge works.",
     items: [
       { id: 'cdn-static', t: 'Static content delivery', d: 'Bytes served from a PoP near the user: origin traffic drops ~90%, p50 drops with the speed of light saved, and the origin stops feeling weather.', go: { tpl: 'CDN (Edge Network)', tab: 'breakdown', do: 'Read the shield dive - a thousand cold PoPs cost the origin exactly one fetch.' } },
       { id: 'cdn-edge', t: 'Caching at the edge', d: 'Hit ratio is the product: every point of it is origin egress the customer never buys, and purge is a global broadcast racing staleness.', go: { tpl: 'CDN (Edge Network)', tab: 'roi', do: 'Open ROI - the whole business is a ratio, priced per million requests.' } },
@@ -73,6 +81,7 @@ export const MASTERY = [
   },
   {
     id: 'api', icon: '🔌', title: 'API Design & Rate Management',
+    flag: "Offset pagination on a moving feed - page 2 that repeats page 1 is a bug you shipped on purpose.",
     items: [
       { id: 'rest-graphql', t: 'REST vs GraphQL', d: 'REST models resources and caches beautifully; GraphQL lets clients shape responses and saves round-trips at the cost of server complexity and cache pain. Public APIs lean REST; product frontends earn GraphQL.', go: { tpl: 'News Feed (Instagram)', tab: 'breakdown', do: 'Read the API section, then redesign one endpoint as a GraphQL query in your head - what got easier, what got worse?' } },
       { id: 'pagination', t: 'Pagination & filtering', d: 'Offset pagination breaks under inserts; cursor pagination (keyset) is stable, index-friendly, and what every feed actually uses.', go: { tpl: 'News Feed (Twitter/X)', tab: 'breakdown', do: 'Find the cursor in the feed API - note what the cursor encodes and why offset would lie.' } },
@@ -82,6 +91,7 @@ export const MASTERY = [
   },
   {
     id: 'search', icon: '🔍', title: 'Search Systems',
+    flag: "\"Elasticsearch handles it\" with no analyzer, index, or ranking story - search is a pipeline, not a checkbox.",
     items: [
       { id: 'search-indexing', t: 'Inverted indexes', d: 'Map every term to the documents containing it: a search becomes set intersection instead of a scan, built at write time so reads are cheap.', go: { tpl: 'FB Post Search', tab: 'breakdown', do: 'Read the ingest dive - the index IS the write path.' } },
       { id: 'search-engines', t: 'Full-text engines', d: 'Elasticsearch-class shards: analyzers tokenize, per-shard queries fan out, results merge - tens of ms over warm shards for real queries.', go: { tpl: 'Local Search (Yelp)', tab: 'capacity', do: 'Open the search node 🔍 internals - the fan-out-and-merge mechanism is the whole engine.' } },
@@ -90,11 +100,22 @@ export const MASTERY = [
   },
   {
     id: 'obs-sec', icon: '🩺', title: 'Monitoring, Observability & Security',
+    flag: "Alerting on causes instead of symptoms - paging on CPU while users watch errors. And JWTs you can never revoke.",
     items: [
       { id: 'metrics', t: 'Metrics & golden signals', d: 'Latency, traffic, errors, saturation: four numbers that describe any service - collected by Prometheus-class scrapers, judged against SLOs.', go: { tpl: 'Observability: Golden Signals', tab: 'breakdown', do: 'Read why these four - then open SLO on any design and watch them become a verdict.' } },
       { id: 'tracing', t: 'Distributed tracing', d: 'One request, one trace id, a span per hop: the only way to answer where did the 800ms go in a system with twelve services.', go: { tpl: 'LLM API Platform (FastAPI)', tab: 'capacity', do: 'Open the telemetry node 🔍 internals - spans, batching, and the export path.' } },
       { id: 'authn', t: 'AuthN & AuthZ (OAuth, JWT)', d: 'OAuth delegates who you are; JWT carries it as a signed claim; authorization decides what that identity may do - three different questions, always kept separate.', go: { tpl: 'LLM API Platform (FastAPI)', tab: 'breakdown', do: 'Find where the JWT is validated and where quota is enforced - note they are different layers.' } },
       { id: 'encryption', t: 'Encryption in transit & at rest', d: 'TLS on every hop, AES on every disk, keys in a KMS you can rotate and audit - table stakes, and the interview answer is knowing where each applies.', go: { tpl: 'Payment System (Stripe-lite)', tab: 'acr', do: 'Look up mTLS, KMS and E2EE - three layers, three threat models.' } },
+    ],
+  },
+  {
+    id: 'envelope', icon: '🧮', title: 'Back-of-Envelope Math',
+    flag: "Numbers pulled from vibes - sizing a fleet without stating the per-box assumption you divided by.",
+    items: [
+      { id: 'latency-ladder', t: 'The latency ladder', d: 'Systems intuition is these numbers, cold: each rung sits one to three orders of magnitude above the last, and every architecture decision is really a decision about which rungs a request is allowed to touch.', go: { tpl: 'CDN (Edge Network)', tab: 'capacity', do: 'Find the cross-region milliseconds hiding in the latency chips - then note how the edge exists purely to stop paying them.' } },
+      { id: 'throughput-rules', t: 'Throughput rules of thumb', d: 'One box of anything sustains a knowable order of magnitude - these are this studio\'s own catalog numbers, provenance and all. Fleet sizing is division: demand over per-box, padded to ~70% utilization.', go: { tpl: 'URL Shortener (Bitly)', tab: 'capacity', do: 'Cover the panel, size every tier for 50K rps by division alone - then check yourself against the simulator.' } },
+      { id: 'dau-to-rps', t: 'DAU → rps in your head', d: 'The conversion every interview opens with: a day is 86,400 seconds - call it 10^5. Daily volume over 10^5 is average rps; peak is 3-10x that; storage is objects x size x days x ~3 for replicas and indexes.', go: { tpl: 'News Feed (Twitter/X)', tab: 'capacity', do: 'Estimate this template\'s rps from a DAU story before looking at the slider - then compare with what it loads at.' } },
+      { id: 'nines', t: 'The nines, in minutes', d: 'Availability talk is only honest as a downtime budget: each nine divides the allowance by ten. Know the monthly numbers cold and every SLO negotiation becomes arithmetic instead of vibes.', go: { tpl: 'Zerodha (Kite)', tab: 'slo', do: 'Set a target and watch these same minutes appear as your error budget - then spend some of it with chaos.' } },
     ],
   },
 ]
@@ -224,6 +245,39 @@ export const MASTERY_CMP = {
     ['Answers', 'Is it healthy? How much?', 'Where did the 800ms go?', 'What exactly happened here?'],
     ['Shape', 'Numbers over time, cheap', 'One tree per request, sampled', 'Text per event, voluminous'],
     ['First reach for', 'Alerts and dashboards', 'Latency archaeology', 'The weird single failure'],
+  ]},
+  'latency-ladder': { cols: ['Time', 'What it means'], rows: [
+    ['L1 cache reference', '~0.5 ns', 'the speed of thought'],
+    ['Main memory read', '~100 ns', '200x L1 - still invisible'],
+    ['SSD random read', '~100 us', '1,000x RAM - where \"fast storage\" lives'],
+    ['Same-DC round trip', '~0.5 ms', 'the floor under every microservice hop'],
+    ['HDD seek', '~10 ms', 'why spinning disks left the hot path'],
+    ['Cross-region RTT (US-EU)', '~80 ms', 'physics - no vendor sells around it'],
+    ['Cross-region RTT (US-India)', '~200 ms', 'why reads replicate near users'],
+  ]},
+  'throughput-rules': { cols: ['Per replica', 'The catch'], rows: [
+    ['Load balancer', '~100,000 rps', 'pure forwarding - it spreads load, never absorbs it'],
+    ['App server', '~2,000 rps', 'CPU-bound work halves it'],
+    ['FastAPI (async)', '~2,200 rps', 'IO-bound awaits, not threads - CPU work still halves it'],
+    ['Redis cache', '~100,000 rps', 'per node; hot keys concentrate on one'],
+    ['SQL database', '~5,000 rps', 'the write ceiling arrives first'],
+    ['NoSQL node', '~20,000 rps', 'assumes the key layout was designed for it'],
+    ['Kafka partition', '~200,000 msg/s', 'ordering lives inside one partition only'],
+    ['LLM worker', '~55 rps', 'rate-limit math, not CPU - the provider is the ceiling'],
+  ]},
+  'dau-to-rps': { cols: ['Rule', 'Worked example'], rows: [
+    ['Seconds per day', '86,400 - call it 10^5', '10M requests/day / 10^5 = ~100 rps average'],
+    ['Peak factor', '3-10x average', '100 rps average - provision for ~1,000'],
+    ['The anchor number', '1M DAU x 10 actions = ~115 rps', 'memorize this one; scale everything from it'],
+    ['Storage per year', 'objects x size x 365 x ~3', '1M photos/day x 2 MB = ~2 TB/day before replicas'],
+    ['Read:write ratio', 'often 100:1', 'the entire reason caches exist'],
+  ]},
+  'nines': { cols: ['Per month', 'Per year'], rows: [
+    ['99% (two nines)', '~7.3 hours', '~3.65 days'],
+    ['99.9%', '43.2 minutes', '~8.8 hours'],
+    ['99.95%', '21.6 minutes', '~4.4 hours'],
+    ['99.99%', '4.32 minutes', '~53 minutes'],
+    ['99.999%', '~26 seconds', '~5.3 minutes'],
   ]},
   'encryption': { cols: ['In transit (TLS/mTLS)', 'At rest (AES + KMS)'], rows: [
     ['Protects against', 'Eavesdroppers on the wire', 'Stolen disks, leaked snapshots'],

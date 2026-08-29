@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1 — 2026-08-29
+- 🧮 Mastery grows its 12th area: Back-of-Envelope Math — the latency ladder, throughput rules of thumb quoted from this catalog (suite-enforced against drift), DAU→rps conversion anchors, and the nines as downtime minutes
+- 🚩 One red-flag line per area: the classic way candidates fail it, named
+
 ## 1.6.0 — 2026-08-29
 - 🎓 Mastery tab: the 80/20 interview curriculum — 11 areas, 35 tracked concepts, 20 inline ⇄ Compare tables, shuffled review, hide-mastered filter, ▶ Practice wired to live controls
 - Live DDIA-style controls: cache **Write policy** (through/back/around with the loss-window warning) and LB **Balancing** (round-robin / least-connections / consistent-hash with per-tier resize math)

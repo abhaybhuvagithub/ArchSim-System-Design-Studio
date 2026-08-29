@@ -135,7 +135,7 @@ export const TOUR_STEPS = [
     id: 'mastery',
     target: '[data-tour="tab-mastery"]',
     title: 'Mastery — the 80/20',
-    body: 'The eleven areas that carry most system design interviews, itemized into 35 tracked concepts — each with a teaching line, an inline ⇄ Compare table where the concept is a trade-off, and a ▶ Practice button that lands on the exact template and control. Shuffled every visit, because positional memory is the enemy of review.',
+    body: 'The twelve areas that carry most system design interviews - the arithmetic included - itemized into 39 tracked concepts — each with a teaching line, an inline ⇄ Compare table where the concept is a trade-off, and a ▶ Practice button that lands on the exact template and control. Shuffled every visit, because positional memory is the enemy of review.',
     tab: 'mastery',
   },
   {

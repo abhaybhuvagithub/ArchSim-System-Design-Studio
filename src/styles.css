@@ -1824,3 +1824,4 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .version-tag { position: fixed; right: 10px; bottom: 8px; font-size: 12px; opacity: .55; z-index: 5; }
 .version-tag a { color: inherit; }
 .version-tag:hover { opacity: .9; }
+.ms-flag { font-size: 13px; line-height: 1.5; margin: -2px 0 10px; color: #e05661; opacity: .92; }

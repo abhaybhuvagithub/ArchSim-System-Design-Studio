@@ -2260,8 +2260,9 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all eleven areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 11 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('the mastery hub renders all twelve areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 12 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 12);
       check('every comparison table arrives expanded — the table IS the mastery',
         [...ms().querySelectorAll('details.ms-cmp')].every(d => d.hasAttribute('open')));
       check('comparison tables live inside the items, in this same tab',
@@ -3719,7 +3720,14 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about']);
-      check('the curriculum covers exactly the eleven canonical areas', M.MASTERY.length === 11);
+      check('the curriculum covers the twelve areas — the eleven canonical plus the arithmetic', M.MASTERY.length === 12);
+      check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
+      check('the throughput rules quote this catalog, not folklore', await (async () => {
+        const { CATALOG: C2 } = await import(pathToFileURL(path.join(root, 'src/catalog.js')).href);
+        const rows = M.MASTERY_CMP['throughput-rules'].rows.map(r => r.join(' '));
+        const has = (label, cap) => rows.some(r => r.includes(label) && r.includes(cap.toLocaleString('en-US')));
+        return has('App server', C2.app.cap) && has('LLM worker', C2.llmworker.cap) && has('Kafka partition', C2.kafka.cap) && has('SQL database', C2.sql.cap);
+      })());
       check('the curriculum carries at least thirty tracked concepts', M.MASTERY_TOTAL >= 30);
       const ids = M.MASTERY.flatMap(a => a.items.map(x => x.id));
       check('every concept id is unique', new Set(ids).size === ids.length);
@@ -3769,7 +3777,7 @@ try {
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
-        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles);
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles);
       })());
     }
 
