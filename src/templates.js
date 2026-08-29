@@ -1899,4 +1899,20 @@ T('UPI Switch (NPCI)', 'The switch between banks: debit leg, credit leg, and the
     'Banks settle net, not gross: millions of transactions collapse into a handful of RBI transfers, tracked on the switch ledger',
     'The status store answers the only question users ask - where is my money - and it must answer during the ambiguity, not after',
   ], 'India · fintech'),
+T('Telemedicine (Practo)', 'Booking, video consults, e-prescriptions - where every record read is itself a recorded event', 700, [
+    ['u', 'client', 'Patients & Doctors', 40, 240], ['gw', 'gateway', 'API Gateway', 170, 240, 3],
+    ['book', 'micro', 'Booking (Slots)', 320, 120, 3], ['avail', 'cache', 'Slot Inventory', 470, 80, 2],
+    ['consult', 'app', 'Consult Service', 320, 260, 4], ['sig', 'ws', 'Signaling', 470, 200, 2],
+    ['sfu', 'micro', 'Video SFU', 610, 200, 5], ['ehr', 'sql', 'EHR (Encounters)', 470, 330, 3],
+    ['rx', 'ledger', 'Prescriptions (e-Rx)', 620, 330, 2], ['files', 'blob', 'Reports & Imaging', 470, 450, 2],
+    ['consent', 'iam', 'Consent & Access', 320, 400, 2], ['audit', 'audit', 'Access Audit', 620, 450, 2],
+    ['q', 'queue', 'Notify Queue', 170, 400, 2], ['nw', 'worker', 'Reminders/Alerts', 170, 500, 2],
+    ['obs', 'otel', 'Telemetry', 760, 330, 2],
+  ], [['u','gw'],['gw','book'],['book','avail'],['book','q'],['q','nw'],['gw','consult'],['consult','consent'],['consult','sig'],['sig','sfu'],['consult','ehr'],['ehr','audit'],['consult','rx'],['ehr','files'],['consult','obs']], [
+    'Consent gates every record read, and the read itself is written: EHR access without an audit row is the incident, not the norm',
+    'The video path and the record path never mix - media flows through the SFU and is not stored; the encounter note is the record, not the recording',
+    'e-Prescriptions live on an append-only ledger: a revoked Rx is a new signed entry, never an edit - pharmacies verify the chain, not a row',
+    'Break-the-glass exists by design: emergencies override consent, loudly - the access succeeds AND pages the audit trail',
+    'A slot is inventory: booking locks it like a seat, because a double-booked doctor is an outage with a waiting room',
+  ], 'Unicorns · India'),
 ]

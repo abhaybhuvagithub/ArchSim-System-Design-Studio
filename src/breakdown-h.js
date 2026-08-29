@@ -1076,4 +1076,63 @@ export default {
   },
 },
 
+
+'Telemedicine (Practo)': {
+  meta: 'Healthcare - India - hard - every read is a recorded event',
+  overview: 'Telemedicine looks like a marketplace wearing a video call, but the system-design center of gravity is elsewhere: it is the first template in this studio where READS are the sensitive operation. A doctor opening a patient record is itself an event that must be consented, audited, and explainable years later - and prescriptions are money-grade records that must never be edited, only appended. Booking is inventory, video is plumbing; trust is the workload.',
+  scope: 'Slot booking, the consult path (signaling vs media), consent-gated EHR access with audit-on-read, break-the-glass, e-prescriptions on an append-only ledger, and reports storage. Insurance claims, diagnostics logistics, and pharmacy fulfilment are their own systems.',
+  fr: {
+    core: ['Book a slot against real doctor availability, with locking', 'Run a video consult: signaling, media relay, encounter notes', 'Gate every EHR read through consent and write an audit row for it', 'Issue, verify, and revoke e-prescriptions as signed append-only entries'],
+    out: ['Insurance and claims adjudication', 'Pharmacy inventory and delivery', 'Wearable/device data ingestion'],
+  },
+  nfr: {
+    core: ['No EHR access without an audit row - the read and its record commit together', 'Media is never stored by default: the encounter note is the record, not the recording', 'Break-the-glass overrides consent in emergencies - allowed, and loudly paged', 'Rx integrity is cryptographic: pharmacies verify a signature chain, not a database row'],
+    out: ['Real-time analytics on consult content - if it is wanted, it is a consented, separate pipeline'],
+  },
+  nums: [['1 row', 'of audit per EHR read - reads ARE writes here'], ['0', 'recordings stored by default - notes, not video'], ['years', 'retention the regulator sets, not the architect'], ['1 slot', 'equals one lock - a double-booked doctor is an outage with a waiting room']],
+  entities: [
+    ['Slot', 'doctor x time, lockable inventory; booking transitions it atomically'],
+    ['Encounter', 'the clinical record of a consult: notes, vitals, diagnosis - append-preferred, versioned when edited'],
+    ['ConsentGrant', 'patient -> doctor/purpose -> scope + expiry; checked before every read, cached with instant revoke'],
+    ['Prescription', 'signed ledger entries: issue, dispense, revoke - each a new entry, the chain is the truth'],
+    ['AuditRow', 'who read what, when, under which consent or break-glass reason - the row that makes the system defensible'],
+  ],
+  apiIntro: 'The API is honest about sensitivity: reads carry purpose, and the audit is not optional metadata - it is part of the read.',
+  api: [
+    { dir: '->', name: 'POST /slots/{id}/book', body: '{ patient }\n-> 201 | 409 slot_taken - the lock is the product' },
+    { dir: '->', name: 'GET /ehr/{patient}?purpose=consult', body: 'consent checked -> 200 + audit row committed | 403 no_grant | 200(break_glass) + page' },
+    { dir: '->', name: 'POST /rx (signed)', body: '{ encounter, drugs[] }\n-> ledger entry id; verification is chain-walk, not row-read' },
+  ],
+  dives: [
+    {
+      title: 'Audit-on-read: when reads are the sensitive operation', focus: ['consult', 'consent', 'ehr', 'audit'],
+      blocks: [
+        ['p', 'Every other template in this studio treats reads as cheap and writes as precious. Healthcare inverts it: opening a record is the act regulators, courts, and patients ask about. So the read path is a small transaction - check the consent grant, serve the record, and commit an audit row naming who, what, when, and under which purpose. The audit write is not telemetry riding alongside; it is part of the read\'s contract.'],
+        ['bul', [
+          'Sizing implication the diagram makes visible: the audit tier takes one write per EHR read - reads ARE writes here, and the audit log is provisioned like a primary store, not an afterthought.',
+          'Consent checks sit on the hot path, so grants cache aggressively - with revocation as instant invalidation, because a revoked grant that serves one more read is a breach, not a staleness bug.',
+          'Break-the-glass is a designed door, not a bypass: emergency access succeeds immediately, tags the audit row with the declared reason, and pages a human - allowed, and loud.',
+        ]],
+        ['warn', 'The tempting shortcut is async audit - queue the row, serve the read, reconcile later. The failure mode writes itself: the queue drops during an incident, and you now have unexplainable access to medical records during the exact window someone will ask about. Audit-on-read commits with the read, and the capacity plan pays for it honestly.'],
+      ],
+    },
+    {
+      title: 'Consults and prescriptions: plumbing vs records', focus: ['sig', 'sfu', 'rx', 'files'],
+      blocks: [
+        ['p', 'The video call is deliberately boring: WebSocket signaling negotiates the session, an SFU relays media, and none of it is stored - the clinical record is the encounter note the doctor writes, not the recording. Prescriptions take the opposite discipline: they are money-grade records on the append-only ledger, where issuing, dispensing, and revoking are each new signed entries and a pharmacy verifies the chain rather than trusting a row.'],
+        ['bul', [
+          'Media-record separation is the privacy architecture: the SFU sees packets, never PHI semantics; the EHR sees notes, never packets - a breach of one is not a breach of both.',
+          'A revoked Rx is a new entry that supersedes, never an UPDATE that erases - the pharmacist who dispensed against the old entry has a defensible chain, and so do you.',
+          'Reports and imaging live in object storage behind the same consent gate, served by short-lived signed URLs - the blob store never learns who is asking; the consent layer already answered that.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A booking system with video calls and a prescriptions table.',
+    senior: 'Slot inventory with locking, consent-gated reads that commit their own audit rows, media-record separation with an SFU, e-Rx on an append-only signed ledger, break-the-glass as a designed and paged door.',
+    staff: 'Design the retention and legal-hold story the regulator dictates, the consent-revocation propagation SLA, the audit tier\'s own durability (who audits the audit), and the incident narrative for the day a court asks exactly who read this record and why.',
+  },
+},
+
 }

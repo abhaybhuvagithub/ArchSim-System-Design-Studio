@@ -12,6 +12,11 @@ export const ACRONYM_CATS = {
 }
 
 export const ACRONYMS = [
+  { a: 'EHR', f: 'Electronic Health Record', d: 'The longitudinal clinical record - encounters, vitals, diagnoses. The design inversion: reading one is itself a recorded, consented event. See the Telemedicine template.', c: 'business' },
+  { a: 'PHI', f: 'Protected Health Information', d: 'Any health data tied to an identity - the thing consent gates, audits trail, and breaches are counted in. Media-record separation exists so the video plumbing never touches it.', c: 'security' },
+  { a: 'HIPAA', f: 'Health Insurance Portability and Accountability Act', d: 'The US healthcare privacy rulebook: access controls, audit trails, breach notification. The engineering translation: audit-on-read, minimum-necessary access, and retention you do not get to choose.', c: 'security' },
+  { a: 'DPDP', f: 'Digital Personal Data Protection Act (India)', d: 'India\'s data-protection law: consent as the default basis, purpose limitation, and erasure rights - the reason consent is a first-class service in Indian health and fintech designs, not a checkbox.', c: 'security' },
+  { a: 'FHIR', f: 'Fast Healthcare Interoperability Resources', d: 'The HL7 standard that made health records API-shaped: resources like Patient and Encounter over REST. The reason two hospital systems can exchange records without a fax machine.', c: 'business' },
   { a: 'UPI', f: 'Unified Payments Interface', d: 'India\'s real-time account-to-account rail: a phone number or VPA resolves to a bank account, and money moves in seconds, 24x7 - the system that made T+1 look optional. See the BHIM template.', c: 'business' },
   { a: 'NPCI', f: 'National Payments Corporation of India', d: 'The umbrella operator behind UPI, IMPS, RuPay and AePS - the institutional plumbing that turns payment rails into public infrastructure.', c: 'business' },
   { a: 'IMPS', f: 'Immediate Payment Service', d: 'The 24x7 instant-transfer rail that predates UPI - same real-time money movement, bank-account addressing instead of VPAs.', c: 'business' },

@@ -329,4 +329,22 @@ export default {
   wall: { t: 'The slowest bank is the product ceiling', d: 'Past every switch-side optimization, latency and deemed-rate are set by two hundred independently-operated core banking systems the switch does not control. The wall is federation itself: you can bound, isolate, and expose each participant honestly - you cannot make their mainframe faster. The engineering answer is the contract and the scoreboard, not the code.' },
 },
 
+
+'Telemedicine (Practo)': {
+  constraint: 'Trust is the workload: every record read carries a consent check and an audit write, prescriptions are cryptographic records, and the regulator - not the architect - sets retention. Scale means more consults without ever loosening those screws.',
+  ladder: [
+    ['1K consults/day', '~1 rps', 'One clinic\'s worth. The consent table and audit log already exist - the disciplines are cheap at small scale, which is exactly when to install them.'],
+    ['100K consults/day', '~30 rps', 'Slot locking formalizes, consent grants cache with instant revoke, the SFU fleet regionalizes, audit becomes its own provisioned store.'],
+    ['2M consults/day', '~400 rps', 'EHR partitions by patient; audit partitions by time WITH per-patient index; e-Rx verification goes offline-capable for pharmacies; break-glass reviews staffed.'],
+    ['20M consults/day', '~3K rps', 'National-platform territory: multi-region with data-residency walls, consent as its own service, and compliance capacity - auditors, retention, legal hold - planned like compute.'],
+  ],
+  levers: [
+    { t: 'Provision the audit like a primary', d: 'One audit write per EHR read means the audit tier scales with READ traffic - the inversion this domain teaches. Under-provisioned audit is not slow; it is unexplainable access.', n: ['audit', 'ehr'] },
+    { t: 'Cache consent, revoke instantly', d: 'Grants are read on every record access - cache hard, but revocation must invalidate in one hop, because one stale-grant read is a breach with a name attached.', n: ['consent'] },
+    { t: 'Separate media from records', d: 'SFUs scale regionally on bandwidth economics and store nothing; the record path scales on database economics and stores everything that matters. Never let them share a fate.', n: ['sfu', 'sig', 'ehr'] },
+    { t: 'Chain-verify prescriptions', d: 'Pharmacies verify signatures offline against the ledger chain - the verification load leaves your hot path entirely, and forgery becomes math instead of trust.', n: ['rx'] },
+  ],
+  wall: { t: 'Regulation sets the floor, forever', d: 'Past every architectural lever, healthcare data has a property nothing else in this studio has: it never cools. Retention laws keep records hot-accessible for years to decades, audit trails must survive longer than the systems that wrote them, and data-residency walls partition your architecture by jurisdiction, not by load. The wall is that compliance capacity - storage that cannot be tiered away, auditability that cannot be sampled, deletion that must be provable - is real capacity, purchased forever. The honest design treats the regulator as a permanent, non-negotiable tenant.' },
+},
+
 }
