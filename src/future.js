@@ -146,3 +146,51 @@ export function futureReady(nodes, edges, sim, resim, target = 0.999) {
     note: `🚀 Future-ready: ${steps.join('; ')}.`,
   }
 }
+
+// ── itemized for the Improve tab ───────────────────────────────────────────
+// Each failing gate becomes one suggestion row in the exact shape and voice
+// of the existing ✨ Improve items: what is true today, what the fix does,
+// what changes. One ⚡ Quick fix per row; futureReady() above remains the
+// engine the library-wide sweep proves.
+export function futureSuggestions(nodes, edges, sim, resim, target = 0.999) {
+  const out = []
+  const push = (id, severity, title, detail, fix) => { if (fix) out.push({ id: 'fr-' + id, icon: '🚀', severity, title, detail, fix }) }
+  const hasClient = nodes.some(n => n.type === 'client')
+
+  if (hasClient && !nodes.some(n => n.type === 'gateway' || n.type === 'lb')) {
+    push('door', 'high', 'Future-ready: add a managed front door',
+      'Clients hit your services directly today. A front door gives one place for auth, rate limits and load shedding - and lets the backend change without the clients noticing.',
+      sloQuickFix('door', nodes, edges, sim, target, null))
+  }
+  if (!nodes.some(n => ['monitor', 'otel', 'tsdb'].includes(n.type))) {
+    push('obs', 'med', 'Future-ready: make incidents visible',
+      'Nothing collects metrics or traces - the first alert will be a customer. A monitoring tier fed by the front door and your busiest services turns the next incident into a dashboard, not a support ticket.',
+      sloQuickFix('obs', nodes, edges, sim, target, null))
+  }
+  {
+    const f = sloQuickFix('spof', nodes, edges, sim, target, null)
+    if (f) push('spof', 'high', 'Future-ready: no single points of failure',
+      f.plan.replace('Will add a failover replica: ', '') + ' runs one replica with live traffic - one crash is an outage. A failover replica turns that crash into a blip the balancer routes around.', f)
+  }
+  {
+    const g = insertGuards(nodes, edges)
+    if (g) push('guard', 'high', 'Future-ready: guardrails on every AI tier',
+      `${g.added.join(', ')} take${g.added.length === 1 ? 's' : ''} unfiltered input and return${g.added.length === 1 ? 's' : ''} unfiltered output today. Guardrails one hop upstream screen prompt injection on the way in and PII/policy on the way out.`,
+      { nodes: g.nodes, edges: g.edges, note: `🚀 Guardrails inserted upstream of ${g.added.join(', ')}.` })
+  }
+  {
+    const sat = nodes.filter(n => FIXABLE(n) && (sim?.stats?.[n.id]?.util || 0) > 0.85)
+    if (sat.length && resim) {
+      const f = sizeForHeadroom(nodes, edges, (n2, e2) => resim(n2, e2 || edges))
+      if (f) push('size', 'med', 'Future-ready: buy back capacity headroom',
+        `${sat.map(n => n.label).join(', ')} run${sat.length === 1 ? 's' : ''} past 85% utilization - the queueing knee where p99 explodes. Sizing toward 70% is the headroom that keeps tails flat through the next burst.`,
+        { nodes: f.nodes, note: `🚀 Headroom: ${f.touched.join(', ')}.` })
+    }
+  }
+  if ((sim?.sysAvail ?? 1) < target && resim) {
+    const f = sloQuickFix('struct', nodes, edges, sim, target, (n2) => resim(n2, edges))
+    if (f) push('struct', 'high', 'Future-ready: availability that clears 99.9%',
+      `Composed availability is ${(100 * (sim?.sysAvail ?? 1)).toFixed(3)}% - below the bar no matter how well it is operated. Raising replicas where the math is thinnest fixes it structurally.`, f)
+  }
+  return out
+}

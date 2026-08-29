@@ -2187,30 +2187,27 @@ try {
       await wait(150);
       const after = slo().textContent.match(/([\d.]+) min/)?.[1];
       check('tightening the target shrinks the budget live', before === '43.2' && after === '4.3');
-      // 🚀 future-ready drive: the card lives in the Improve tab now —
-      // disclose the steps, apply, and the card must flip to the green state
+      // 🚀 future-ready drive: itemized rows in the Improve tab, exactly the
+      // shape of the existing ✨ suggestions — title, explanation, one ⚡ Quick
+      // fix each. Applying one must resolve that gate (its row disappears).
       {
         click([...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('✨ Improve')));
         await wait(250);
-        const card = () => doc.querySelector('.future-card');
-        check('the 🚀 Future-ready card lives in the Improve tab', !!card());
-        if (card() && !card().classList.contains('ok')) {
-          check('the card discloses its upgrade steps before the click',
-            card().querySelectorAll('.future-list li').length >= 1);
-          const nodesBefore = doc.querySelectorAll('svg g.node').length;
-          click(card().querySelector('.future-go'));
-          await wait(500);
-          check('one click applies the whole upgrade and the card turns green',
-            !!doc.querySelector('.future-card.ok') && doc.querySelectorAll('svg g.node').length >= nodesBefore);
-          check('the added monitor is wired, not floating', (() => {
-            const monG = [...doc.querySelectorAll('svg g.node')].find(g => /Monitoring \(added\)/.test(g.textContent));
-            if (!monG) return true;   // this canvas already had observability
-            return [...doc.querySelectorAll('svg path, svg line')].length > 0 && !!doc.querySelector('.future-card.ok');
-          })());
+        const frRows = () => [...doc.querySelectorAll('.sug')].filter(r => r.querySelector('.sug-t')?.textContent.includes('🚀'));
+        if (frRows().length > 0) {
+          const row = frRows()[0];
+          check('future-ready renders as Improve-style items, not a card',
+            !doc.querySelector('.future-card') && !!row.querySelector('.sug-d') && row.querySelector('.sug-d').textContent.length > 60 &&
+            /Future-ready:/.test(row.querySelector('.sug-t').textContent));
+          check('each item carries its own ⚡ Quick fix', !!row.querySelector('.btn.quick'));
+          const before3 = frRows().length;
+          click(row.querySelector('.btn.quick'));
+          await wait(450);
+          check('one click resolves that gate — its row disappears', frRows().length < before3);
         } else {
-          check('the card discloses its upgrade steps before the click', true);
-          check('one click applies the whole upgrade and the card turns green', true);
-          check('the added monitor is wired, not floating', true);
+          check('future-ready renders as Improve-style items, not a card', !doc.querySelector('.future-card'));
+          check('each item carries its own ⚡ Quick fix', true);
+          check('one click resolves that gate — its row disappears', true);
         }
         click([...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.includes('✨ Improve')));
         await wait(150);
