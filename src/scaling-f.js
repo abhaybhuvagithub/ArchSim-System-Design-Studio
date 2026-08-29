@@ -311,4 +311,22 @@ export default {
   wall: { t: 'The adversary retrains faster than you', d: 'Fraud is the one workload where the input distribution studies YOUR output. Every threshold leaks through probing; every model decays on contact; labels lag by weeks while attacks pivot in days. Past all architecture, the moat is loop speed - and the honest ceiling is that you are pricing fraud, not eliminating it: the steady state is basis points, chosen on purpose.' },
 },
 
+
+'UPI Switch (NPCI)': {
+  constraint: 'Every transaction is two bank legs plus a possible reversal - the switch scales orchestration, but its ceiling is set by the slowest bank on the wire and the ambiguity it must carry meanwhile.',
+  ladder: [
+    ['100K txns/day', '~3 rps', 'A handful of banks, synchronous legs, reversals worked by hand. The DEEMED state already exists - it just has a phone number.'],
+    ['10M txns/day', '~300 rps', 'Reversal queue and worker formalize; idempotent leg contract published; per-bank timeouts tuned by bank, not globally.'],
+    ['500M txns/day', '~10K rps', 'Per-bank circuit breakers and fairness; status store partitioned by txn id; net settlement windows; festival peaks rehearsed like launches.'],
+    ['15B txns/month', '~50K rps peak', 'Real-world UPI territory: bank-tier isolation, deemed-rate as a first-class SLO per bank, and settlement plumbing whose limits are institutional.'],
+  ],
+  levers: [
+    { t: 'Idempotent legs by contract', d: 'The (txn id, leg) replay rule is the single interface promise that makes blind retries safe across two hundred banks - everything else stands on it.', n: ['orch', 'rem', 'ben'] },
+    { t: 'Bound ambiguity, do not hide it', d: 'DEEMED with a public reversal SLA turns the scariest state into a bounded, honest one. The status store answers during the gap.', n: ['status', 'rq', 'rev'] },
+    { t: 'Per-bank breakers and fairness', d: 'One slow bank must cost only its own transactions - breakers trip per bank, queues are fair-shared, and deemed-rate is tracked per participant.', n: ['orch'] },
+    { t: 'Settle net on an append-only ledger', d: 'Millions of transactions, a handful of RBI transfers - netting keeps settlement sub-linear while the ledger keeps it auditable.', n: ['led', 'recon'] },
+  ],
+  wall: { t: 'The slowest bank is the product ceiling', d: 'Past every switch-side optimization, latency and deemed-rate are set by two hundred independently-operated core banking systems the switch does not control. The wall is federation itself: you can bound, isolate, and expose each participant honestly - you cannot make their mainframe faster. The engineering answer is the contract and the scoreboard, not the code.' },
+},
+
 }

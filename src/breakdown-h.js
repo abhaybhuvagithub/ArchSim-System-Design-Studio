@@ -1018,4 +1018,62 @@ export default {
   },
 },
 
+
+'UPI Switch (NPCI)': {
+  meta: 'Fintech - India DPI - hard - two legs, one illusion',
+  overview: 'From the app\'s seat, UPI is one tap. From the switch\'s seat, it is a distributed transaction across two banks that do not trust each other, over a network that times out - debit the remitter, credit the beneficiary, and survive every failure that lands between those two sentences. The design is famous for what happens in the gap: the DEEMED state, where money has verifiably left one account and not verifiably arrived in another, and a reversal choreography resolves it against bank truth.',
+  scope: 'The switch itself: leg orchestration, timeout ambiguity and reversals, idempotent bank legs, status serving during ambiguity, and deferred net settlement between banks. PSP app UX, device binding, and PIN handling live in the BHIM template.',
+  fr: {
+    core: ['Orchestrate debit-then-credit across remitter and beneficiary banks in real time', 'Resolve credit-leg ambiguity: deemed status, verification, reversal or confirmation', 'Serve transaction status to PSPs during and after ambiguity', 'Net-settle inter-bank obligations on the switch ledger'],
+    out: ['PSP-side UX and device binding (see BHIM)', 'Dispute adjudication beyond automated reversal'],
+  },
+  nfr: {
+    core: ['A leg is retried, never repeated: idempotency by transaction id at every bank interface', 'Ambiguity is bounded: every DEEMED transaction reaches a terminal state within the reversal SLA', 'The switch survives one bank being slow without queueing every other bank behind it', 'Peak is the product: festival-night traffic is the design point, not the exception'],
+    out: ['Gross real-time settlement between banks - netting is the point'],
+  },
+  nums: [['2 legs', 'debit and credit - the gap between them is the design'], ['DEEMED', 'the state where ambiguity lives, bounded by SLA'], ['net', 'millions of txns settle as a handful of RBI transfers'], ['24x7', 'no clearing hours - the reversal loop never sleeps']],
+  entities: [
+    ['Transaction', 'txn id + both legs + state machine: INITIATED -> DEBITED -> CREDITED | DEEMED -> REVERSED | CONFIRMED'],
+    ['Leg', 'one bank-side operation, idempotent by (txn id, leg) - replay-safe by contract'],
+    ['ReversalTask', 'a DEEMED transaction awaiting bank truth: verify, then reverse the debit or confirm the credit'],
+    ['NetPosition', 'per bank-pair running obligation on the switch ledger - what actually settles'],
+  ],
+  apiIntro: 'PSPs speak to the switch; the switch speaks to banks. Status is a first-class endpoint because ambiguity is a first-class state.',
+  api: [
+    { dir: '->', name: 'POST /txn (id: t)', body: '{ remitter_vpa, beneficiary_vpa, amount }\n-> 200 { state: CREDITED } | 202 { state: DEEMED } - both are answers' },
+    { dir: '->', name: 'POST /bank/{id}/debit|credit (idempotent by txn id)', body: 'the leg contract every bank implements - replays return the original result' },
+    { dir: '<-', name: 'GET /txn/{id}', body: '-> { state, legs } - must answer DURING ambiguity, not after it resolves' },
+  ],
+  dives: [
+    {
+      title: 'The gap between the legs', focus: ['orch', 'rem', 'ben', 'status'],
+      blocks: [
+        ['p', 'The orchestrator debits first - money must exist before it moves - then credits. A debit failure is clean: nothing happened. A credit TIMEOUT is the interesting case: the beneficiary bank may have credited and lost the response, or never received the request. The switch cannot know, so it refuses to guess: the transaction goes DEEMED, the status store says so honestly, and resolution moves to the reversal loop.'],
+        ['bul', [
+          'Idempotency by (txn id, leg) is what makes the whole machine safe: the orchestrator can retry any leg blindly, because banks replay instead of repeat.',
+          'Per-bank circuit breakers keep one slow bank from queueing the nation: its transactions go DEEMED faster; everyone else proceeds.',
+          'The status store is deliberately boring technology serving the only question users ask - and it must answer during the gap, which is why it is written before the credit leg, not after.',
+        ]],
+        ['warn', 'The instinct to hide DEEMED behind a spinner is the real design failure. Money-left-my-account is survivable when the system says exactly that and bounds the resolution time; it becomes a trust crisis when the app pretends nothing happened.'],
+      ],
+    },
+    {
+      title: 'Reversal choreography and net settlement', focus: ['rq', 'rev', 'led', 'recon'],
+      blocks: [
+        ['p', 'The reversal worker drains DEEMED transactions against bank truth: query the beneficiary - if the credit landed, confirm; if not, reverse the debit. Both outcomes are idempotent legs like any other. Meanwhile the ledger tracks net positions per bank pair: the banks exchange a handful of RBI transfers for millions of transactions, and reconciliation matches the switch ledger against every bank\'s books daily.'],
+        ['bul', [
+          'Reversal is a NEW debit-side leg with its own idempotency, never an UPDATE to the old one - the ledger stays append-only all the way down.',
+          'The reversal SLA is a public promise: ambiguity bounded in hours, automatically - the difference between an incident and a headline.',
+          'Netting scales settlement sub-linearly with volume: transaction count grows, RBI transfer count barely moves.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A service that calls two bank APIs and marks the transaction complete.',
+    senior: 'Debit-then-credit with a DEEMED state for credit ambiguity, idempotent legs by (txn id, leg), a reversal worker resolving against bank truth within an SLA, per-bank breakers, honest status during the gap, net settlement on an append-only ledger.',
+    staff: 'Design the reversal-loop failure modes (what watches the watcher), the per-bank isolation and fairness story at festival peak, the settlement-dispute path when the switch and a bank disagree, and the migration of the leg contract across two hundred banks that deploy on their own schedules.',
+  },
+},
+
 }

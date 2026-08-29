@@ -20,7 +20,7 @@ import { speechSupported, extractSpeech, chunkText, RATES, readRate, saveRate, p
   voicesByLanguage, readVoiceName, saveVoiceName, PROSODY, BLOCK_PAUSE_MS, speakableText } from './speech.js'
 import { BREAKDOWNS, BREAKDOWN_NAMES, breakdownFor } from './breakdown.js'
 import { SCALING_NAMES, scalingFor, PRINCIPLES } from './scaling.js'
-import { REPLICATION, ISOLATION, PARTITIONING, WRITE_POLICY, LB_ALGO, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
+import { REPLICATION, ISOLATION, PARTITIONING, WRITE_POLICY, LB_ALGO, IDEMPOTENCY, LEDGER_COMMIT, replicationEffects, isolationEffects, partitionEffects, quorumOverlaps } from './ddia.js'
 import { DDIA_TRACK, DDIA_COMPARISONS } from './learn-ddia.js'
 import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from './tour.js'
 import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects, readFractionOf } from './ddia2.js'
@@ -2704,7 +2704,7 @@ function Inspector({ n, sim, setNodes, cloud, cloudMult = 1, onShowDetails }) {
           </select>
         </div>
       )}
-      <ConsistencyFields n={n} setNodes={setNodes} />
+      <ConsistencyFields n={n} setNodes={setNodes} sim={sim} />
       <BalancingField n={n} setNodes={setNodes} />
       <ServiceFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
       <IdentityFields n={n} set={patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))} />
@@ -2885,7 +2885,7 @@ function CanvasDescription({ nodes, edges, rps, template }) {
 
 // Correctness, as editable properties. The simulator has always shown how much
 // a store can take; this is where you say what it guarantees.
-const STORE_TYPES = new Set(['sql', 'nosql', 'cache', 'search', 'blob', 'warehouse', 'lake'])
+const STORE_TYPES = new Set(['sql', 'nosql', 'cache', 'search', 'blob', 'warehouse', 'lake', 'ledger'])
 
 function BalancingField({ n, setNodes }) {
   if (n.type !== 'lb' && n.type !== 'gateway') return null
@@ -2907,7 +2907,7 @@ function BalancingField({ n, setNodes }) {
   )
 }
 
-function ConsistencyFields({ n, setNodes }) {
+function ConsistencyFields({ n, setNodes, sim }) {
   if (!STORE_TYPES.has(n.type)) return null
   const set = patch => setNodes(ns => ns.map(x => x.id === n.id ? { ...x, ...patch } : x))
   const rep = replicationEffects(n)
@@ -2926,6 +2926,46 @@ function ConsistencyFields({ n, setNodes }) {
         </select>
       </div>
       <div className="ddia-blurb">{REPLICATION[rep.mode]?.blurb}</div>
+
+      {n.type === 'ledger' && (() => {
+        const idem = n.idem === false ? 'off' : 'on'
+        const commit = n.ledgerCommit || 'each'
+        const st = sim?.stats?.[n.id]
+        const inRps = st?.in || 0
+        const dupRps = st?.dupIn || 0
+        const phantomRows = Math.round(dupRps * 2)
+        const windowRows = Math.round((inRps * (LEDGER_COMMIT.batch.windowMs / 1000)) * 2)
+        return (
+          <>
+            <div className="field">
+              <label>Idempotency</label>
+              <select value={idem} onChange={e => set({ idem: e.target.value === 'on' })}>
+                {Object.keys(IDEMPOTENCY).map(k => <option key={k} value={k}>{IDEMPOTENCY[k].label}</option>)}
+              </select>
+            </div>
+            <div className="ddia-blurb">{IDEMPOTENCY[idem].blurb}</div>
+            {idem === 'off' && dupRps > 0 && (
+              <div className="ddia-verdict bad">DOUBLE-BOOKING NOW: a retry storm is landing ~{Math.round(dupRps)} duplicate requests/s on this ledger — without idempotency keys that is ~{phantomRows.toLocaleString()} phantom entries per second of money that never moved.</div>
+            )}
+            {idem === 'off' && dupRps === 0 && (
+              <div className="ddia-verdict bad">Nothing looks wrong at this moment — that is the trap. The first timeout-and-retry books money twice. Inject a 🔁 Retry Storm on this node and watch.</div>
+            )}
+            {idem === 'on' && dupRps > 0 && (
+              <div className="ddia-verdict good">A retry storm is landing ~{Math.round(dupRps)} duplicates/s and every one is replaying onto its existing entries — capacity is paying, correctness is not.</div>
+            )}
+            <div className="field">
+              <label>Commit mode</label>
+              <select value={commit} onChange={e => set({ ledgerCommit: e.target.value })}>
+                {Object.keys(LEDGER_COMMIT).map(k => <option key={k} value={k}>{LEDGER_COMMIT[k].label}</option>)}
+              </select>
+            </div>
+            <div className="ddia-blurb">{LEDGER_COMMIT[commit].blurb}</div>
+            {commit === 'batch' && (
+              <div className="ddia-verdict bad">Loss window at this traffic: a crash mid-window forfeits ~{Math.max(windowRows, 2).toLocaleString()} uncommitted entries ({LEDGER_COMMIT.batch.windowMs}ms × {Math.round(inRps)} rps × 2 rows). If that number has to be zero, the fsync ceiling is the product.</div>
+            )}
+          </>
+        )
+      })()}
 
       {n.type === 'cache' && (() => {
         const wp = n.writePolicy || 'through'

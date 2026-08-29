@@ -1885,4 +1885,18 @@ T('Card Payments (Auth + Settlement)', 'Authorization is a promise in millisecon
     'Labels arrive weeks late as chargebacks - the feedback log is the slowest, most valuable pipe in the design',
     'Thresholds are the business: a false positive insults a customer and loses the sale; a false negative is the loss itself',
   ], 'India · fintech'),
+T('UPI Switch (NPCI)', 'The switch between banks: debit leg, credit leg, and the reversal choreography in between', 2000, [
+    ['psp', 'client', 'PSP Apps', 40, 240], ['gw', 'gateway', 'Switch Gateway', 170, 240, 4],
+    ['orch', 'micro', 'Txn Orchestrator', 320, 240, 6], ['rem', 'app', 'Remitter Bank CBS', 480, 150, 6],
+    ['ben', 'app', 'Beneficiary Bank CBS', 480, 330, 6], ['status', 'nosql', 'Txn Status Store', 320, 400, 3],
+    ['rq', 'kafka', 'Reversal Queue', 620, 150, 2], ['rev', 'worker', 'Reversal Worker', 750, 150, 3],
+    ['led', 'ledger', 'Net Settlement Ledger', 620, 330, 3], ['recon', 'worker', 'Bank Reconciliation', 750, 330, 2],
+    ['obs', 'otel', 'Telemetry', 750, 450, 2],
+  ], [['psp','gw'],['gw','orch'],['orch','rem'],['orch','ben'],['orch','status'],['rem','rq'],['rq','rev'],['orch','led'],['led','recon'],['orch','obs']], [
+    'Two legs, one illusion: debit the remitter, credit the beneficiary - and the network can fail between them, which is where the whole design lives',
+    'A credit-leg timeout is ambiguity, not failure: the txn goes DEEMED, and the reversal worker resolves it against bank truth - this is the famous money-left-my-account state',
+    'Both legs are idempotent by transaction id: banks replay a retried leg onto the same result, never twice',
+    'Banks settle net, not gross: millions of transactions collapse into a handful of RBI transfers, tracked on the switch ledger',
+    'The status store answers the only question users ask - where is my money - and it must answer during the ambiguity, not after',
+  ], 'India · fintech'),
 ]

@@ -206,7 +206,7 @@ export const SECONDARY_INDEX = {
 // Returned in the same shape the existing advisor uses, so these sit alongside
 // the capacity findings rather than in a separate list.
 
-const STORE_TYPES = new Set(['sql', 'nosql', 'cache', 'search', 'blob', 'warehouse', 'lake'])
+const STORE_TYPES = new Set(['sql', 'nosql', 'cache', 'search', 'blob', 'warehouse', 'lake', 'ledger'])
 const isStore = n => STORE_TYPES.has(n.type)
 
 export function ddiaFindings(nodes, edges, rps) {
@@ -334,5 +334,28 @@ export const LB_ALGO = {
   chash: {
     label: 'Consistent hashing',
     blurb: 'A key hashes to a point on a ring and sticks to the same replica - caches stay warm, sessions stay local, shards stay stable. The famous property: resizing the fleet moves only ~1/N of the keys, not all of them.',
+  },
+}
+
+// ── money movement (ledger nodes) ───────────────────────────────────────────
+export const IDEMPOTENCY = {
+  on: {
+    label: 'Idempotency keys ON',
+    blurb: 'Every mutation carries a client-supplied key, checked before insert: a retried payment lands on its existing entries. Duplicates become harmless replays - the storm still costs capacity, never correctness.',
+  },
+  off: {
+    label: 'Idempotency keys OFF',
+    blurb: 'Each request books blindly. Under normal traffic nothing looks wrong - which is exactly the trap: correctness now depends on the network never retrying, and the network always retries.',
+  },
+}
+export const LEDGER_COMMIT = {
+  each: {
+    label: 'Fsync each entry',
+    blurb: 'Every entry pair is durably committed before the OK. A crash loses nothing; the throughput ceiling is the price, paid on purpose.',
+  },
+  batch: {
+    label: 'Batched group commit (~50ms)',
+    blurb: 'Entries buffer and fsync together: throughput multiplies, and every crash forfeits the buffer. For money, that window is not a tuning detail - it is a stated business decision about acceptable loss.',
+    windowMs: 50,
   },
 }
