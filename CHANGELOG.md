@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.9.1 — 2026-08-29
+- 🎤 Every Mastery concept now carries its "as asked" line — the concept wearing its interview costume ("one celebrity just broke shard 7 — now what?"), 39 authored phrasings, suite-required
+
 ## 1.9.0 — 2026-08-29
 - 🤖 Mastery gains its 13th area: **LLM Systems in Production** — the ten interview questions that test operating, not knowing (retrieval-vs-generation isolation, grounded hallucination, loop guards, cost-spike attribution, 1-GPU/1000-request design, RAG-vs-FT-vs-neither, evals without a gold answer, tool-selection debugging, injection defense, the hallucination-latency-cost triangle). Every drill answers in the required shape — diagnose → intervene → **prove** — and the suite enforces that a proof lives in every playbook table
 - Ask-AI: lost-in-the-middle, LLM-as-judge, semantic cache

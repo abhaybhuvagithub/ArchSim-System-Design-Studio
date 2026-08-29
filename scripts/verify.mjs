@@ -2271,6 +2271,8 @@ try {
       check('the mastery hub renders all thirteen areas with a progress bar',
         ms().querySelectorAll('.ms-area').length === 13 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
       check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 13);
+      check('the 🎤 as-asked lines render on the concepts',
+        ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
       check('every production-LLM drill carries proof in its playbook table', await (async () => {
         const M3 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const area = M3.MASTERY.find(a => a.id === 'llm-prod');
@@ -3779,6 +3781,8 @@ try {
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about']);
       check('the curriculum covers the thirteen areas — canonical, arithmetic, and production LLM drills', M.MASTERY.length === 13);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
+      check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
+        M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
       check('the throughput rules quote this catalog, not folklore', await (async () => {
         const { CATALOG: C2 } = await import(pathToFileURL(path.join(root, 'src/catalog.js')).href);
         const rows = M.MASTERY_CMP['throughput-rules'].rows.map(r => r.join(' '));
