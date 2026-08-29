@@ -46,7 +46,7 @@ import { roiFor } from './roi.js'
 import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { futureSuggestions } from './future.js'
-import { MASTERY, MASTERY_TOTAL, readMastery, writeMastery } from './mastery.js'
+import { MASTERY, MASTERY_TOTAL, MASTERY_CMP, readMastery, writeMastery } from './mastery.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -1493,6 +1493,19 @@ function MasteryTab({ onGo }) {
               <div className="ms-body">
                 <div className="ms-t">{x.t}</div>
                 <div className="ms-d">{x.d}</div>
+                {MASTERY_CMP[x.id] && (
+                  <details className="ms-cmp">
+                    <summary>⇄ Compare</summary>
+                    <table>
+                      <thead><tr><th></th>{MASTERY_CMP[x.id].cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+                      <tbody>
+                        {MASTERY_CMP[x.id].rows.map((r, ri) => (
+                          <tr key={ri}><td className="ms-dim">{r[0]}</td>{r.slice(1).map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </details>
+                )}
                 <div className="ms-go">
                   <button className="btn" onClick={() => onGo(x.go)}>▶ Practice{x.go.tpl ? `: ${x.go.tpl}` : ''}</button>
                   <span className="ms-do muted">{x.go.do}</span>

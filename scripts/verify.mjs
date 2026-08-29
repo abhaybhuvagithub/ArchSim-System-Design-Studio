@@ -2262,6 +2262,16 @@ try {
       const ms = () => doc.querySelector('.mastery');
       check('the mastery hub renders all eleven areas with a progress bar',
         ms().querySelectorAll('.ms-area').length === 11 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('comparison tables live inside the items, in this same tab',
+        ms().querySelectorAll('details.ms-cmp').length >= 15);
+      {
+        const cmp = [...ms().querySelectorAll('.ms-item')].find(it => /Write-through/.test(it.textContent))?.querySelector('details.ms-cmp');
+        cmp.setAttribute('open', '');
+        await wait(100);
+        check('opening ⇄ Compare shows the authored table with all its options',
+          [...cmp.querySelectorAll('thead th')].map(t => t.textContent).join('|').includes('Write-back') &&
+          cmp.querySelectorAll('tbody tr').length >= 4 && /Memory speed/.test(cmp.textContent));
+      }
       const firstBox = ms().querySelector('.ms-check input');
       firstBox.click();
       await wait(150);
@@ -3631,6 +3641,19 @@ try {
       check('Ask AI can define the remaining prose-only gaps (GraphQL, write policies, vector clocks, redundancy shapes)', await (async () => {
         const asst = fs.readFileSync(path.join(root, 'src/assistant.js'), 'utf8');
         return ['graphql', 'write-back', 'vector clock', 'active-active'].every(t => asst.includes(`'${t}':`));
+      })());
+      check('the comparison layer is authored, complete and well-shaped', (() => {
+        const ids2 = new Set(M.MASTERY.flatMap(a => a.items.map(x => x.id)));
+        const keys = Object.keys(M.MASTERY_CMP);
+        if (keys.length < 15) return false;
+        for (const k of keys) {
+          if (!ids2.has(k)) return false;   // a table for a ghost concept
+          const c = M.MASTERY_CMP[k];
+          if (c.cols.length < 2 || c.rows.length < 3) return false;
+          for (const r of c.rows) if (r.length !== c.cols.length + 1 || r.some(cell => !cell || !String(cell).trim())) return false;
+        }
+        // the canonical trios exist as tables, not just prose
+        return ['cache-strategies', 'lb-techniques', 'conflict', 'metrics', 'authn'].every(k => keys.includes(k));
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
