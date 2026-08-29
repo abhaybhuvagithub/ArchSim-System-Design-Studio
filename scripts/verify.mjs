@@ -2289,25 +2289,13 @@ try {
       }
       itemByText('Relational vs NoSQL').querySelector('.ms-check input').click();
       await wait(120);
-      // quiz mode hides the answers until revealed, per item
-      {
-        const quizCb = [...ms().querySelectorAll('.ms-opt')].find(l => /Quiz me/.test(l.textContent)).querySelector('input');
-        quizCb.click();
-        await wait(150);
-        const item = itemByText('Relational vs NoSQL');
-        check('quiz mode hides teaching lines and comparisons behind Reveal',
-          !item.querySelector('.ms-d') && !item.querySelector('.ms-cmp') && !!item.querySelector('.ms-reveal'));
-        click(item.querySelector('.ms-reveal'));
-        await wait(120);
-        check('revealing one item shows its answer without unhiding the rest',
-          !!itemByText('Relational vs NoSQL').querySelector('.ms-d') &&
-          [...ms().querySelectorAll('.ms-reveal')].length > 0);
-        quizCb.click();
-        await wait(120);
-      }
-      check('the study controls are just the two toggles — no shuffle ceremony',
+      // everything shows directly — no reveal step anywhere
+      check('every item shows its answer directly, no reveal step',
+        ms().querySelectorAll('.ms-reveal').length === 0 &&
+        [...ms().querySelectorAll('.ms-item')].every(it => !!it.querySelector('.ms-d')));
+      check('the study controls are just the one toggle — no shuffle ceremony, no quiz gate',
         ms().querySelectorAll('.ms-controls .btn').length === 0 &&
-        ms().querySelectorAll('.ms-controls .ms-opt').length === 2);
+        ms().querySelectorAll('.ms-controls .ms-opt').length === 1);
       const goBtn = [...ms().querySelectorAll('.ms-go .btn')].find(b => b.textContent.includes('Rate Limiter'));
       click(goBtn);
       await wait(300);
