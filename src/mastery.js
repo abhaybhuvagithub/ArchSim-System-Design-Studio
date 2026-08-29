@@ -107,3 +107,127 @@ export function readMastery() {
 export function writeMastery(set) {
   try { localStorage.setItem(MASTERY_STORE, JSON.stringify([...set])) } catch { /* private mode */ }
 }
+
+// ── inline comparisons ─────────────────────────────────────────────────────
+// The concepts above are mostly A-vs-B decisions; the table IS the mastery.
+// Keyed by item id; first column is the dimension, the rest are the options.
+export const MASTERY_CMP = {
+  'sql-nosql': { cols: ['SQL (relational)', 'NoSQL (partitioned)'], rows: [
+    ['Data model', 'Tables, joins, schema up front', 'Documents / wide rows, schema per item'],
+    ['Transactions', 'ACID across rows and tables', 'Usually per-item; cross-item is your problem'],
+    ['Write scaling', 'One leader - a ceiling you feel', 'Horizontal by partition key, near-linear'],
+    ['Query flexibility', 'Ask anything, add an index later', 'Design queries first; the key layout IS the API'],
+    ['Reach for it when', 'Money, inventory, anything relational', 'Feeds, events, profiles at large scale'],
+  ]},
+  'partitioning': { cols: ['Vertical (by column/service)', 'Horizontal (sharding)'], rows: [
+    ['Splits', 'Different data to different stores', 'Same data across many nodes by key'],
+    ['Buys you', 'Isolation, right store per job', 'Write and storage scale without ceiling'],
+    ['Costs you', 'Cross-store joins are gone', 'Hot keys, resharding, scatter-gather queries'],
+    ['Ceiling', 'The busiest single table remains', 'The hottest single key remains'],
+  ]},
+  'indexing': { cols: ['Primary', 'Secondary', 'Covering'], rows: [
+    ['Locates', 'The row itself (physical order)', 'Row pointers by another column', 'The answer - no row visit at all'],
+    ['Write cost', 'Free - it IS the table', 'One extra structure per write', 'Largest: index carries the columns'],
+    ['Serves', 'Key lookups and ranges', 'Filters on non-key columns', 'Hot queries worth precomputing fully'],
+  ]},
+  'consistency': { cols: ['Strong', 'Causal', 'Eventual'], rows: [
+    ['A read sees', 'The latest write, always', 'Everything that caused what it sees', 'Some recent-enough state'],
+    ['Price', 'Coordination on the write path', 'Session/vector bookkeeping', 'Nearly free'],
+    ['Feels wrong when', 'Never - just slower', 'Rarely - replies precede posts, never', 'Your own write vanishes for a moment'],
+    ['Fits', 'Balances, inventory, auth', 'Chats, comments, feeds', 'Counters, likes, presence'],
+  ]},
+  'cache-where': { cols: ['Client (browser)', 'Edge (CDN)', 'Server (Redis)'], rows: [
+    ['Serves', 'One user', 'Everyone near a PoP', 'Your whole fleet'],
+    ['Latency saved', 'All of it - zero network', 'The ocean crossing', 'The database query'],
+    ['Invalidation', 'Cache-Control and prayer', 'Purge broadcast in seconds', 'Delete the key - instant'],
+    ['Holds', 'Static assets, API responses briefly', 'Public, shared content', 'Hot rows, sessions, computed views'],
+  ]},
+  'cache-strategies': { cols: ['Write-through', 'Write-back', 'Write-around'], rows: [
+    ['Write path', 'Cache + store, then OK', 'Cache only; store later', 'Store only; cache untouched'],
+    ['Write latency', 'Both hops', 'Memory speed', 'Store speed'],
+    ['Crash loses', 'Nothing', 'The unflushed window', 'Nothing'],
+    ['First read after write', 'Hit', 'Hit', 'Miss - by design'],
+    ['Fits', 'The safe default', 'Write-heavy + tolerance for loss', 'Written often, read rarely'],
+  ]},
+  'cache-eviction': { cols: ['LRU', 'LFU'], rows: [
+    ['Drops', 'Longest untouched', 'Least popular overall'],
+    ['Bet', 'Recent past predicts near future', 'Popularity is stable'],
+    ['Wins on', 'Bursty, shifting workloads', 'Stable hot sets with scans mixed in'],
+    ['Fails on', 'One big scan evicts everything hot', 'Yesterday\'s star hogs space today'],
+  ]},
+  'horizontal': { cols: ['Vertical (bigger box)', 'Horizontal (more boxes)'], rows: [
+    ['Cost curve', 'Steepens - big iron is priced like it', 'Near-linear in replicas'],
+    ['Ceiling', 'The biggest machine money buys', 'Coordination, not hardware'],
+    ['Failure', 'The box IS the outage', 'One replica is a blip'],
+    ['Needs', 'Nothing - it just works', 'Stateless services or partitioned state'],
+  ]},
+  'lb-techniques': { cols: ['Round-robin', 'Least connections', 'Consistent hashing'], rows: [
+    ['Sends traffic', 'Next in the circle', 'To the least busy replica', 'Where the key hashes - always'],
+    ['Great at', 'Uniform, cheap requests', 'Mixed light/heavy workloads', 'Cache warmth, sessions, shards'],
+    ['Blind to', 'Request weight', 'Key affinity', 'Load imbalance between keys'],
+    ['On resize', 'Nothing to move', 'Nothing to move', 'Only ~1/N of keys remap'],
+  ]},
+  'brokers': { cols: ['Queue (SQS/RabbitMQ)', 'Stream (Kafka)'], rows: [
+    ['A message is', 'Handed to one consumer, then gone', 'Appended to a log, retained'],
+    ['Replay', 'No - ack means delete', 'Yes - rewind any consumer group'],
+    ['Consumers', 'Compete for work', 'Each group reads independently'],
+    ['Ordering', 'Per queue/group, loosely', 'Strict within a partition'],
+    ['Fits', 'Jobs, tasks, one-shot work', 'Events, audit, fan-out, pipelines'],
+  ]},
+  'cap': { cols: ['Choose C (consistency)', 'Choose A (availability)'], rows: [
+    ['During a partition', 'Minority side refuses writes', 'Every side keeps answering'],
+    ['You get', 'One truth, always', 'Uptime, always'],
+    ['You accept', 'Errors/timeouts for some users', 'Conflicts to reconcile later'],
+    ['Lives here', 'Ledgers, inventory, locks', 'Carts, likes, presence, DNS'],
+  ]},
+  'consensus': { cols: ['Paxos', 'Raft'], rows: [
+    ['Famous for', 'Being correct and unteachable', 'Being understandable on purpose'],
+    ['Structure', 'Proposers/acceptors, subtle roles', 'One leader with a term + a log'],
+    ['You will meet it in', 'Papers and Spanner lore', 'etcd, Consul, everything modern'],
+  ]},
+  'conflict': { cols: ['Last-write-wins', 'Vector clocks', 'CRDTs'], rows: [
+    ['Concurrent writes', 'One silently vanishes', 'Detected - both surface', 'Merge automatically'],
+    ['Cost', 'A timestamp', 'A counter map per write', 'Constrained data types'],
+    ['Honest use', 'Data you can afford to lose', 'When someone must decide', 'Counters, sets, collaborative docs'],
+  ]},
+  'redundancy': { cols: ['Active-active', 'Active-passive'], rows: [
+    ['Failure looks like', 'Nothing - survivors absorb', 'A pause, then failover'],
+    ['Capacity', 'Every replica serves', 'Standby burns money idle'],
+    ['Data layer must', 'Tolerate concurrent writers', 'Only replicate one way'],
+    ['Fits', 'Stateless tiers, read fleets', 'Single-leader databases'],
+  ]},
+  'rest-graphql': { cols: ['REST', 'GraphQL'], rows: [
+    ['Shape', 'Server decides per endpoint', 'Client asks for exact fields'],
+    ['Round-trips', 'One per resource - N+1 lurks', 'One, whatever the depth'],
+    ['Caching', 'HTTP/CDN native - a superpower', 'Bring your own, per query'],
+    ['Versioning', '/v2 and discipline', 'Deprecate fields in one living schema'],
+    ['Fits', 'Public APIs, simple resources', 'Product frontends over deep graphs'],
+  ]},
+  'pagination': { cols: ['Offset (page=7)', 'Cursor (after=id)'], rows: [
+    ['Under inserts', 'Rows shift - duplicates and skips', 'Stable - the cursor pins position'],
+    ['DB cost', 'Scans and discards offset rows', 'Index seek, constant-ish'],
+    ['Jump to page N', 'Trivial', 'Not really - and feeds never need it'],
+  ]},
+  'rate-limiting': { cols: ['Token bucket', 'Leaky bucket'], rows: [
+    ['Bursts', 'Allowed up to bucket size', 'Smoothed to the drain rate'],
+    ['Output', 'Spiky but capped on average', 'Metronome-steady'],
+    ['State', 'Tokens + last-refill timestamp', 'A queue with a fixed drain'],
+    ['Fits', 'APIs - real traffic is bursty', 'Protecting steady-rate downstreams'],
+  ]},
+  'authn': { cols: ['Session cookie', 'JWT', 'OAuth 2.0'], rows: [
+    ['What it is', 'A pointer to server state', 'A signed, self-contained claim', 'A protocol for delegating access'],
+    ['Server keeps', 'The session store', 'Nothing - the token carries it', 'The authorization server does'],
+    ['Revocation', 'Delete the row - instant', 'Awkward - expiry or denylist', 'Refresh-token revoke'],
+    ['Fits', 'First-party web apps', 'Service-to-service, short-lived', 'Sign in with Google, API grants'],
+  ]},
+  'metrics': { cols: ['Metrics', 'Traces', 'Logs'], rows: [
+    ['Answers', 'Is it healthy? How much?', 'Where did the 800ms go?', 'What exactly happened here?'],
+    ['Shape', 'Numbers over time, cheap', 'One tree per request, sampled', 'Text per event, voluminous'],
+    ['First reach for', 'Alerts and dashboards', 'Latency archaeology', 'The weird single failure'],
+  ]},
+  'encryption': { cols: ['In transit (TLS/mTLS)', 'At rest (AES + KMS)'], rows: [
+    ['Protects against', 'Eavesdroppers on the wire', 'Stolen disks, leaked snapshots'],
+    ['Mechanism', 'Handshake per connection', 'Encrypt on write, keys in a KMS'],
+    ['The real question', 'Every hop, or just the edge?', 'Who can touch the keys, and is it audited?'],
+  ]},
+}

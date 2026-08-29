@@ -1793,3 +1793,11 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .ms-go .btn { font-size: 12px; padding: 3px 10px; }
 .ms-do { font-size: 12px; }
 .ms-note { font-size: 12px; margin-top: 6px; }
+
+/* ── Mastery inline comparisons ────────────────────────────────────────── */
+.ms-cmp { margin: 4px 0 8px; }
+.ms-cmp summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--accent); user-select: none; }
+.ms-cmp table { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 12px; line-height: 1.45; }
+.ms-cmp th, .ms-cmp td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
+.ms-cmp th { font-size: 12px; background: rgba(127,140,160,.08); }
+.ms-cmp .ms-dim { font-weight: 600; white-space: nowrap; }
