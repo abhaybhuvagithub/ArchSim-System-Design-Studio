@@ -72,9 +72,12 @@ export function sloQuickFix(id, nodes, edges, sim, target = 0.999, resim = null)
     const cy = Math.round(clients.reduce((a, n) => a + n.y, 0) / clients.length)
     const lb = { id: 'lb-fix', type: 'lb', label: 'LB (added)', x: cx, y: cy, replicas: 2 }
     const cids = new Set(clients.map(n => n.id))
-    const rewired = edges.map(e => cids.has(e[0]) ? [lb.id, e[1]] : e)
-    const inbound = clients.map(c => [c.id, lb.id])
-    return { nodes: [...nodes, lb], edges: [...inbound, ...rewired.filter(e => e[0] !== e[1])], plan: 'Will insert an LB behind the clients and route their traffic through it', note: '⚡ Inserted a load balancer behind the clients — one front door for limits, auth and shedding.' }
+    const eFrom = e => Array.isArray(e) ? e[0] : e.from
+    const eTo = e => Array.isArray(e) ? e[1] : e.to
+    const mkE = (from, to) => Array.isArray(edges[0] || [0]) ? [from, to] : { id: `${from}->${to}`, from, to, label: '' }
+    const rewired = edges.map(e => cids.has(eFrom(e)) ? mkE(lb.id, eTo(e)) : e)
+    const inbound = clients.map(c => mkE(c.id, lb.id))
+    return { nodes: [...nodes, lb], edges: [...inbound, ...rewired.filter(e => eFrom(e) !== eTo(e))], plan: 'Will insert an LB behind the clients and route their traffic through it', note: '⚡ Inserted a load balancer behind the clients — one front door for limits, auth and shedding.' }
   }
   if (id === 'obs') {
     const y = Math.max(...nodes.map(n => n.y), 200) + 90

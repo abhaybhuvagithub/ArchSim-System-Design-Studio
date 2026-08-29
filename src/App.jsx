@@ -45,6 +45,7 @@ import { PRO_ENABLED, PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, s
 import { roiFor } from './roi.js'
 import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
+import { futureReady, futureAudit } from './future.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -176,6 +177,10 @@ export default function App() {
   const sim = useMemo(() => simulate(nodes, edges, rps, downSet, fx), [nodes, edges, rps, downSet, fx])
   const cap = useMemo(() => capacityReport(nodes, sim), [nodes, sim])
   const sugs = useMemo(() => review(nodes, edges, rps), [nodes, edges, rps])
+  const future = useMemo(() => {
+    if (!nodes.length) return null
+    try { return futureReady(nodes, edges, sim, (n2, e2) => simulate(n2, e2 || edges, rps, downSet, fx)) } catch { return null }
+  }, [nodes, edges, sim, rps, downSet, fx])
   const cost = useMemo(() => costReport(nodes, sim, cloudInfo.mult), [nodes, sim, cloudInfo])
   const baseSim = useMemo(() => (faults.length ? simulate(nodes, edges, rps) : sim), [faults, nodes, edges, rps, sim])
   const brief = useMemo(() => describeArchitecture({
@@ -834,6 +839,15 @@ export default function App() {
         <button className={`btn ${tab === 'improve' ? 'active' : ''}`} data-tour="improve" onClick={() => { setTab(t => t === 'improve' ? 'capacity' : 'improve'); setSel(null) }}
           title="Review the design and suggest components to add, wired in automatically">
           ✨ Improve{sugs.length ? ` (${sugs.length})` : ''}
+        </button>
+        <button className={`btn ${future?.alreadyReady ? 'fr-ok' : 'fr-go'}`}
+          title={future ? future.plan : 'Load a design first'}
+          disabled={!future}
+          onClick={() => {
+            if (!future || future.alreadyReady) { notify('🚀 Already future-ready — every gate on the audit is green.', 'info'); return }
+            setNodes(future.nodes); setEdges(future.edges); notify(future.note, 'info')
+          }}>
+          🚀 Future-ready{future && !future.alreadyReady ? ` (${future.steps.length})` : future?.alreadyReady ? ' ✓' : ''}
         </button>
         <button className={`btn ${explain != null ? 'active' : ''}`} data-tour="explain"
           onClick={() => setExplain(v => (v == null ? (explainList.length ? 0 : null) : null))}
