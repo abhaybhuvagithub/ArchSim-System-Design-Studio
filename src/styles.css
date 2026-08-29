@@ -1774,3 +1774,20 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .future-p { font-size: 12.5px; margin: 6px 0 0; }
 .future-list { margin: 8px 0 10px; padding-left: 18px; font-size: 12.5px; line-height: 1.6; }
 .future-go { border-color: var(--accent); font-weight: 600; }
+
+/* ── Mastery tab ───────────────────────────────────────────────────────── */
+.ms-progress { display: flex; align-items: center; gap: 12px; margin: 10px 0 16px; }
+.ms-bar { flex: 1; max-width: 420px; height: 10px; border-radius: 999px; border: 1px solid var(--border); overflow: hidden; }
+.ms-fill { height: 100%; background: var(--accent); transition: width .25s; }
+.ms-count { font-size: 12.5px; }
+.ms-area { margin-bottom: 18px; }
+.ms-h { font-weight: 700; font-size: 13.5px; margin-bottom: 8px; }
+.ms-item { display: flex; gap: 10px; border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; margin-bottom: 8px; }
+.ms-item.done { opacity: .62; }
+.ms-check input { width: 16px; height: 16px; margin-top: 2px; }
+.ms-t { font-weight: 600; font-size: 13px; }
+.ms-d { font-size: 12.5px; line-height: 1.55; margin: 3px 0 7px; }
+.ms-go { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ms-go .btn { font-size: 12px; padding: 3px 10px; }
+.ms-do { font-size: 12px; }
+.ms-note { font-size: 12px; margin-top: 6px; }

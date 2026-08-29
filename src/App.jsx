@@ -46,6 +46,7 @@ import { roiFor } from './roi.js'
 import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { futureSuggestions } from './future.js'
+import { MASTERY, MASTERY_TOTAL, readMastery, writeMastery } from './mastery.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -1171,6 +1172,7 @@ export default function App() {
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
               ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
               ['acr', 'Acronyms', null, 'Every acronym in the studio, expanded - searchable'],
+              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: eleven areas, tracked, wired to practice'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1219,6 +1221,11 @@ export default function App() {
               onFix={(fix) => { setNodes(fix.nodes); if (fix.edges) setEdges(fix.edges); notify(fix.note, 'info') }} />
           ) : tab === 'acr' ? (
             <AcronymsTab />
+          ) : tab === 'mastery' ? (
+            <MasteryTab onGo={(go) => {
+              if (go.tpl) { const i = TEMPLATES.findIndex(t2 => t2.name === go.tpl); if (i >= 0) loadTemplate(String(i)) }
+              if (go.tab) setTab(go.tab)
+            }} />
           ) : tab === 'brief' ? (
             <Brief brief={brief} />
           ) : tab === 'hld' ? (
@@ -1453,6 +1460,49 @@ function About() {
         </div>
       </div>
       </ReadAloud>
+    </section>
+  )
+}
+
+// The 80/20 mastery hub: eleven areas that carry most interviews, each item
+// one teaching line plus a concrete exercise wired into the studio. Progress
+// is a checkbox you earn, persisted locally.
+function MasteryTab({ onGo }) {
+  const [done, setDone] = useState(readMastery)
+  const toggle = (id) => {
+    const next = new Set(done)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    setDone(next); writeMastery(next)
+  }
+  const pct = Math.round((done.size / MASTERY_TOTAL) * 100)
+  return (
+    <section className="mastery">
+      <h3>🎓 Mastery — the 20% that carries 80% of interviews</h3>
+      <div className="ms-progress">
+        <div className="ms-bar"><div className="ms-fill" style={{ width: pct + '%' }} /></div>
+        <span className="ms-count">{done.size} of {MASTERY_TOTAL} mastered · {pct}%</span>
+      </div>
+      {MASTERY.map(area => (
+        <div key={area.id} className="ms-area">
+          <div className="ms-h">{area.icon} {area.title} <span className="muted">{area.items.filter(x => done.has(x.id)).length}/{area.items.length}</span></div>
+          {area.items.map(x => (
+            <div key={x.id} className={`ms-item ${done.has(x.id) ? 'done' : ''}`}>
+              <label className="ms-check">
+                <input type="checkbox" checked={done.has(x.id)} onChange={() => toggle(x.id)} aria-label={`Mark ${x.t} mastered`} />
+              </label>
+              <div className="ms-body">
+                <div className="ms-t">{x.t}</div>
+                <div className="ms-d">{x.d}</div>
+                <div className="ms-go">
+                  <button className="btn" onClick={() => onGo(x.go)}>▶ Practice{x.go.tpl ? `: ${x.go.tpl}` : ''}</button>
+                  <span className="ms-do muted">{x.go.do}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+      <p className="muted ms-note">Checked means you could teach it, not that you clicked it — the boxes are yours to earn. Interview mode grades the same material under pressure.</p>
     </section>
   )
 }
