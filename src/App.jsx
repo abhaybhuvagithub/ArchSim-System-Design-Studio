@@ -1609,7 +1609,7 @@ function MasteryTab({ onGo }) {
   const pct = Math.round((done.size / MASTERY_TOTAL) * 100)
   return (
     <section className="mastery">
-      <h3>🎓 Mastery — the 20% that carries 80% of interviews</h3>
+      <h3>🎓 Mastery</h3>
       <div className="ms-progress">
         <div className="ms-bar"><div className="ms-fill" style={{ width: pct + '%' }} /></div>
         <span className="ms-count">{done.size} of {MASTERY_TOTAL} mastered · {pct}%</span>
