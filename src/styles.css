@@ -1781,31 +1781,31 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .ms-progress { display: flex; align-items: center; gap: 12px; margin: 10px 0 16px; }
 .ms-bar { flex: 1; max-width: 420px; height: 10px; border-radius: 999px; border: 1px solid var(--border); overflow: hidden; }
 .ms-fill { height: 100%; background: var(--accent); transition: width .25s; }
-.ms-count { font-size: 12.5px; }
+.ms-count { font-size: 13.5px; }
 .ms-area { margin-bottom: 18px; }
-.ms-h { font-weight: 700; font-size: 13.5px; margin-bottom: 8px; }
+.ms-h { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
 .ms-item { display: flex; gap: 10px; border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; margin-bottom: 8px; }
 .ms-item.done { opacity: .62; }
 .ms-check input { width: 16px; height: 16px; margin-top: 2px; }
-.ms-t { font-weight: 600; font-size: 13px; }
-.ms-d { font-size: 12.5px; line-height: 1.55; margin: 3px 0 7px; }
+.ms-t { font-weight: 600; font-size: 14.5px; }
+.ms-d { font-size: 13.5px; line-height: 1.6; margin: 3px 0 8px; }
 .ms-go { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.ms-go .btn { font-size: 12px; padding: 3px 10px; }
-.ms-do { font-size: 12px; }
-.ms-note { font-size: 12px; margin-top: 6px; }
+.ms-go .btn { font-size: 13px; padding: 4px 11px; }
+.ms-do { font-size: 13px; }
+.ms-note { font-size: 12.5px; margin-top: 6px; }
 
 /* ── Mastery inline comparisons ────────────────────────────────────────── */
 .ms-cmp { margin: 4px 0 8px; }
-.ms-cmp summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--accent); user-select: none; }
-.ms-cmp table { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 12px; line-height: 1.45; }
+.ms-cmp summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--accent); user-select: none; }
+.ms-cmp table { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 13px; line-height: 1.5; }
 .ms-cmp th, .ms-cmp td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
-.ms-cmp th { font-size: 12px; background: rgba(127,140,160,.08); }
+.ms-cmp th { font-size: 13px; background: rgba(127,140,160,.08); }
 .ms-cmp .ms-dim { font-weight: 600; white-space: nowrap; }
 
 /* ── Mastery study controls ────────────────────────────────────────────── */
 .ms-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 14px; }
 .ms-controls .btn { font-size: 12.5px; }
-.ms-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; user-select: none; }
+.ms-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; cursor: pointer; user-select: none; }
 .ms-opt input { width: 15px; height: 15px; }
 .ms-reveal { font-size: 12.5px; margin: 2px 0 6px; border-style: dashed; }
 
