@@ -16,11 +16,15 @@ STAGE=$(mktemp -d)
 cp -r dist/* "$STAGE"/
 
 git checkout gh-pages
+# From here on, ANY failure must still land us back on main — a stranded
+# gh-pages checkout is how this script once deleted itself from under a
+# session mid-deploy.
+trap 'git checkout -q main >/dev/null 2>&1 || true' EXIT
 rm -rf assets
 cp -r "$STAGE"/* .
 rm -rf "$STAGE"
 git add -A
-git commit -m "Deploy: $(git log main -1 --pretty=%s)"
+git commit -m "Deploy: $(git log main -1 --pretty=%s)" || echo "(tree already matches the build — pushing anyway)"
 # Push with $GH_TOKEN when set (CI / sandboxes with no stored credentials).
 if [ -n "${GH_TOKEN:-}" ]; then
   git push "https://x-access-token:${GH_TOKEN}@github.com/abhaybhuvagithub/ArchSim-System-Design-Studio.git" gh-pages
