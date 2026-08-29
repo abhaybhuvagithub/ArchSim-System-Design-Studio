@@ -2305,14 +2305,9 @@ try {
         quizCb.click();
         await wait(120);
       }
-      // reshuffle keeps the deck whole
-      {
-        const before4 = ms().querySelectorAll('.ms-item').length;
-        click([...ms().querySelectorAll('.ms-controls .btn')].find(b => b.textContent.includes('Shuffle')));
-        await wait(150);
-        check('reshuffling keeps all areas and items on the table',
-          ms().querySelectorAll('.ms-area').length === 11 && ms().querySelectorAll('.ms-item').length === before4);
-      }
+      check('the study controls are just the two toggles — no shuffle ceremony',
+        ms().querySelectorAll('.ms-controls .btn').length === 0 &&
+        ms().querySelectorAll('.ms-controls .ms-opt').length === 2);
       const goBtn = [...ms().querySelectorAll('.ms-go .btn')].find(b => b.textContent.includes('Rate Limiter'));
       click(goBtn);
       await wait(300);

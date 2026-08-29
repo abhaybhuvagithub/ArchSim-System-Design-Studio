@@ -1470,12 +1470,9 @@ function About() {
 function MasteryTab({ onGo }) {
   const [done, setDone] = useState(readMastery)
   const [ui, setUi] = useState(readMasteryUI)
-  const [nonce, setNonce] = useState(0)            // bump = new shuffle
   const [revealed, setRevealed] = useState(() => new Set())
-  const deck = useMemo(
-    () => (ui.order === 'shuffle' ? shuffleMastery() : MASTERY),
-    [ui.order, nonce]
-  )
+  // a fresh deal every visit — shuffled review, no ceremony
+  const deck = useMemo(() => shuffleMastery(), [])
   const setPref = patch => { const next = { ...ui, ...patch }; setUi(next); writeMasteryUI(next) }
   const toggle = (id) => {
     const next = new Set(done)
@@ -1491,12 +1488,6 @@ function MasteryTab({ onGo }) {
         <span className="ms-count">{done.size} of {MASTERY_TOTAL} mastered · {pct}%</span>
       </div>
       <div className="ms-controls">
-        <button className="btn" onClick={() => { setPref({ order: 'shuffle' }); setNonce(n => n + 1); setRevealed(new Set()) }}>
-          🔀 Shuffle{ui.order === 'shuffle' ? ' again' : ''}
-        </button>
-        <button className="btn" onClick={() => setPref({ order: ui.order === 'shuffle' ? 'curriculum' : 'shuffle' })}>
-          {ui.order === 'shuffle' ? '📋 Curriculum order' : '🔀 Shuffled order'}
-        </button>
         <label className="ms-opt"><input type="checkbox" checked={ui.quiz}
           onChange={e => { setPref({ quiz: e.target.checked }); setRevealed(new Set()) }} /> 🙈 Quiz me — hide the answers</label>
         <label className="ms-opt"><input type="checkbox" checked={ui.hideMastered}
