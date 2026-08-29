@@ -231,3 +231,30 @@ export const MASTERY_CMP = {
     ['The real question', 'Every hop, or just the edge?', 'Who can touch the keys, and is it audited?'],
   ]},
 }
+
+// ── study-session helpers ──────────────────────────────────────────────────
+// Shuffled review beats positional memory: a permutation of areas and of the
+// items inside each, nothing lost, nothing duplicated (the suite holds us to
+// that). UI preferences persist so a study setup survives the tab switch.
+export const MASTERY_UI_STORE = 'archsim.mastery.ui.v1'
+
+function fyShuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+export function shuffleMastery() {
+  return fyShuffle(MASTERY).map(area => ({ ...area, items: fyShuffle(area.items) }))
+}
+
+export function readMasteryUI() {
+  try { return { order: 'shuffle', quiz: false, hideMastered: false, ...JSON.parse(localStorage.getItem(MASTERY_UI_STORE) || '{}') } }
+  catch { return { order: 'shuffle', quiz: false, hideMastered: false } }
+}
+export function writeMasteryUI(ui) {
+  try { localStorage.setItem(MASTERY_UI_STORE, JSON.stringify(ui)) } catch { /* private mode */ }
+}
