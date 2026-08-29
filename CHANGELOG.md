@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.10.1 — 2026-08-29
+- 🕊️ **Daya by design**: the studio's kindness rule — grade systems hard, people gently — is now stated in About and ENFORCED by the suite: person-facing copy is scanned for contempt on every build, the lowest interview band is pinned to its constructive phrasing, and the principle itself must stay readable
+
 ## 1.10.0 — 2026-08-29
 - 🏥 **Telemedicine (Practo)** — healthcare enters the library with its defining inversion: reads are the sensitive operation (consent-gated, audit-on-read committed WITH the read), media-record separation (the note is the record, not the recording), e-prescriptions on the append-only ledger, break-the-glass as a designed and paged door; wall: regulation sets the floor forever — health data never cools
 - 🔤 +5: EHR, PHI, HIPAA, DPDP, FHIR

@@ -4085,6 +4085,32 @@ try {
     const triggers = [...doc.querySelectorAll('.toolbar .menu > button')];
     check('the toolbar has View, Design and Configuration menus',
       ['View', 'Design', 'Configuration'].every(l => triggers.some(b => b.textContent.trim().startsWith(l))));
+    // ── daya by design: the studio grades systems hard and people gently ────
+    // Person-facing copy may be direct; it may never aim contempt at the user.
+    check('no person-facing copy is cruel — daya is a build contract', (() => {
+      const files = ['src/interview.js', 'src/interview-llm.js', 'src/tour.js', 'src/onboarding.jsx', 'src/mastery.js', 'src/learn.js', 'src/App.jsx', 'src/about.js'];
+      const contempt = [
+        /\byou(?:'re| are| were)?\s+(?:so\s+)?(?:stupid|dumb|an idiot|idiotic|hopeless|pathetic|useless|lazy|clueless|incompetent)\b/i,
+        /\b(?:idiot|moron|imbecile|loser|pathetic)\b/i,
+        /\bstupid (?:question|answer|mistake)\b/i,
+        /\bobviously\b[^.\n]{0,40}\byou\b/i,
+      ];
+      for (const f of files) {
+        const src = fs.readFileSync(path.join(root, f), 'utf8')
+          .replace(/^\s*\/\/.*$/gm, '');            // comments are for engineers, strings are for people
+        for (const rx of contempt) if (rx.test(src)) return false;
+      }
+      return true;
+    })());
+    check('the lowest interview band stays constructive, never a verdict on the person', (() => {
+      const src = fs.readFileSync(path.join(root, 'src/interview.js'), 'utf8');
+      return src.includes('The shape of an answer is there');
+    })());
+    check('the daya principle is stated where visitors can read it', (() => {
+      const src = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
+      return src.includes('Daya by design') && src.includes('grades systems hard and people gently') && src.includes('Prabhu ni krupa');
+    })());
+
     check('the guide button is labelled Guide/Tour', (() => {
       const b = doc.querySelector('[data-tour="help"]');
       return !!b && b.textContent.trim() === 'Guide/Tour';
