@@ -1470,7 +1470,6 @@ function About() {
 function MasteryTab({ onGo }) {
   const [done, setDone] = useState(readMastery)
   const [ui, setUi] = useState(readMasteryUI)
-  const [revealed, setRevealed] = useState(() => new Set())
   // a fresh deal every visit — shuffled review, no ceremony
   const deck = useMemo(() => shuffleMastery(), [])
   const setPref = patch => { const next = { ...ui, ...patch }; setUi(next); writeMasteryUI(next) }
@@ -1488,8 +1487,6 @@ function MasteryTab({ onGo }) {
         <span className="ms-count">{done.size} of {MASTERY_TOTAL} mastered · {pct}%</span>
       </div>
       <div className="ms-controls">
-        <label className="ms-opt"><input type="checkbox" checked={ui.quiz}
-          onChange={e => { setPref({ quiz: e.target.checked }); setRevealed(new Set()) }} /> 🙈 Quiz me — hide the answers</label>
         <label className="ms-opt"><input type="checkbox" checked={ui.hideMastered}
           onChange={e => setPref({ hideMastered: e.target.checked })} /> ✅ Hide mastered</label>
       </div>
@@ -1499,49 +1496,38 @@ function MasteryTab({ onGo }) {
         return (
           <div key={area.id} className="ms-area">
             <div className="ms-h">{area.icon} {area.title} <span className="muted">{area.items.filter(x => done.has(x.id)).length}/{area.items.length}</span></div>
-            {items.map(x => {
-              const hidden = ui.quiz && !revealed.has(x.id)
-              return (
-                <div key={x.id} className={`ms-item ${done.has(x.id) ? 'done' : ''}`}>
-                  <label className="ms-check">
-                    <input type="checkbox" checked={done.has(x.id)} onChange={() => toggle(x.id)} aria-label={`Mark ${x.t} mastered`} />
-                  </label>
-                  <div className="ms-body">
-                    <div className="ms-t">{x.t}</div>
-                    {hidden ? (
-                      <button className="btn ms-reveal" onClick={() => setRevealed(r => new Set(r).add(x.id))}>
-                        👁 Reveal — say it out loud first
-                      </button>
-                    ) : (
-                      <>
-                        <div className="ms-d">{x.d}</div>
-                        {MASTERY_CMP[x.id] && (
-                          <details className="ms-cmp">
-                            <summary>⇄ Compare</summary>
-                            <table>
-                              <thead><tr><th></th>{MASTERY_CMP[x.id].cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
-                              <tbody>
-                                {MASTERY_CMP[x.id].rows.map((r, ri) => (
-                                  <tr key={ri}><td className="ms-dim">{r[0]}</td>{r.slice(1).map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </details>
-                        )}
-                      </>
-                    )}
-                    <div className="ms-go">
-                      <button className="btn" onClick={() => onGo(x.go)}>▶ Practice{x.go.tpl ? `: ${x.go.tpl}` : ''}</button>
-                      {!hidden && <span className="ms-do muted">{x.go.do}</span>}
-                    </div>
+            {items.map(x => (
+              <div key={x.id} className={`ms-item ${done.has(x.id) ? 'done' : ''}`}>
+                <label className="ms-check">
+                  <input type="checkbox" checked={done.has(x.id)} onChange={() => toggle(x.id)} aria-label={`Mark ${x.t} mastered`} />
+                </label>
+                <div className="ms-body">
+                  <div className="ms-t">{x.t}</div>
+                  <div className="ms-d">{x.d}</div>
+                  {MASTERY_CMP[x.id] && (
+                    <details className="ms-cmp">
+                      <summary>⇄ Compare</summary>
+                      <table>
+                        <thead><tr><th></th>{MASTERY_CMP[x.id].cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+                        <tbody>
+                          {MASTERY_CMP[x.id].rows.map((r, ri) => (
+                            <tr key={ri}><td className="ms-dim">{r[0]}</td>{r.slice(1).map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </details>
+                  )}
+                  <div className="ms-go">
+                    <button className="btn" onClick={() => onGo(x.go)}>▶ Practice{x.go.tpl ? `: ${x.go.tpl}` : ''}</button>
+                    <span className="ms-do muted">{x.go.do}</span>
                   </div>
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )
       })}
-      <p className="muted ms-note">Checked means you could teach it, not that you clicked it — the boxes are yours to earn. Quiz mode is the honest version: name the trade-offs out loud, then reveal. Interview mode grades the same material under pressure.</p>
+      <p className="muted ms-note">Checked means you could teach it, not that you clicked it — the boxes are yours to earn. Interview mode grades the same material under pressure.</p>
     </section>
   )
 }
