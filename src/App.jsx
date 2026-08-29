@@ -48,6 +48,17 @@ import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { futureSuggestions } from './future.js'
 import { MASTERY, MASTERY_TOTAL, MASTERY_CMP, readMastery, writeMastery, shuffleMastery, readMasteryUI, writeMasteryUI } from './mastery.js'
 import { encodeShare, decodeShare, hasSharedDesign, parseEntryParams, hasEntryParams } from './share.js'
+
+// Every tab wears one small icon — playful, never noisy. Unknown keys stay plain.
+const TAB_ICON = {
+  capacity: '📊', improve: '✨', chaos: '🌪️', cost: '💸', code: '🧩', assist: '💬',
+  roi: '💹', slo: '🎯', acr: '🔤', mastery: '🎓', scale: '📈', breakdown: '📘',
+  learn: '🎒', map: '🗺️', interview: '🎙️', about: 'ℹ️', compare: '⚖️', explain: '💡', trips: '✈️',
+}
+const GROUP_ICON = {
+  'India · fintech': '💳', 'India · consumer': '🇮🇳', 'Unicorns · India': '🦄', 'Unicorns · USA': '🦅',
+  'GenAI': '🤖', 'Cloud business': '☁️', 'Classics': '🏛️', 'Infra': '🔧',
+}
 import { VERSION } from './version.js'
 import { initAnalytics } from './analytics.js'
 
@@ -969,7 +980,7 @@ export default function App() {
         </Menu>
 
         <button className="btn" data-tour="help" onClick={() => setTourAt(0)}
-          title="Replay the guided walkthrough of the app">Guide/Tour</button>
+          title="Replay the guided walkthrough of the app">🧭 Guide/Tour</button>
         {PRO_ENABLED && <button className={`btn ${license ? 'pro-on' : 'pro-cta'}`} onClick={() => setPricing({})}
           title={license ? `ArchSim Pro active (${license.plan}${license.lifetime ? ' — lifetime' : ' until ' + license.expires})` : 'Unlock all 89 designs with every breakdown and scaling playbook'}>
           {license ? 'PRO ✓' : '⭐ Pro'}</button>}
@@ -1239,13 +1250,13 @@ export default function App() {
               ['map', 'Map', null, 'Where this design is deployed, and what distance costs'],
               ['interview', 'Interview', null, 'Mock system design interview on the loaded design'],
               ['about', 'About', null, 'What this simulator is and how it differs'],
-            ].map(([key, label, badge, hint]) => (
+            ].map(([key, label, badge, hint]) => ({ key, label, badge, hint })).map(({ key, label, badge, hint }) => (
               <button key={key} role="tab" id={`tab-${key}`} aria-selected={tab === key}
                 data-tour={`tab-${key}`}
                 title={hint}
                 className={`${tab === key ? 'on' : ''} ${key === 'chaos' && faults.length ? 'alarm' : ''}`}
                 onClick={() => { setTab(key); if (key !== 'capacity' && key !== 'brief' && key !== 'hld' && key !== 'lld') setSel(null) }}>
-                {label}
+                {TAB_ICON[key] ? TAB_ICON[key] + ' ' : ''}{label}
                 {badge != null && <span className="tab-badge">{badge}</span>}
               </button>
             ))}
@@ -2586,7 +2597,7 @@ function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty, futureSug
   const actionable = sugs.filter(s => s.apply)
   return (
     <section>
-      <h3>Architecture review</h3>
+      <h3>🧐 Architecture review</h3>
       {empty ? (
         <div className="empty">Load a template or drop a few components in, then come back — the review looks at what is missing, what is saturated, and what has no redundancy at the current traffic level.</div>
       ) : sugs.length === 0 ? (
@@ -3934,7 +3945,7 @@ function TemplatePicker({ onPick, pro = false }) {
           <option value="starter">◻︎ Starter scaffold</option>
         </optgroup>
         {[...new Set(TEMPLATES.map(t => t.group))].map(g => (
-          <optgroup key={g} label={g}>
+          <optgroup key={g} label={(GROUP_ICON[g] ? GROUP_ICON[g] + ' ' : '') + g}>
             {TEMPLATES.map((t, i) => t.group === g ? <option key={t.name} value={i}>{t.name}</option> : null)}
           </optgroup>
         ))}

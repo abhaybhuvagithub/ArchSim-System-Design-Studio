@@ -4123,7 +4123,7 @@ try {
 
     check('the guide button is labelled Guide/Tour', (() => {
       const b = doc.querySelector('[data-tour="help"]');
-      return !!b && b.textContent.trim() === 'Guide/Tour';
+      return !!b && b.textContent.trim() === '🧭 Guide/Tour';
     })());
     check('every menu trigger declares itself as one',
       triggers.length >= 3 && triggers.every(b => b.getAttribute('aria-haspopup') === 'menu' && b.hasAttribute('aria-expanded')));

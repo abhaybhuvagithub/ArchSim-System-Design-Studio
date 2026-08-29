@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.10.3 — 2026-08-29
+- 🎨 Playful pass: every tab wears an icon (📊 Capacity · 🌪️ Chaos · 💹 ROI · 🎓 Mastery · 🎙️ Interview…), 🧭 Guide/Tour, picker groups get flags-and-unicorns (🇮🇳 💳 🦄 🦅 🤖), palette groups iconed, DDIA verdicts badge themselves ✅/⚠️ via CSS, advisor findings flare 🔥/💡 by severity
+
 ## 1.10.2 — 2026-08-29
 - 🔗 Entry deep-links: `?tpl=<name>&tab=<id>` opens the studio exactly where a pitch begins (a CFO on ROI, a student on Mastery), wizard suppressed — built for the outreach kit
 
