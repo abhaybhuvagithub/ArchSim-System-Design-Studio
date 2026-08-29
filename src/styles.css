@@ -1825,3 +1825,4 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .version-tag a { color: inherit; }
 .version-tag:hover { opacity: .9; }
 .ms-flag { font-size: 14px; line-height: 1.55; margin: -2px 0 10px; color: #e05661; opacity: .95; }
+.ms-ask { font-size: 13.5px; font-style: italic; line-height: 1.5; margin: 2px 0 6px; color: var(--accent); opacity: .9; }

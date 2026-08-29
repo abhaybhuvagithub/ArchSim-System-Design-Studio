@@ -1632,6 +1632,7 @@ function MasteryTab({ onGo }) {
                 </label>
                 <div className="ms-body">
                   <div className="ms-t">{x.t}</div>
+                  {x.asks && <div className="ms-ask">🎤 {x.asks}</div>}
                   <div className="ms-d">{x.d}</div>
                   {MASTERY_CMP[x.id] && <MsCompare cmp={MASTERY_CMP[x.id]} />}
                   <div className="ms-go">
