@@ -47,7 +47,7 @@ import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { futureSuggestions } from './future.js'
 import { MASTERY, MASTERY_TOTAL, MASTERY_CMP, readMastery, writeMastery, shuffleMastery, readMasteryUI, writeMasteryUI } from './mastery.js'
-import { encodeShare, decodeShare, hasSharedDesign } from './share.js'
+import { encodeShare, decodeShare, hasSharedDesign, parseEntryParams, hasEntryParams } from './share.js'
 import { VERSION } from './version.js'
 import { initAnalytics } from './analytics.js'
 
@@ -101,7 +101,7 @@ export default function App() {
   // panel geometry: docked width, or floating window position
   const [panelW, setPanelW] = useState({ ...PANEL_DEFAULT })
   const [tourAt, setTourAt] = useState(null)
-  const [onboard, setOnboard] = useState(() => !hasSharedDesign())   // greets every page load unless a shared design arrived in the URL; Skip just closes it for this session
+  const [onboard, setOnboard] = useState(() => !hasSharedDesign() && !hasEntryParams())   // greets every page load unless a shared design arrived in the URL; Skip just closes it for this session
   const [cmdk, setCmdk] = useState(false)
   useEffect(() => {
     const onKey = (e) => {
@@ -110,6 +110,14 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  useEffect(() => {
+    const entry = parseEntryParams(window.location.search)
+    if (entry) {
+      if (entry.tplName) { const i = TEMPLATES.findIndex(t2 => t2.name === entry.tplName); if (i >= 0) loadTemplate(String(i)) }
+      if (entry.tab) setTab(entry.tab)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
     const shared = decodeShare(window.location.hash)

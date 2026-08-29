@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.10.2 — 2026-08-29
+- 🔗 Entry deep-links: `?tpl=<name>&tab=<id>` opens the studio exactly where a pitch begins (a CFO on ROI, a student on Mastery), wizard suppressed — built for the outreach kit
+
 ## 1.10.1 — 2026-08-29
 - 🕊️ **Daya by design**: the studio's kindness rule — grade systems hard, people gently — is now stated in About and ENFORCED by the suite: person-facing copy is scanned for contempt on every build, the lowest interview band is pinned to its constructive phrasing, and the principle itself must stay readable
 
