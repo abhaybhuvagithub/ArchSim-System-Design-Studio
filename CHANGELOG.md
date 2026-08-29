@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.0 — 2026-08-29
+- 🤖 Mastery gains its 13th area: **LLM Systems in Production** — the ten interview questions that test operating, not knowing (retrieval-vs-generation isolation, grounded hallucination, loop guards, cost-spike attribution, 1-GPU/1000-request design, RAG-vs-FT-vs-neither, evals without a gold answer, tool-selection debugging, injection defense, the hallucination-latency-cost triangle). Every drill answers in the required shape — diagnose → intervene → **prove** — and the suite enforces that a proof lives in every playbook table
+- Ask-AI: lost-in-the-middle, LLM-as-judge, semantic cache
+
 ## 1.8.0 — 2026-08-29
 - 🔁 New chaos fault: **Retry Storm** — duplicate delivery as real simulator physics (`dup` inflates demand at the target and cascades downstream)
 - 📒 Money-movement controls on every ledger: **Idempotency** on/off and **Commit mode** (fsync-each vs batched) with live verdicts — a storm on an idempotency-off ledger shows phantom entries per second; batched commits price their loss window in entries at current traffic

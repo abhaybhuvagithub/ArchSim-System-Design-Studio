@@ -2268,9 +2268,20 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all twelve areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 12 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 12);
+      check('the mastery hub renders all thirteen areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 13 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 13);
+      check('every production-LLM drill carries proof in its playbook table', await (async () => {
+        const M3 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const area = M3.MASTERY.find(a => a.id === 'llm-prod');
+        if (!area || area.items.length !== 10) return false;
+        return area.items.every(x => {
+          const c = M3.MASTERY_CMP[x.id];
+          if (!c) return false;
+          const flat = (c.cols.join(' ') + ' ' + c.rows.map(r => r.join(' ')).join(' ')).toLowerCase();
+          return /prove|proof|prove it|held-out|labeled|before\/after|regression|calibrat/.test(flat);
+        });
+      })());
       check('every comparison table arrives expanded — the table IS the mastery',
         [...ms().querySelectorAll('details.ms-cmp')].every(d => d.hasAttribute('open')));
       check('comparison tables live inside the items, in this same tab',
@@ -3766,7 +3777,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about']);
-      check('the curriculum covers the twelve areas — the eleven canonical plus the arithmetic', M.MASTERY.length === 12);
+      check('the curriculum covers the thirteen areas — canonical, arithmetic, and production LLM drills', M.MASTERY.length === 13);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('the throughput rules quote this catalog, not folklore', await (async () => {
         const { CATALOG: C2 } = await import(pathToFileURL(path.join(root, 'src/catalog.js')).href);
@@ -3823,7 +3834,7 @@ try {
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
-        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles);
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles);
       })());
     }
 
