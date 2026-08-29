@@ -1249,7 +1249,11 @@ export default function App() {
             <Learn done={doneSteps} nodes={nodes} />
           ) : tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
-              onHover={setHover} empty={nodes.length === 0} />
+              onHover={setHover} empty={nodes.length === 0} future={future}
+              onFutureReady={() => {
+                if (!future || future.alreadyReady) return
+                setNodes(future.nodes); setEdges(future.edges); notify(future.note, 'info')
+              }} />
           ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} cloud={cloud} cloudMult={cloudInfo.mult} onShowDetails={setDetailsNode} />
             : selEdgeObj ? (
               <EdgeInspector e={selEdgeObj} nodes={nodes} sim={sim} step={stepMap[selEdgeObj.id]}
@@ -2389,10 +2393,25 @@ function EdgeInspector({ e, nodes, sim, step, setEdges, onDelete }) {
   )
 }
 
-function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty }) {
+function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty, future = null, onFutureReady = () => {} }) {
   const actionable = sugs.filter(s => s.apply)
   return (
     <section>
+      {future && (
+        <div className={`future-card ${future.alreadyReady ? 'ok' : ''}`}>
+          <div className="future-h">🚀 Future-ready{future.alreadyReady ? ' — this design already clears the bar' : ` — ${future.steps.length} upgrade${future.steps.length === 1 ? '' : 's'} to the growth-stage bar`}</div>
+          {future.alreadyReady ? (
+            <p className="future-p">Front door, observability, no SPOFs, guarded AI, capacity headroom and 99.9% availability: every gate on the audit is green.</p>
+          ) : (
+            <>
+              <ul className="future-list">
+                {future.steps.map((st, i2) => <li key={i2}>{st}</li>)}
+              </ul>
+              <button className="btn future-go" onClick={onFutureReady}>🚀 Apply all — make it future-ready</button>
+            </>
+          )}
+        </div>
+      )}
       <h3>Architecture review</h3>
       {empty ? (
         <div className="empty">Load a template or drop a few components in, then come back — the review looks at what is missing, what is saturated, and what has no redundancy at the current traffic level.</div>
