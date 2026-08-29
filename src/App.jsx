@@ -1224,7 +1224,7 @@ export default function App() {
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
               ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
               ['acr', 'Acronyms', null, 'Every acronym in the studio, expanded - searchable'],
-              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: eleven areas, tracked, wired to practice'],
+              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: twelve areas including the arithmetic, tracked, wired to practice'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1624,6 +1624,7 @@ function MasteryTab({ onGo }) {
         return (
           <div key={area.id} className="ms-area">
             <div className="ms-h">{area.icon} {area.title} <span className="muted">{area.items.filter(x => done.has(x.id)).length}/{area.items.length}</span></div>
+            {area.flag && <div className="ms-flag">🚩 {area.flag}</div>}
             {items.map(x => (
               <div key={x.id} className={`ms-item ${done.has(x.id) ? 'done' : ''}`}>
                 <label className="ms-check">
