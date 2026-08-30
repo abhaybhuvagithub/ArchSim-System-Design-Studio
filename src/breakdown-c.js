@@ -3,7 +3,7 @@
 export default {
 
 'Rapido': {
-  meta: 'India · consumer · geospatial allocation per city',
+  meta: 'Bharat · consumer · geospatial allocation per city',
   overview: 'Two-wheeler ride hailing: match a rider to a nearby captain in seconds, verify the ride start with an OTP, and settle over UPI. Cities are independent systems, which makes the sharding unusually clean.',
   scope: 'Allocation and the location pipeline are the interview. Payments settle through an external switch and are below the line beyond "never block the ride on them".',
   planning: 'Establish that nothing crosses city boundaries, because that turns a global scaling problem into many independent regional ones. Then treat captain location as soft state and allocation as a claim problem.',
@@ -60,7 +60,7 @@ export default {
 },
 
 'Ola': {
-  meta: 'India · consumer · multi-category fleet with EV and in-app wallet',
+  meta: 'Bharat · consumer · multi-category fleet with EV and in-app wallet',
   overview: 'Ride hailing across several vehicle categories at once: Mini, Sedan, Auto and a growing electric fleet, all matched from one city-level geo index. A rider is quoted a fare per category before a driver is even searched for, an electric ride is only offered a driver whose battery can actually make the trip, and payment goes through the in-app wallet first with UPI as the slower fallback.',
   scope: 'Category-filtered allocation, the EV range check and the wallet-first payment path are the interview. Driver onboarding and advance-scheduled outstation or rental bookings are below the line.',
   planning: 'Establish that every category shares one geo index per city and is only filtered apart at ranking time, not partitioned into separate indexes. Then treat the wallet as the fast, local payment path and UPI as an external rail that must never block a ride.',
@@ -118,7 +118,7 @@ export default {
 },
 
 'Zomato': {
-  meta: 'India · consumer · spiky reads, contended writes',
+  meta: 'Bharat · consumer · spiky reads, contended writes',
   overview: 'Restaurant discovery and food ordering in one product. Browsing is a heavily cacheable read workload with sharp, entirely predictable peaks; ordering is a small transactional path that must not be affected by it.',
   scope: 'The split between discovery and ordering is the interview, along with pre-scaling for meal times. Rider logistics are worth naming but the depth belongs in the delivery-focused designs.',
   planning: 'Separate the two workloads on the first diagram. Then point out that the peaks are at fixed hours every day, which makes predictive provisioning the right answer rather than reactive autoscaling.',
@@ -174,7 +174,7 @@ export default {
 },
 
 'Swiggy + Instamart': {
-  meta: 'India · consumer · inventory is the contended resource',
+  meta: 'Bharat · consumer · inventory is the contended resource',
   overview: 'Ten-minute grocery delivery from dark stores. Availability is the intersection of stock and reachability, both of which change, and overselling is not acceptable.',
   scope: 'Per-store inventory and the availability-versus-truth split are the interview. Rider routing is below the line beyond batching.',
   planning: 'Establish that "available" is a property of an item *for a location at a time*, not of the item. That reframing is what makes the caching strategy and the transactional checkout obvious.',
@@ -230,7 +230,7 @@ export default {
 },
 
 'Razorpay': {
-  meta: 'India · fintech · correctness first, throughput second',
+  meta: 'Bharat · fintech · correctness first, throughput second',
   overview: 'A payment gateway for merchants: accept a charge, route it to an acquiring bank, record it immutably, and tell the merchant reliably. Your throughput ceiling belongs to the banks.',
   scope: 'Idempotency, the ledger, webhooks and multi-acquirer routing are the interview. KYC and merchant onboarding are below the line.',
   planning: 'Start from the two external realities: merchants retry, and acquirers fail independently. The first forces idempotency, the second forces routing and reconciliation. Everything else is downstream of those.',
@@ -286,7 +286,7 @@ export default {
 },
 
 'BHIM (UPI)': {
-  meta: 'India · fintech · you are a participant on a shared switch',
+  meta: 'Bharat · fintech · you are a participant on a shared switch',
   overview: 'A UPI payments app: resolve a VPA, authenticate with a PIN inside a hardware security module, and move money through the national switch. Almost nothing here is capacity you own.',
   scope: 'Idempotency via the retrieval reference number, HSM constraints and per-bank isolation are the interview. Regulatory certification is below the line.',
   planning: 'Establish immediately that the switch and the banks are the ceiling. That reframes the whole design as being about isolation, idempotency and graceful degradation rather than throughput.',
@@ -342,7 +342,7 @@ export default {
 },
 
 'Google Pay (UPI, India)': {
-  meta: 'India · fintech · multi-PSP with inline fraud',
+  meta: 'Bharat · fintech · multi-PSP with inline fraud',
   overview: 'A UPI app at hundreds of millions of users. Same external switch ceiling as any participant, plus fraud scoring that has to run inline without adding perceptible latency.',
   scope: 'Multi-PSP routing, inline fraud within a latency budget, and keeping rewards off the payment path are the interview.',
   planning: 'Note that being multi-PSP is the only genuine capacity lever available, since each sponsor bank has its own allocation. Then treat fraud as a latency-budgeted inline step and rewards as strictly asynchronous.',

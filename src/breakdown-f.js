@@ -66,7 +66,7 @@ export default {
 },
 
 'Flipkart (Big Billion Days)': {
-  meta: 'India · consumer · hard · a stampede you can see coming',
+  meta: 'Bharat · consumer · hard · a stampede you can see coming',
   overview: 'An Indian marketplace whose defining engineering event is a scheduled sale where tens of millions of people arrive in the same minute for a few thousand units.',
   scope: 'The flash sale, payment rails and serviceability are the interview. Warehouse operations and seller onboarding are below the line.',
   planning: 'Say early that the peak is on a published date. That single fact moves the whole problem from autoscaling to provisioning and admission control — and admission control is the honest answer, because no architecture makes 10,000 units satisfy ten million people.',
@@ -133,7 +133,7 @@ export default {
 },
 
 'IndiaMART (B2B leads)': {
-  meta: 'India · consumer · medium · a two-sided market where nothing is sold',
+  meta: 'Bharat · consumer · medium · a two-sided market where nothing is sold',
   overview: 'A B2B marketplace where buyers post requirements and suppliers pay for the resulting leads. No cart, no checkout, no inventory — the unit of value is an enquiry and the customer is the seller.',
   scope: 'Lead matching, lead quality and the SEO surface are the interview. Payments and the inside-sales organisation are below the line.',
   planning: 'The first thing to establish is that this is not e-commerce. Buyers are free and suppliers pay, so the two sides need different SLAs and different treatment — and lead quality, not uptime, is what the paying side actually buys.',

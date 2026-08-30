@@ -14,6 +14,8 @@ export const markOnboarded = () => {
 }
 
 const STARTS = [
+  { id: 'upi', label: '🇮🇳 UPI (BHIM)', hint: 'Bharat\'s payment rail — the design the world studies now', tpl: 'BHIM (UPI)' },
+  { id: 'zomato', label: '🛵 Zomato', hint: 'Dinner-rush traffic, live courier tracking — desi scale, honestly modeled', tpl: 'Zomato' },
   { id: 'rag', label: '🤖 AI / RAG system', hint: 'The architecture behind every "chat with your data" product', tpl: 'GenAI: RAG Assistant' },
   { id: 'url', label: '🔗 URL shortener', hint: 'The classic interview warm-up — read-heavy, cache-everything', tpl: 'URL Shortener (Bitly)' },
   { id: 'ramp', label: '💳 Fintech (Ramp)', hint: 'Two seconds to answer a card swipe — a real unicorn design', tpl: 'Ramp' },

@@ -2,7 +2,7 @@
 export default {
 
 'Zerodha (Kite)': {
-  meta: 'India · fintech · hard · two paths with opposite physics',
+  meta: 'Bharat · fintech · hard · two paths with opposite physics',
   overview: 'A discount stock broker. One path carries orders to the exchange with a risk check in the way and a latency budget in tens of milliseconds; the other fans one exchange feed out to a million open sockets. They share almost nothing, and treating them as one system is the classic mistake.',
   scope: 'The order path, pre-trade risk, ticker fan-out and settlement into the ledger. Charting, mutual funds and the back office are below the line.',
   fr: {
@@ -118,7 +118,7 @@ export default {
 },
 
 'CRED': {
-  meta: 'India · fintech · medium · PCI scope as an architecture decision',
+  meta: 'Bharat · fintech · medium · PCI scope as an architecture decision',
   overview: 'Credit-card bill payments with a rewards layer. The interesting constraint is regulatory: card numbers may exist in exactly one place, so the vault is not a component, it is the boundary that shapes everything else. Payments are ACID; rewards ride an event stream and may lag.',
   scope: 'Bill fetch and payment, the card vault, and the rewards pipeline. Lending, commerce and the club are below the line.',
   fr: {
