@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.11.0 — 2026-08-29
+- 🏛️ **HLD tab rebuilt around live computation**: 🧭 Request Anatomy (traffic-weighted primary path, per-hop p50/p99 at current utilization, user-felt budget, async boundary marked), 🧮 Capacity Worksheet (per-tier headroom, the interview number), failure modes **derived from this graph** (real SPOFs listed by name) — the template-invariant filler is gone
+- 🧱 **LLD tab rebuilt around authored + honest-derived**: the six flagship schema/flow/state entries now render in-tab with **live latencies on every sequence step**, authored API contracts pulled verbatim, per-type engineering notes that cite this design's own utilization, physics-matched testing section
+
 ## 1.10.3 — 2026-08-29
 - 🎨 Playful pass: every tab wears an icon (📊 Capacity · 🌪️ Chaos · 💹 ROI · 🎓 Mastery · 🎙️ Interview…), 🧭 Guide/Tour, picker groups get flags-and-unicorns (🇮🇳 💳 🦄 🦅 🤖), palette groups iconed, DDIA verdicts badge themselves ✅/⚠️ via CSS, advisor findings flare 🔥/💡 by severity
 
