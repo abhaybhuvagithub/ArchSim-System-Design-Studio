@@ -1915,4 +1915,19 @@ T('Telemedicine (Practo)', 'Booking, video consults, e-prescriptions - where eve
     'Break-the-glass exists by design: emergencies override consent, loudly - the access succeeds AND pages the audit trail',
     'A slot is inventory: booking locks it like a seat, because a double-booked doctor is an outage with a waiting room',
   ], 'Unicorns · India'),
+T('Ayurveda Gyaan (Charak Samhita)', 'A 2000-year-old corpus served honestly: immutable shlokas, layered commentary, citation-forced answers', 500, [
+    ['u', 'client', 'Seekers & Vaidyas', 40, 240], ['gw', 'gateway', 'API Gateway', 170, 240, 3],
+    ['corpus', 'micro', 'Shloka Registry', 330, 120, 3], ['scans', 'blob', 'Manuscripts & Editions', 480, 60, 2],
+    ['srch', 'search', 'Multilingual Search', 330, 240, 2], ['vec', 'vector', 'Gyaan Embeddings', 480, 300, 2],
+    ['guard', 'guard', 'Safety & Citation Guard', 480, 180, 2], ['llm', 'llm', 'Vaidic Gyaan (RAG)', 620, 180, 8],
+    ['consult', 'app', 'AYUSH Teleconsult', 330, 400, 3], ['prak', 'micro', 'Prakriti Assessment', 480, 460, 2],
+    ['codes', 'sql', 'NAMASTE <-> ICD-11 Map', 620, 400, 2], ['prov', 'ledger', 'Formulation Provenance', 620, 300, 2],
+    ['audit', 'audit', 'Access Audit', 760, 400, 2], ['obs', 'otel', 'Telemetry', 760, 180, 2],
+  ], [['u','gw'],['gw','corpus'],['corpus','scans'],['gw','srch'],['srch','corpus'],['gw','guard'],['guard','llm'],['llm','vec'],['llm','corpus'],['gw','consult'],['consult','prak'],['consult','codes'],['consult','prov'],['consult','audit'],['llm','obs']], [
+    'The source text is immutable across two millennia: commentaries, translations and corrections are OVERLAYS on canonical shloka ids (sthana.chapter.verse), never edits to the canon',
+    'Every gyaan answer must cite its shloka - the RAG is citation-forced, and "the text does not address this" is a first-class answer, not a failure',
+    'Dual coding by design: NAMASTE terminology maps to ICD-11 TM2, so a prakriti assessment can live in a modern EHR without translation loss',
+    'Formulations carry provenance on the ledger: herb batch to classical formulation to prescription - one chain a regulator or a patient can walk',
+    'The safety guard sits UPSTREAM of the model: contraindication and interaction checks are deterministic rules, not model vibes - the system is a librarian, never the vaidya',
+  ], 'India · consumer'),
 ]

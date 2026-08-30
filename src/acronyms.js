@@ -12,6 +12,10 @@ export const ACRONYM_CATS = {
 }
 
 export const ACRONYMS = [
+  { a: 'AYUSH', f: 'Ayurveda, Yoga, Unani, Siddha, Homoeopathy', d: 'India\'s ministry and ecosystem for traditional medicine - the reason ayurvedic teleconsultation has formal practice guidelines and a digital grid to integrate with.', c: 'business' },
+  { a: 'ABDM', f: 'Ayushman Bharat Digital Mission', d: 'India\'s national digital-health backbone: health ids, registries, consent-driven record exchange - the rails an AYUSH platform interoperates with rather than rebuilds.', c: 'business' },
+  { a: 'NAMASTE', f: 'National AYUSH Morbidity and Standardized Terminologies Electronic portal', d: 'Standardized codes for Ayurveda, Siddha and Unani terms - the vocabulary half of dual coding. See the Ayurveda Gyaan template.', c: 'business' },
+  { a: 'TM2', f: 'ICD-11 Traditional Medicine Module 2', d: 'The WHO classification chapter that gave Ayurveda, Siddha and Unani conditions international codes - the other half of dual coding, and the bridge into any modern EHR.', c: 'business' },
   { a: 'EHR', f: 'Electronic Health Record', d: 'The longitudinal clinical record - encounters, vitals, diagnoses. The design inversion: reading one is itself a recorded, consented event. See the Telemedicine template.', c: 'business' },
   { a: 'PHI', f: 'Protected Health Information', d: 'Any health data tied to an identity - the thing consent gates, audits trail, and breaches are counted in. Media-record separation exists so the video plumbing never touches it.', c: 'security' },
   { a: 'HIPAA', f: 'Health Insurance Portability and Accountability Act', d: 'The US healthcare privacy rulebook: access controls, audit trails, breach notification. The engineering translation: audit-on-read, minimum-necessary access, and retention you do not get to choose.', c: 'security' },
