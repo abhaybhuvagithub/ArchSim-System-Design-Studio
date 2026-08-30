@@ -448,7 +448,7 @@ export const TEMPLATES = [
     'Log retention tiers: hot for days, warm for weeks, archive for compliance',
   ], 'Observability'),
 
-  // ─────────────── India · consumer & fintech ───────────────
+  // ─────────────── Bharat · consumer & fintech ───────────────
   T('Rapido', 'Two-wheeler ride hailing with captain matching', 12000, [
     ['r', 'client', 'Riders', 40, 170, 1, 0.35], ['cap', 'client', 'Captains', 40, 360, 1, 0.65],
     ['lb', 'lb', 'LB', 180, 265], ['gw', 'gateway', 'API Gateway', 310, 265, 3],
@@ -470,7 +470,7 @@ export const TEMPLATES = [
     'Surge from the live supply/demand ratio per cell, computed on the event stream',
     'UPI is the dominant payment rail — it is a partner API, so queue and retry, never block the ride on it',
     'Cash rides still exist: settlement and captain wallet reconciliation is a real subsystem',
-  ], 'India · consumer'),
+  ], 'Bharat · consumer'),
 
   T('Ola', 'Multi-category ride hailing with EV fleet and in-app wallet', 16000, [
     ['r', 'client', 'Riders', 40, 170, 1, 0.55], ['d', 'client', 'Driver Fleet', 40, 380, 1, 0.45],
@@ -496,7 +496,7 @@ export const TEMPLATES = [
     'Wallet balance is checked and debited before UPI is even attempted — a local ledger write is faster and fully within your control',
     'UPI is the fallback and top-up rail: a rate-limited partner API, so top-ups queue and retry rather than blocking a ride',
     'Trips DB and Wallet Ledger are separate systems of record — a ride can complete while a debit is still settling, so reconcile asynchronously, never inline',
-  ], 'India · consumer'),
+  ], 'Bharat · consumer'),
 
   T('Zomato', 'Discovery, ordering and delivery', 20000, [
     ['u', 'client', 'Users', 40, 260], ['cdn', 'cdn', 'CDN (images)', 170, 150],
@@ -521,7 +521,7 @@ export const TEMPLATES = [
     'ETA must combine prep time, rider travel and traffic — surface a range, not false precision',
     'Peak is brutally spiky: lunch and dinner IST, plus IPL and festival surges',
     'Images dominate bandwidth — CDN with aggressive resizing at the edge',
-  ], 'India · consumer'),
+  ], 'Bharat · consumer'),
 
   T('Swiggy + Instamart', 'Food delivery plus 10-minute dark stores', 25000, [
     ['u', 'client', 'Users', 40, 270], ['cdn', 'cdn', 'CDN', 170, 150],
@@ -546,7 +546,7 @@ export const TEMPLATES = [
     'Store-level sharding keeps a hot store from taking down the region',
     'Separate read models for browse vs the transactional order path',
     'Refunds and cancellations are as much of the system as the happy path',
-  ], 'India · consumer'),
+  ], 'Bharat · consumer'),
 
   T('Razorpay', 'Payment gateway with smart routing and settlement', 4000, [
     ['m', 'client', 'Merchants', 40, 270], ['waf', 'waf', 'WAF', 170, 270, 2],
@@ -572,7 +572,7 @@ export const TEMPLATES = [
     'T+1 settlement with reconciliation against bank files; mismatches are a daily operational reality',
     'PCI scope: tokenize card data so most services never touch a PAN',
     'Bank APIs are the least reliable component — circuit break and degrade, never queue user-visibly',
-  ], 'India · fintech'),
+  ], 'Bharat · fintech'),
 
   T('BHIM (UPI)', 'UPI payments through the NPCI switch', 6000, [
     ['u', 'client', 'Users', 40, 270], ['lb', 'lb', 'LB', 170, 270],
@@ -596,7 +596,7 @@ export const TEMPLATES = [
     'Idempotency on the RRN; the same transaction may be retried by the switch',
     'NPCI enforces TPS caps and success-rate thresholds — throttle yourself before they do',
     'Chargeback/dispute (URCS) handling needs an immutable audit trail',
-  ], 'India · fintech'),
+  ], 'Bharat · fintech'),
 
   T('Google Pay (UPI, India)', 'UPI at national scale with fraud and rewards', 30000, [
     ['u', 'client', 'Users', 40, 280], ['gslb', 'gslb', 'Global Traffic Mgr', 170, 280],
@@ -622,7 +622,7 @@ export const TEMPLATES = [
     'Collect requests and mandates (autopay) are a separate, abuse-prone flow',
     'NPCI publishes bank-wise success rates — routing on them is a real competitive advantage',
     'Every rupee movement is reconciled daily against the switch; unreconciled is an incident',
-  ], 'India · fintech'),
+  ], 'Bharat · fintech'),
 
 
   T('Video Surveillance (VMS)', 'Continuous camera ingest, retention and search', 6000, [
@@ -1471,7 +1471,7 @@ export const TEMPLATES = [
     'Pincode serviceability gates everything; an undeliverable product should never be purchasable',
     'Tier-2/3 networks mean payload size is a product feature, not an optimisation',
     'UPI and card rails are external ceilings — route across PSPs and degrade rather than fail',
-  ], 'India · consumer'),
+  ], 'Bharat · consumer'),
 
   T('IndiaMART (B2B leads)', 'The product is the lead, not the order', 8000, [
     ['b', 'client', 'Buyers', 40, 180], ['s', 'client', 'Suppliers', 40, 400],
@@ -1496,8 +1496,8 @@ export const TEMPLATES = [
     'Millions of SEO landing pages are the acquisition channel, so rendering is a scale problem',
     'Contact reveal is metered against a subscription — that counter is billing and must be exact',
     'Distribution is fan-out with a cap: one enquiry to too many suppliers devalues every one of them',
-  ], 'India · consumer'),
-// ── Unicorns · India ──────────────────────────────────────────────────────
+  ], 'Bharat · consumer'),
+// ── Unicorns · Bharat ──────────────────────────────────────────────────────
   T('Zerodha (Kite)', 'Discount broker: order path vs ticker fan-out', 9000, [
     ['t', 'client', 'Traders', 40, 240], ['lb', 'lb', 'LB', 170, 240],
     ['gw', 'gateway', 'API GW', 300, 240, 3], ['ord', 'app', 'Order Mgmt', 450, 160, 8],
@@ -1511,7 +1511,7 @@ export const TEMPLATES = [
     'One exchange feed, N subscribers: snapshot cache + WebSocket fan-out, never per-user exchange pulls',
     'Settlement is exactly-once off the trade stream — a duplicated fill corrupts the ledger',
     'Ledger is ACID and boring on purpose; everything fast sits in front of it',
-  ], 'Unicorns · India'),
+  ], 'Unicorns · Bharat'),
   T('Dream11', 'Fantasy sports: contest-join spike + live leaderboards', 30000, [
     ['f', 'client', 'Fans', 40, 200, 1, 0.9], ['sf', 'client', 'Score Feed', 40, 400, 1, 0.1],
     ['cdn', 'cdn', 'CDN', 170, 200], ['lb', 'lb', 'LB', 300, 200],
@@ -1525,7 +1525,7 @@ export const TEMPLATES = [
     'Every ball bowled recomputes millions of team scores: stream compute, not request-time compute',
     'Leaderboards are sorted sets in memory, read millions of times between updates',
     'Team edits freeze at match lock — a hard consistency boundary the whole design leans on',
-  ], 'Unicorns · India'),
+  ], 'Unicorns · Bharat'),
   T('CRED', 'Card bills: PCI vault + rewards event stream', 6000, [
     ['m', 'client', 'Members', 40, 240], ['lb', 'lb', 'LB', 170, 240],
     ['gw', 'gateway', 'API GW', 300, 240, 2], ['bp', 'app', 'Bill Pay', 450, 160, 4],
@@ -1539,7 +1539,7 @@ export const TEMPLATES = [
     'Payment state machine is ACID; rewards are eventually consistent off the event stream',
     'Rewards must be idempotent per payment — replayed events must not double-credit coins',
     'Bureau refresh is a background sync, never on the request path',
-  ], 'Unicorns · India'),
+  ], 'Unicorns · Bharat'),
   T('Zepto (10-min delivery)', 'Quick commerce: dark stores + rider dispatch', 12000, [
     ['c', 'client', 'Shoppers', 40, 220], ['cdn', 'cdn', 'CDN', 170, 220],
     ['lb', 'lb', 'LB', 300, 220], ['gw', 'gateway', 'API GW', 420, 220, 3],
@@ -1553,7 +1553,7 @@ export const TEMPLATES = [
     'Dispatch is a constraint solver on the rider geo index: pick, pack and hand over inside the 10-minute promise',
     'Demand forecasting decides tonight what sits on shelves tomorrow — the real capacity planning is physical',
     'The promise is the product: p99 delivery time is the SLO that matters, not request latency',
-  ], 'Unicorns · India'),
+  ], 'Unicorns · Bharat'),
   T('Postman', 'API platform: sync, sandboxed runs, mock servers', 8000, [
     ['d', 'client', 'Developers', 40, 240], ['lb', 'lb', 'LB', 170, 240],
     ['gw', 'gateway', 'API GW', 300, 240, 2], ['sync', 'ws', 'Collection Sync', 450, 140, 4],
@@ -1566,7 +1566,7 @@ export const TEMPLATES = [
     'Runs are async: queue in, results to object storage, notify when done',
     'Mock servers answer from saved examples with zero user code on the path',
     'Workspaces gate everything: the permission check is on every read, so it must be cheap',
-  ], 'Unicorns · India'),
+  ], 'Unicorns · Bharat'),
   // ── Unicorns · USA ────────────────────────────────────────────────────────
   T('Discord', 'Guild chat: gateway fan-out, presence, voice', 40000, [
     ['u', 'client', 'Users', 40, 240], ['lb', 'lb', 'LB', 170, 240],
@@ -1792,7 +1792,7 @@ T('Astrotalk', 'Consultation marketplace: per-minute billing on a live socket', 
     'Astrologer presence and wait-queues are the marketplace - a stale "online" flag sells a session that cannot start',
     'Billing ticks are exactly-once: a doubled minute is a refund storm and a one-star review',
     'Kundli computation is deterministic from birth data - compute once, cache forever',
-  ], 'Unicorns · India'),
+  ], 'Unicorns · Bharat'),
 T('Object Storage (S3)', 'Design the bucket: metadata, placement, erasure-coded pods', 30000, [
     ['u', 'client', 'SDK Clients', 40, 240], ['lb', 'lb', 'LB', 170, 240],
     ['fe', 'gateway', 'API Front', 300, 240, 8], ['cache', 'cache', 'Hot Object Cache', 440, 130, 5],
@@ -1870,7 +1870,7 @@ T('Card Payments (Auth + Settlement)', 'Authorization is a promise in millisecon
     'The ledger is append-only double-entry: corrections are reversing entries, so the history IS the audit',
     'Netting is the quiet miracle: ten thousand transactions between two banks settle as one transfer',
     'Reconciliation is the immune system - your ledger vs the network file vs the bank statement, three-way matched daily',
-  ], 'India · fintech'),
+  ], 'Bharat · fintech'),
   T('Fraud Detection (Real-time)', 'Score every transaction inside the auth path - against an adversary who learns', 1200, [
     ['u', 'client', 'Auth Stream', 40, 240], ['gw', 'gateway', 'Ingest GW', 170, 240, 3],
     ['vel', 'cache', 'Velocity Counters', 320, 130, 3], ['fs', 'featurestore', 'Feature Store', 320, 250, 2],
@@ -1884,7 +1884,7 @@ T('Card Payments (Auth + Settlement)', 'Authorization is a promise in millisecon
     'The model suggests, the rule decides: regulators want declines you can explain, so the rules engine holds the veto',
     'Labels arrive weeks late as chargebacks - the feedback log is the slowest, most valuable pipe in the design',
     'Thresholds are the business: a false positive insults a customer and loses the sale; a false negative is the loss itself',
-  ], 'India · fintech'),
+  ], 'Bharat · fintech'),
 T('UPI Switch (NPCI)', 'The switch between banks: debit leg, credit leg, and the reversal choreography in between', 2000, [
     ['psp', 'client', 'PSP Apps', 40, 240], ['gw', 'gateway', 'Switch Gateway', 170, 240, 4],
     ['orch', 'micro', 'Txn Orchestrator', 320, 240, 6], ['rem', 'app', 'Remitter Bank CBS', 480, 150, 6],
@@ -1898,7 +1898,7 @@ T('UPI Switch (NPCI)', 'The switch between banks: debit leg, credit leg, and the
     'Both legs are idempotent by transaction id: banks replay a retried leg onto the same result, never twice',
     'Banks settle net, not gross: millions of transactions collapse into a handful of RBI transfers, tracked on the switch ledger',
     'The status store answers the only question users ask - where is my money - and it must answer during the ambiguity, not after',
-  ], 'India · fintech'),
+  ], 'Bharat · fintech'),
 T('Telemedicine (Practo)', 'Booking, video consults, e-prescriptions - where every record read is itself a recorded event', 700, [
     ['u', 'client', 'Patients & Doctors', 40, 240], ['gw', 'gateway', 'API Gateway', 170, 240, 3],
     ['book', 'micro', 'Booking (Slots)', 320, 120, 3], ['avail', 'cache', 'Slot Inventory', 470, 80, 2],
@@ -1914,7 +1914,7 @@ T('Telemedicine (Practo)', 'Booking, video consults, e-prescriptions - where eve
     'e-Prescriptions live on an append-only ledger: a revoked Rx is a new signed entry, never an edit - pharmacies verify the chain, not a row',
     'Break-the-glass exists by design: emergencies override consent, loudly - the access succeeds AND pages the audit trail',
     'A slot is inventory: booking locks it like a seat, because a double-booked doctor is an outage with a waiting room',
-  ], 'Unicorns · India'),
+  ], 'Unicorns · Bharat'),
 T('Ayurveda Gyaan (Charak Samhita)', 'A 2000-year-old corpus served honestly: immutable shlokas, layered commentary, citation-forced answers', 500, [
     ['u', 'client', 'Seekers & Vaidyas', 40, 240], ['gw', 'gateway', 'API Gateway', 170, 240, 3],
     ['corpus', 'micro', 'Shloka Registry', 330, 120, 3], ['scans', 'blob', 'Manuscripts & Editions', 480, 60, 2],
@@ -1929,5 +1929,5 @@ T('Ayurveda Gyaan (Charak Samhita)', 'A 2000-year-old corpus served honestly: im
     'Dual coding by design: NAMASTE terminology maps to ICD-11 TM2, so a prakriti assessment can live in a modern EHR without translation loss',
     'Formulations carry provenance on the ledger: herb batch to classical formulation to prescription - one chain a regulator or a patient can walk',
     'The safety guard sits UPSTREAM of the model: contraindication and interaction checks are deterministic rules, not model vibes - the system is a librarian, never the vaidya',
-  ], 'India · consumer'),
+  ], 'Bharat · consumer'),
 ]

@@ -56,7 +56,7 @@ const TAB_ICON = {
   learn: '🎒', map: '🗺️', interview: '🎙️', about: 'ℹ️', compare: '⚖️', explain: '💡', trips: '✈️', hld: '🏛️', lld: '🧱', brief: '📄',
 }
 const GROUP_ICON = {
-  'India · fintech': '💳', 'India · consumer': '🇮🇳', 'Unicorns · India': '🦄', 'Unicorns · USA': '🦅',
+  'Bharat · fintech': '💳', 'Bharat · consumer': '🇮🇳', 'Unicorns · Bharat': '🦄', 'Unicorns · USA': '🦅',
   'GenAI': '🤖', 'Cloud business': '☁️', 'Classics': '🏛️', 'Infra': '🔧',
 }
 import { VERSION } from './version.js'
@@ -1552,7 +1552,7 @@ function CmdK({ onClose, onTemplate, onTab, onPractice }) {
       ['learn', 'Learn'], ['interview', 'Interview'], ['cost', 'Cost'], ['compare', 'Compare'], ['about', 'About'],
     ]
     const pool = [
-      ...TEMPLATES.map((t, i) => ({ kind: 'Load', label: t.name, run: () => onTemplate(i) })),
+      ...TEMPLATES.map((t, i) => ({ kind: 'Load', label: t.name, hay: `${t.name} ${t.group || ''}`.toLowerCase() + (/bharat/i.test(t.group || '') ? ' india indian' : ''), run: () => onTemplate(i) })),
       ...tabDefs.map(([id, label]) => ({ kind: 'Go to', label, run: () => onTab(id) })),
       ...MASTERY.flatMap(a => a.items.map(x => ({ kind: 'Practice', label: x.t, run: () => onPractice(x.go) }))),
     ]
@@ -1560,7 +1560,7 @@ function CmdK({ onClose, onTemplate, onTab, onPractice }) {
     if (!needle) return pool.slice(0, 12)
     const scored = pool
       .map(r => {
-        const hay = r.label.toLowerCase()
+        const hay = r.hay || r.label.toLowerCase()
         const s2 = hay.startsWith(needle) ? 0 : hay.includes(needle) ? 1 : 2
         return { ...r, s2 }
       })
@@ -3856,7 +3856,7 @@ function LevelTable() {
 export function matchesTpl(t, q) {
   const s2 = String(q || '').trim().toLowerCase()
   if (!s2) return true
-  const hay = `${t.name} ${t.group || ''} ${t.tagline || ''}`.toLowerCase()
+  const hay = `${t.name} ${t.group || ''} ${t.tagline || ''}`.toLowerCase() + (/(bharat)/i.test(t.group || '') ? ' india indian' : '')
   return s2.split(/\s+/).every(w => hay.includes(w))
 }
 
@@ -3944,7 +3944,11 @@ function TemplatePicker({ onPick, pro = false }) {
           <option value="blank">＋ Blank canvas</option>
           <option value="starter">◻︎ Starter scaffold</option>
         </optgroup>
-        {[...new Set(TEMPLATES.map(t => t.group))].map(g => (
+        {[...new Set(TEMPLATES.map(t => t.group))].sort((x, y) => {
+          const ORDER = ['Bharat · fintech', 'Bharat · consumer', 'Unicorns · Bharat']
+          const ix = ORDER.indexOf(x), iy = ORDER.indexOf(y)
+          return (ix === -1 ? 99 : ix) - (iy === -1 ? 99 : iy)
+        }).map(g => (
           <optgroup key={g} label={(GROUP_ICON[g] ? GROUP_ICON[g] + ' ' : '') + g}>
             {TEMPLATES.map((t, i) => t.group === g ? <option key={t.name} value={i}>{t.name}</option> : null)}
           </optgroup>

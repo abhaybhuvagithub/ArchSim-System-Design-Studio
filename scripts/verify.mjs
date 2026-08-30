@@ -1031,7 +1031,7 @@ try {
     const match = (t2, q) => {
       const s2 = String(q || '').trim().toLowerCase();
       if (!s2) return true;
-      const hay = `${t2.name} ${t2.group || ''} ${t2.tagline || ''}`.toLowerCase();
+      const hay = `${t2.name} ${t2.group || ''} ${t2.tagline || ''}`.toLowerCase() + (/bharat/i.test(t2.group || '') ? ' india indian' : '');
       return s2.split(/\s+/).every(w => hay.includes(w));
     };
     check('the picker is a combobox, so typing can open it',
@@ -4151,7 +4151,16 @@ try {
       return src.includes('Daya by design') && src.includes('grades systems hard and people gently') && src.includes('Prabhu ni krupa');
     })());
 
-    check('the guide button is labelled Guide/Tour', (() => {
+    check('Bharat leads the template picker — first group wears the flag', (() => {
+      const og = [...doc.querySelectorAll('.tplpick-native optgroup')].filter(o => o.label !== 'Start from scratch');
+      return og.length > 3 && /Bharat/.test(og[0].label) && /Bharat/.test(og[1].label) && /Bharat/.test(og[2].label);
+    })());
+    check('the onboarding wizard offers a Bharat flagship first', await (async () => {
+      const src = fs.readFileSync(path.join(root, 'src/onboarding.jsx'), 'utf8');
+      const m = src.match(/const STARTS = \[\s*\{[^}]*tpl: '([^']+)'/);
+      return !!m && /BHIM|UPI|Zomato/.test(m[1]);
+    })());
+        check('the guide button is labelled Guide/Tour', (() => {
       const b = doc.querySelector('[data-tour="help"]');
       return !!b && b.textContent.trim() === '🧭 Guide/Tour';
     })());

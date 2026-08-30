@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.12.1 — 2026-08-29
+- 🇮🇳 **Bharat first, everywhere**: group labels renamed (Bharat · fintech, Bharat · consumer, Unicorns · Bharat), Bharat groups lead the template picker before anything else, the onboarding wizard opens with UPI and Zomato — and the suite pins the ordering so it can never quietly regress
+
 ## 1.12.0 — 2026-08-29
 - 🕉️ **Ayurveda Gyaan (Charak Samhita)** — the inversion template: the corpus is eternal, the interpretation is layered. Canonical shloka addressing (sthana.chapter.verse) with a no-UPDATE canon, versioned overlays for commentary and translation, edition concordance so citations never silently lie, citation-forced RAG where "the text does not address this" is an honorable first-class answer, NAMASTE ↔ ICD-11 TM2 dual coding, formulation provenance on the ledger (its third vertical), and a wall for the ages: **authority does not shard — sampradaya queues behind scholars, not GPUs**
 - 🔤 +4: AYUSH, ABDM, NAMASTE, TM2 · Ask-AI: prakriti, shloka addressing
