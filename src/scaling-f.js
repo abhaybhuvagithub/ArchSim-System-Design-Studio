@@ -347,4 +347,22 @@ export default {
   wall: { t: 'Regulation sets the floor, forever', d: 'Past every architectural lever, healthcare data has a property nothing else in this studio has: it never cools. Retention laws keep records hot-accessible for years to decades, audit trails must survive longer than the systems that wrote them, and data-residency walls partition your architecture by jurisdiction, not by load. The wall is that compliance capacity - storage that cannot be tiered away, auditability that cannot be sampled, deletion that must be provable - is real capacity, purchased forever. The honest design treats the regulator as a permanent, non-negotiable tenant.' },
 },
 
+
+'Ayurveda Gyaan (Charak Samhita)': {
+  constraint: 'The corpus is small and eternal; the load is interpretation. Scaling here means multiplying readers and questions against a canon that never grows - the opposite constraint of every feed and firehose in this library.',
+  ladder: [
+    ['1K seekers/day', '~0.05 rps', 'A digitized edition and a search box. The canonical ids and the no-UPDATE rule matter from day one - retrofitting immutability is archaeology.'],
+    ['100K seekers/day', '~3 rps', 'Overlays formalize with versions; the concordance table arrives with the second edition; RAG ships citation-forced from its first answer.'],
+    ['5M seekers/day', '~150 rps', 'Canon lives at the edge with infinite TTL; overlay materialization per (verse, lang); the guard\'s rule set becomes data with its own review workflow; consult volume brings Telemedicine-grade audit.'],
+    ['50M seekers/day', '~1.5K rps', 'National-platform territory: AYUSH-grid interop, multilingual embeddings refreshed as scholarship grows, and the queue that matters is scholarly review throughput, not request throughput.'],
+  ],
+  levers: [
+    { t: 'Cache the eternal at the edge', d: 'Immutable canon earns the rare infinite TTL and permanent ETags - serve shlokas like static assets because that is what a 2000-year-old text is.', n: ['corpus', 'gw'] },
+    { t: 'Materialize overlays per (verse, lang)', d: 'The read shape is verse-plus-chosen-overlays; precompute the popular combinations and the corpus service becomes a CDN with a scholar\'s conscience.', n: ['corpus', 'srch'] },
+    { t: 'Force citations, precompute the index', d: 'Citation checking at answer time needs verse-claim maps hot in memory - build the citation index at overlay publish time, not at question time.', n: ['guard', 'llm', 'vec'] },
+    { t: 'Rules as reviewed data', d: 'Contraindication and interaction rules ship like overlays: versioned, attributed, reviewed - the guard is only as trustworthy as its editorial pipeline.', n: ['guard', 'prov'] },
+  ],
+  wall: { t: 'Authority does not shard', d: 'Past every cache and index, the binding constraint is scholarly: new commentaries, concordance disputes, terminology mappings and safety rules all require lineage-grade human consensus, and sampradaya does not autoscale. Compute multiplies; authority is validated one careful review at a time. The honest design accepts it - interpretation queues behind scholars, not GPUs - and the metric that matters at scale is review throughput with provenance, which is a governance system wearing an architecture.' },
+},
+
 }

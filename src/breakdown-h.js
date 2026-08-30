@@ -1135,4 +1135,63 @@ export default {
   },
 },
 
+
+'Ayurveda Gyaan (Charak Samhita)': {
+  meta: 'Knowledge systems - India - hard - the corpus is eternal, the interpretation is layered',
+  overview: 'Every other template in this studio serves data that churns. This one serves a medical corpus that has been stable for two thousand years - and that inversion drives the whole design. The Charak Samhita is verse-addressable (sthana.chapter.shloka), its text is canon, and everything humans have added since - Chakrapani\'s commentary, translations into a dozen languages, modern clinical mappings - is an overlay that must never touch the source. Around that immutable core sits a modern platform: citation-forced RAG for vaidic gyaan, AYUSH-guideline teleconsults, NAMASTE-to-ICD-11 dual coding, and formulation provenance on an append-only ledger. The system\'s ethic is stated in its architecture: it is a librarian and a clerk, never the vaidya.',
+  scope: 'The canonical corpus service with overlays, multilingual retrieval and citation-forced answers, prakriti assessment, AYUSH teleconsultation, terminology dual-coding, and formulation provenance. Herb farming/manufacturing operations, insurance, and modern-medicine diagnosis are out.',
+  fr: {
+    core: ['Serve any shloka by canonical address with chosen overlays (commentary, language)', 'Answer gyaan questions with mandatory shloka citations - or abstain honestly', 'Run AYUSH-guideline teleconsults with prakriti assessment as structured data', 'Record prescriptions of classical formulations with batch-level provenance', 'Map every clinical term NAMASTE <-> ICD-11 TM2 both directions'],
+    out: ['Diagnosis or treatment advice from the AI itself - the guard exists to prevent exactly this', 'Manufacturing and supply-chain operations (the provenance chain is consumed, not produced, here)', 'Modern-medicine EHR (interop via codes, not ownership)'],
+  },
+  nfr: {
+    core: ['Canon immutability is absolute: no write path exists to source verses - corrections are new overlay versions', 'No uncited clinical claim leaves the system: the guard enforces citation-or-abstain', 'Edition concordance: one verse, several numbering traditions - citations must resolve across all mapped editions', 'Health-grade privacy: consult reads are audited like the Telemedicine template - this is PHI with a Sanskrit vocabulary'],
+    out: ['Real-time collaboration on commentaries (scholarly review is deliberately slow)'],
+  },
+  nums: [['120', 'chapters across 8 sthanas - the whole canon fits in memory; the load is interpretation'], ['1 id', 'sthana.chapter.verse - the primary key of a civilization-scale text'], ['2 codes', 'NAMASTE + ICD-11 TM2 on every clinical concept'], ['∞ TTL', 'the rare true forever-cache: immutable canon at the edge']],
+  entities: [
+    ['Shloka', 'canonical id + Devanagari + IAST transliteration; frozen - the one table with no UPDATE grant at all'],
+    ['Overlay', 'commentary | translation | clinical-note, keyed (shlokaId, author, lang, version) - corrections append a version, never edit'],
+    ['Concordance', 'edition A verse id <-> edition B verse id - the unglamorous table that keeps citations true across printings'],
+    ['PrakritiProfile', 'structured assessment output (dosha weights + confidence), dual-coded, EHR-portable'],
+    ['FormulationRx', 'classical formulation ref + batch chain on the ledger: herb lot -> preparation -> dispense'],
+  ],
+  apiIntro: 'The API is honest about what is eternal and what is layered: verses are GET-only forever; knowledge answers carry citations or an abstention; prescriptions carry chains.',
+  api: [
+    { dir: '->', name: 'GET /shloka/{sthana}/{ch}/{v}?overlays=chakrapani,gu,en', body: '-> canon + requested overlays; ETag is permanent - cache it until the sun cools' },
+    { dir: '->', name: 'POST /gyaan', body: '{ question, lang }\n-> { answer, citations: [sthana.ch.v, ...] } | { abstain: true, reason: "the text does not address this" }' },
+    { dir: '->', name: 'POST /rx', body: '{ consultId, formulation, batchId }\n-> ledger entry id - the provenance chain is walkable from the receipt' },
+  ],
+  dives: [
+    {
+      title: 'The immutable canon and its overlays', focus: ['corpus', 'scans', 'srch'],
+      blocks: [
+        ['p', 'The Shloka Registry is the quietest service in the studio and the most absolute: source verses have no write path - not admin-gated, absent. Everything alive happens in overlays, keyed by (shloka, author, language, version), so Chakrapani sits beside a 2024 Gujarati translation without either touching the text. Multilingual search indexes canon and overlays together but always RESOLVES to canonical ids, because the id - not the wording - is what two scholars can agree on.'],
+        ['bul', [
+          'The ledger discipline, applied to knowledge: a translation correction is a new overlay version with lineage - readers can diff interpretations across decades.',
+          'The forever-cache is real here: immutable canon means edge caches with infinite TTL and permanent ETags - the rare system where cache invalidation is genuinely nobody\'s problem.',
+          'Manuscript scans live in blob storage behind the same canonical addressing - the photograph of the palm leaf and its Unicode text share one id.',
+        ]],
+        ['warn', 'The trap is edition variance: Charak numbering differs across printed traditions, and a citation that silently assumes one edition points readers at the wrong verse in another. The Concordance table is unglamorous and non-optional - without it, the most careful citation system in the studio quietly lies.'],
+      ],
+    },
+    {
+      title: 'Gyaan without hallucination', focus: ['guard', 'llm', 'vec', 'consult', 'prov'],
+      blocks: [
+        ['p', 'The RAG path is deliberately strict. Retrieval returns shloka ids; generation must quote-and-cite from exactly those; the guard verifies every clinical claim maps to a citation and every formulation mention passes deterministic contraindication rules - rules, not model judgment. And abstention is designed in as an honorable exit: "the text does not address this" is rendered as a real answer with real typography, because in a scriptural and medical context, a confident paraphrase without a source is not a UX bug - it is cultural and medical harm.'],
+        ['bul', [
+          'Citation-forced means machine-checkable: the guard rejects any output sentence carrying a clinical claim whose citation set is empty - regeneration or abstention, never passage.',
+          'The consult path stays human: prakriti assessment structures the questionnaire, dual codes make it portable, but the vaidya decides - the AI drafts nothing prescriptive.',
+          'Prescriptions land on the provenance ledger: herb lot -> classical preparation -> dispense, append-only - the third vertical this studio\'s ledger has served, because trust chains are one shape.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A search box over translated texts with a chatbot on top.',
+    senior: 'Canonical verse addressing with overlay versioning and edition concordance, citation-forced RAG with a deterministic safety guard and an honorable abstain, dual-coded assessments, provenance-chained prescriptions, audited consult reads.',
+    staff: 'Design the scholarly governance: who may publish an overlay, how concordance disputes resolve, how ICD updates ripple through dual codes without rewriting history - and the ethical architecture that keeps the system a librarian as capability grows. Sampradaya - lineage consensus - does not shard; the design must queue interpretation behind scholars, not GPUs.',
+  },
+},
+
 }

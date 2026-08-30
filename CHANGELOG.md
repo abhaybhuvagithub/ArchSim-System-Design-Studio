@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.0 — 2026-08-29
+- 🕉️ **Ayurveda Gyaan (Charak Samhita)** — the inversion template: the corpus is eternal, the interpretation is layered. Canonical shloka addressing (sthana.chapter.verse) with a no-UPDATE canon, versioned overlays for commentary and translation, edition concordance so citations never silently lie, citation-forced RAG where "the text does not address this" is an honorable first-class answer, NAMASTE ↔ ICD-11 TM2 dual coding, formulation provenance on the ledger (its third vertical), and a wall for the ages: **authority does not shard — sampradaya queues behind scholars, not GPUs**
+- 🔤 +4: AYUSH, ABDM, NAMASTE, TM2 · Ask-AI: prakriti, shloka addressing
+
 ## 1.11.0 — 2026-08-29
 - 🏛️ **HLD tab rebuilt around live computation**: 🧭 Request Anatomy (traffic-weighted primary path, per-hop p50/p99 at current utilization, user-felt budget, async boundary marked), 🧮 Capacity Worksheet (per-tier headroom, the interview number), failure modes **derived from this graph** (real SPOFs listed by name) — the template-invariant filler is gone
 - 🧱 **LLD tab rebuilt around authored + honest-derived**: the six flagship schema/flow/state entries now render in-tab with **live latencies on every sequence step**, authored API contracts pulled verbatim, per-type engineering notes that cite this design's own utilization, physics-matched testing section
