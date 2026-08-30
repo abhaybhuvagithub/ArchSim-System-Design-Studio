@@ -2082,7 +2082,7 @@ try {
   // ── analysis tab order ─────────────────────────────────────────────────────
   const tabNames = [...doc.querySelectorAll('.tabs button')].map((b) => b.textContent.trim());
   log('tab order: ' + tabNames.join(' | '));
-  check('Brief is the first analysis tab', /^Brief/.test(tabNames[0] || ''));
+  check('Brief is the first analysis tab', /Brief$/.test((tabNames[0] || '').trim()));
   check('About is the last analysis tab', /About$/.test(tabNames[tabNames.length - 1] || ''));
 
   // ── no template header before anything is loaded ───────────────────────────
@@ -2925,6 +2925,36 @@ try {
         selL.value = [...selL.options].find((o) => o.textContent.includes('WhatsApp')).value;
         selL.dispatchEvent(new win.Event('change', { bubbles: true }));
         await wait(250);
+      }
+
+      // ── HLD/LLD tabs: live, design-specific, never filler ──────────────────
+      {
+        const goTab2 = async (name) => { click(byText('.tabs button', name)); await wait(200) };
+        await goTab2('HLD'); await wait(150);
+        check('the HLD tab computes the request anatomy live (≥3 hops on WhatsApp)',
+          doc.querySelectorAll('.anatomy-hop').length >= 3);
+        check('the anatomy states the user-felt budget with a dominant hop',
+          /User-felt budget/.test(doc.body.textContent) && /dominated by/.test(doc.body.textContent));
+        check('the capacity worksheet prices headroom per tier',
+          doc.querySelectorAll('.cap-row').length >= 4 && /headroom/i.test(doc.body.textContent));
+        check('failure modes are read from THIS graph, not a checklist',
+          /read from this graph/i.test(doc.body.textContent) && /Single points of failure/.test(doc.body.textContent));
+        const A2 = await import(pathToFileURL(path.join(root, 'src/anatomy.js')).href);
+        const T2 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const S2m = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        check('anatomy totals equal the sum of their hops (module math)', (() => {
+          const t = T2.TEMPLATES.find(x => x.name === 'Chat (WhatsApp)');
+          const s = S2m.simulate(t.nodes, t.edges, t.rps, new Set());
+          const a = A2.requestAnatomy(t.nodes, t.edges, s);
+          const sum = a.hops.reduce((acc, h) => acc + h.p50, 0);
+          return Math.abs(sum - a.totalP50) < 0.5 && a.totalP99 > a.totalP50;
+        })());
+        await goTab2('LLD'); await wait(150);
+        check('authored LLD renders schema + flow + state machine in the tab (WhatsApp)',
+          /authored for this design/i.test(doc.body.textContent) && doc.body.textContent.includes('🗄️') && /🎰/.test(doc.body.textContent));
+        check('the per-type pattern notes cite live numbers from THIS design',
+          /Patterns in THIS design/i.test(doc.body.textContent) && /% busy/.test(doc.body.textContent));
+        await goTab2('Capacity'); await wait(120);
       }
 
       // ── the two new live controls: cache write policy, LB balancing ────────

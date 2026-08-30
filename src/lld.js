@@ -109,6 +109,18 @@ export default {
       { from: 'b', to: 's2', label: 'ack → delete inbox row' },
     ],
   },
+  state: {
+    title: 'Message lifecycle — the tick machine',
+    states: ['COMPOSED', 'QUEUED_ON_DEVICE', 'SENT (✓)', 'DELIVERED (✓✓)', 'READ (blue ✓✓)', 'FAILED'],
+    transitions: [
+      ['COMPOSED', 'QUEUED_ON_DEVICE', 'send tapped — the message is durable on the phone BEFORE any network exists'],
+      ['QUEUED_ON_DEVICE', 'SENT (✓)', 'server acked and persisted; one tick is a promise from the server, not the recipient'],
+      ['SENT (✓)', 'DELIVERED (✓✓)', 'recipient device acked — store-and-forward held it while they were offline'],
+      ['DELIVERED (✓✓)', 'READ (blue ✓✓)', 'read receipt, if the recipient allows it — a privacy toggle, not a protocol truth'],
+      ['QUEUED_ON_DEVICE', 'FAILED', 'retries exhausted — shown honestly, retried on reconnect'],
+      ['SENT (✓)', 'SENT (✓)', 'recipient offline: the server holds it (the queue IS the product)'],
+    ],
+  },
   notes: [
     ['warn', 'The ordering matters more than any single component. Durable write, then acknowledge, then publish. Invert those and a Pub/Sub drop becomes a lost message.'],
   ],

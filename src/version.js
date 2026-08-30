@@ -1,2 +1,2 @@
 // One source of truth for the footer stamp; bump alongside CHANGELOG.md.
-export const VERSION = '1.10.3'
+export const VERSION = '1.11.0'

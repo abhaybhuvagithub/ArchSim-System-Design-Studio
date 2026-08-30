@@ -53,7 +53,7 @@ import { encodeShare, decodeShare, hasSharedDesign, parseEntryParams, hasEntryPa
 const TAB_ICON = {
   capacity: '📊', improve: '✨', chaos: '🌪️', cost: '💸', code: '🧩', assist: '💬',
   roi: '💹', slo: '🎯', acr: '🔤', mastery: '🎓', scale: '📈', breakdown: '📘',
-  learn: '🎒', map: '🗺️', interview: '🎙️', about: 'ℹ️', compare: '⚖️', explain: '💡', trips: '✈️',
+  learn: '🎒', map: '🗺️', interview: '🎙️', about: 'ℹ️', compare: '⚖️', explain: '💡', trips: '✈️', hld: '🏛️', lld: '🧱', brief: '📄',
 }
 const GROUP_ICON = {
   'India · fintech': '💳', 'India · consumer': '🇮🇳', 'Unicorns · India': '🦄', 'Unicorns · USA': '🦅',

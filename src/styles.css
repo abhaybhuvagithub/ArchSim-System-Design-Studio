@@ -1832,3 +1832,9 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .ddia-verdict.bad::before  { content: '⚠️ '; }
 .sug.high .sug-t > span:first-child::before { content: '🔥 '; }
 .sug.med  .sug-t > span:first-child::before { content: '💡 '; }
+
+/* ── HLD/LLD extreme-detail tables ── */
+.anatomy-t { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 6px 0 4px; }
+.anatomy-t th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .65; padding: 3px 8px; border-bottom: 1px solid var(--border); }
+.anatomy-t td { padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.anatomy .muted, .lld-section .muted { opacity: .75; }
