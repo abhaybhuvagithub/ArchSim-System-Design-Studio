@@ -1846,3 +1846,11 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .cmdk-chip.on { opacity: 1; border-color: var(--accent); color: var(--accent); }
 .cmdk li.cmdk-cat { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; opacity: .6; padding: 8px 12px 2px; cursor: default; pointer-events: none; }
 .cmdk-sub { float: right; font-size: 12px; opacity: .55; }
+
+/* ── diagrams-as-code import ── */
+.dac-import { margin: 10px 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 8px; }
+.dac-import summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.dac-in { width: 100%; margin-top: 8px; font-family: var(--font-mono); font-size: 12.5px; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: inherit; }
+.dac-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; font-size: 12.5px; }
+.dac-msg { margin-top: 6px; font-size: 12.5px; padding: 6px 8px; border-radius: 6px; background: rgba(60,180,120,.12); }
+.dac-msg.bad { background: rgba(224,86,97,.12); }

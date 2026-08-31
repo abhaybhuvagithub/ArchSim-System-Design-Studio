@@ -1,3 +1,4 @@
+import { toMermaid, toExcalidraw } from './dac.js'
 // Turns the live canvas into runnable artifacts — a docker-compose file, a
 // Terraform skeleton for the selected cloud, and an OpenAPI contract for the
 // service tiers. Everything is derived from nodes and edges on every render,
@@ -172,9 +173,13 @@ export const CODE_VIEWS = [
   { id: 'compose', label: 'docker-compose', file: 'docker-compose.yml', hint: 'Run the whole design locally — replicas and dependencies come from the canvas.' },
   { id: 'terraform', label: 'Terraform', file: 'main.tf', hint: 'The deployment shape on the selected cloud, one module per component.' },
   { id: 'openapi', label: 'OpenAPI', file: 'openapi.yaml', hint: 'API contract for the service tiers, resources inferred from their stores.' },
+  { id: 'mermaid', label: 'Mermaid', file: 'architecture.mmd', hint: 'Diagram-as-code for READMEs — GitHub, Notion and Obsidian render it natively. Async edges are dashed; paste it back to simulate.' },
+  { id: 'excalidraw', label: 'Excalidraw', file: 'architecture.excalidraw', hint: 'The interview whiteboard, pre-drawn: open the file at excalidraw.com and keep sketching.' },
 ]
 
 export function generateCode(view, nodes, edges, cloud) {
+  if (view === 'mermaid') return toMermaid(nodes, edges)
+  if (view === 'excalidraw') return toExcalidraw(nodes, edges)
   if (view === 'terraform') return generateTerraform(nodes, cloud)
   if (view === 'openapi') return generateOpenAPI(nodes, edges)
   return generateCompose(nodes, edges)

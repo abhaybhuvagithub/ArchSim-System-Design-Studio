@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.14.0 — 2026-08-31
+- 🧩 **Diagrams-as-code interop**: export any design as **Mermaid** (READMEs on GitHub/Notion/Obsidian render it; async edges dashed; round-trips losslessly) or as an **Excalidraw** file (the interview whiteboard, pre-drawn); **import any Mermaid flowchart** — component types inferred from names (postgres→sql, redis→cache, kafka, load balancer, users…) — and it becomes a live simulation
+
 ## 1.13.1 — 2026-08-31
 - About opens with "What this is" — the pitch first, the caveats after
 
