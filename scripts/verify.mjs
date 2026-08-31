@@ -2977,6 +2977,57 @@ try {
         await goTab2('Capacity'); await wait(120);
       }
 
+      // ── diagrams-as-code: Mermaid out, Mermaid in, Excalidraw out ──────────
+      {
+        const D = await import(pathToFileURL(path.join(root, 'src/dac.js')).href);
+        const T3 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const card = T3.TEMPLATES.find(x => /Card Payments/.test(x.name));
+        const mm = D.toMermaid(card.nodes, card.edges);
+        check('Mermaid export is a flowchart with one line per node and edge',
+          /^flowchart LR$/m.test(mm) && (mm.match(/^\s+\w+\["/gm) || []).length === card.nodes.length && (mm.match(/-->|-\.->/g) || []).length === card.edges.length);
+        check('async edges (into a log/queue/worker) export dashed', (mm.match(/-\.->/g) || []).length >= 2);
+        const rt = D.fromMermaid(mm);
+        check('an ArchSim Mermaid export round-trips losslessly — counts and types',
+          !!rt && rt.nodes.length === card.nodes.length && rt.edges.length === card.edges.length
+          && card.nodes.every(n => rt.nodes.find(r => r.id === n.id.replace(/[^A-Za-z0-9_]/g, '_'))?.type === n.type));
+        const readme = D.fromMermaid('flowchart LR\n  U[Users] --> LB[Load Balancer] --> API[Order Service]\n  API --> PG[(Postgres)]\n  API --> R[Redis cache]\n  API -.-> K[Kafka events]');
+        check('a hand-written README flowchart imports with inferred types',
+          !!readme && readme.nodes.length === 6 && readme.edges.length === 5
+          && Object.fromEntries(readme.nodes.map(n => [n.id, n.type])).PG === 'sql' && Object.fromEntries(readme.nodes.map(n => [n.id, n.type])).R === 'cache'
+          && Object.fromEntries(readme.nodes.map(n => [n.id, n.type])).LB === 'lb' && Object.fromEntries(readme.nodes.map(n => [n.id, n.type])).U === 'client');
+        check('garbage is refused, never guessed', D.fromMermaid('hello world') === null && D.fromMermaid('') === null);
+        const ex = JSON.parse(D.toExcalidraw(card.nodes, card.edges));
+        check('Excalidraw export binds a text label to every node and an arrow to every edge',
+          ex.type === 'excalidraw' && ex.elements.filter(e => e.type === 'rectangle').length === card.nodes.length
+          && ex.elements.filter(e => e.type === 'text').every(t => t.containerId) && ex.elements.filter(e => e.type === 'arrow').length === card.edges.length
+          && ex.elements.filter(e => e.type === 'arrow').every(a2 => a2.startBinding && a2.endBinding));
+
+        // DOM: Code tab offers both views; import lands nodes on the canvas
+        const goTab3 = async (name) => { click(byText('.tabs button', name)); await wait(200) };
+        await goTab3('Code');
+        const mmBtn = [...doc.querySelectorAll('button')].find(b => b.textContent.trim() === 'Mermaid');
+        check('the Code tab offers Mermaid and Excalidraw views', !!mmBtn && !![...doc.querySelectorAll('button')].find(b => b.textContent.trim() === 'Excalidraw'));
+        click(mmBtn); await wait(200);
+        check('the Mermaid view renders the current design as a flowchart', /flowchart LR/.test(doc.querySelector('.code-out')?.textContent || ''));
+        const ta = doc.querySelector('.dac-in');
+        check('an import box is offered right under the export', !!ta);
+        if (ta) {
+          const taSet = Object.getOwnPropertyDescriptor(win.HTMLTextAreaElement.prototype, 'value').set;
+          taSet.call(ta, 'flowchart LR\n  U[Users] --> LB[Load Balancer] --> API[Order Service]\n  API --> PG[(Postgres)]');
+          ta.dispatchEvent(new win.Event('input', { bubbles: true }));
+          await wait(120);
+          click([...doc.querySelectorAll('.dac-row button')].find(b => /Import to canvas/.test(b.textContent)));
+          await wait(300);
+          check('importing puts the diagram on the canvas as live components', doc.querySelectorAll('svg g.node').length === 4 && /Imported 4 components/.test(doc.body.textContent));
+        }
+        // restore WhatsApp for everything downstream
+        const selW = [...doc.querySelectorAll('select')].find((x) => [...x.options].some((o) => o.textContent.includes('WhatsApp')));
+        selW.value = [...selW.options].find((o) => o.textContent.includes('WhatsApp')).value;
+        selW.dispatchEvent(new win.Event('change', { bubbles: true }));
+        await wait(250);
+        await goTab3('Capacity');
+      }
+
       // ── the two new live controls: cache write policy, LB balancing ────────
       {
         // cache node: WhatsApp has one — walk nodes until Write policy appears

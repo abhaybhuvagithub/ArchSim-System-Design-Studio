@@ -38,6 +38,7 @@ import { LAND, WORLD_W, WORLD_H } from './world.js'
 import { QUESTION_BANK, QUESTION_LEVELS, questionsAt } from './questions.js'
 import { explainFlow, isBidir } from './explain.js'
 import { generateCode, CODE_VIEWS } from './codegen.js'
+import { fromMermaid } from './dac.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 import { Onboarding } from './onboarding.jsx'
@@ -1284,7 +1285,7 @@ export default function App() {
           ) : tab === 'about' ? (
             <About />
           ) : tab === 'code' ? (
-            <CodeGen nodes={nodes} edges={edges} cloud={cloud} sugs={sugs} />
+            <CodeGen nodes={nodes} edges={edges} cloud={cloud} sugs={sugs} onImport={(n, e) => { setNodes(n); setEdges(e); setSel(null); notify(`📥 Imported ${n.length} components from Mermaid`) }} />
           ) : tab === 'assist' ? (
             <Assistant nodes={nodes} edges={edges} sim={sim} cost={cost} sugs={sugs}
               faults={faults} rps={rps} cloud={cloud} template={template} simOn={simOn} />
@@ -2025,7 +2026,15 @@ function Assistant({ nodes, edges, sim, cost, sugs, faults, rps, cloud, template
 // The Code tab: three generated artifacts, re-derived from nodes and edges on
 // every change — which is what makes "the code evolves with Improve and Quick
 // Fix" true by construction rather than by bookkeeping.
-function CodeGen({ nodes, edges, cloud, sugs }) {
+function CodeGen({ nodes, edges, cloud, sugs, onImport }) {
+  const [mmIn, setMmIn] = useState('')
+  const [mmMsg, setMmMsg] = useState(null)
+  const importMermaid = () => {
+    const parsed = fromMermaid(mmIn)
+    if (!parsed) { setMmMsg({ bad: true, text: 'Could not read that as a Mermaid flowchart — it needs a flowchart/graph line and at least two connected nodes.' }); return }
+    onImport?.(parsed.nodes, parsed.edges)
+    setMmMsg({ text: `Imported ${parsed.nodes.length} components and ${parsed.edges.length} edges — types were inferred from names; adjust any in the inspector, then push traffic.` })
+  }
   const [view, setView] = useState('project')
   const [copied, setCopied] = useState(false)
   const [file, setFile] = useState(null)
@@ -2088,6 +2097,18 @@ function CodeGen({ nodes, edges, cloud, sugs }) {
         {isProject && <button className="btn" onClick={downloadZip} title="Every generated file plus docker-compose.yml, zipped">📦 project .zip</button>}
       </div>
       <pre className="code-out" aria-label={isProject ? `Generated ${curFile?.path}` : `Generated ${meta.label}`}>{code}</pre>
+      {view === 'mermaid' && (
+        <details className="dac-import" open>
+          <summary>📥 Import a Mermaid diagram — any README flowchart becomes a live simulation</summary>
+          <textarea className="dac-in" rows={6} value={mmIn} onChange={e => { setMmIn(e.target.value); setMmMsg(null) }}
+            placeholder={'flowchart LR\n  U[Users] --> LB[Load Balancer] --> API[Order Service]\n  API --> PG[(Postgres)]\n  API --> R[Redis cache]\n  API -.-> K[Kafka events]'} />
+          <div className="dac-row">
+            <button className="btn" onClick={importMermaid} disabled={!mmIn.trim()}>Import to canvas</button>
+            <span className="muted">Types are inferred from names — cache, kafka, postgres, redis, s3, load balancer, users… Diagrams exported from ArchSim round-trip exactly.</span>
+          </div>
+          {mmMsg && <div className={`dac-msg ${mmMsg.bad ? 'bad' : ''}`}>{mmMsg.text}</div>}
+        </details>
+      )}
       <p className="muted" style={{ fontSize: 12 }}>
         {isProject
           ? 'Real code with the design decisions in it: cache-aside where a cache fronts a store, producers where a queue is wired, a consumer loop in each worker, RAG where embeddings meet a vector store. A starting point, not a finished product.'

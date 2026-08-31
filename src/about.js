@@ -35,6 +35,7 @@ export const ABOUT = [
   {
     title: 'Why it is different',
     lines: [
+      'Where it sits among the tools: whiteboards and diagrams-as-code draw, C4 tools organise, IaC visualisers deploy, discovery tools reverse-engineer — ArchSim runs. And it speaks their formats: export any design as Mermaid (READMEs render it natively) or Excalidraw (the interview whiteboard), and paste any Mermaid flowchart back in to simulate it.',
       '**A diagram cannot be wrong — which is why diagrams teach you nothing.** Draw a single load balancer in front of forty services in any other tool and it will happily render it. Here it turns red at 100% utilization, starts dropping traffic, and the p99 goes with it. The feedback is the point.',
       '**The advice is executable, not a checklist.** The advisor reads your actual graph and every finding carries a one-click fix that edits the diagram — splicing a cache between a service and its database, putting a queue in front of a synchronously-called worker, shielding a mainframe behind enterprise MQ. Nothing is a link to an article.',
       `**Chaos is a first-class mode, not a slide.** ${faults} named failures — availability zone, grey failure, cache stampede, expired TLS certificate, thread-pool exhaustion, retry storm — each compiled into real capacity, latency, drop and partition effects, each with a mitigation hint and a quick fix, each healing itself.`,
