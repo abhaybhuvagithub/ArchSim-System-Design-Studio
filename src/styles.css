@@ -1838,3 +1838,11 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .anatomy-t th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .65; padding: 3px 8px; border-bottom: 1px solid var(--border); }
 .anatomy-t td { padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .anatomy .muted, .lld-section .muted { opacity: .75; }
+
+/* ── ⌘K categories ── */
+.cmdk-btn { font-weight: 700; min-width: 36px; }
+.cmdk-chips { display: flex; gap: 6px; padding: 6px 10px 2px; flex-wrap: wrap; }
+.cmdk-chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: inherit; cursor: pointer; opacity: .8; }
+.cmdk-chip.on { opacity: 1; border-color: var(--accent); color: var(--accent); }
+.cmdk li.cmdk-cat { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; opacity: .6; padding: 8px 12px 2px; cursor: default; pointer-events: none; }
+.cmdk-sub { float: right; font-size: 12px; opacity: .55; }

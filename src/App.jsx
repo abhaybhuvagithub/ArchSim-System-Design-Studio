@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback, Fragment } from 'react'
 import { CATALOG, PALETTE_GROUPS } from './catalog.js'
 import { TEMPLATES } from './templates.js'
 import { simulate, capacityReport } from './sim.js'
@@ -979,6 +979,9 @@ export default function App() {
           ))}
         </Menu>
 
+        <button className="btn cmdk-btn" data-tour="cmdk" onClick={() => setCmdk(true)}
+          title="Command palette — load a template, jump to a tab, practice a concept (Ctrl/⌘ K)"
+          aria-label="Open command palette (Ctrl or Cmd K)">⌘</button>
         <button className="btn" data-tour="help" onClick={() => setTourAt(0)}
           title="Replay the guided walkthrough of the app">🧭 Guide/Tour</button>
         {PRO_ENABLED && <button className={`btn ${license ? 'pro-on' : 'pro-cta'}`} onClick={() => setPricing({})}
@@ -1540,9 +1543,12 @@ function About() {
 // is a checkbox you earn, persisted locally.
 // ⌘K / Ctrl+K: one keystroke to anywhere — load a template, jump to a tab,
 // or open a mastery concept where it is practiced. Ranked by prefix match.
+const CMDK_CATS = ['All', 'Load', 'Go to', 'Practice']
+const CMDK_CAT_ICON = { All: '✦', Load: '📦', 'Go to': '🧭', Practice: '🎓' }
 function CmdK({ onClose, onTemplate, onTab, onPractice }) {
   const [q, setQ] = useState('')
   const [idx, setIdx] = useState(0)
+  const [cat, setCat] = useState('All')
   const inputRef = useRef(null)
   useEffect(() => { inputRef.current?.focus() }, [])
   const results = useMemo(() => {
@@ -1552,12 +1558,20 @@ function CmdK({ onClose, onTemplate, onTab, onPractice }) {
       ['learn', 'Learn'], ['interview', 'Interview'], ['cost', 'Cost'], ['compare', 'Compare'], ['about', 'About'],
     ]
     const pool = [
-      ...TEMPLATES.map((t, i) => ({ kind: 'Load', label: t.name, hay: `${t.name} ${t.group || ''}`.toLowerCase() + (/bharat/i.test(t.group || '') ? ' india indian' : ''), run: () => onTemplate(i) })),
+      ...TEMPLATES.map((t, i) => ({ t, i })).sort((x, y) => {
+        const P = ['Bharat · fintech', 'Bharat · consumer', 'Unicorns · Bharat']
+        const px = P.indexOf(x.t.group), py = P.indexOf(y.t.group)
+        return (px === -1 ? 99 : px) - (py === -1 ? 99 : py) || x.i - y.i
+      }).map(({ t, i }) => ({ kind: 'Load', label: t.name, sub: t.group, hay: `${t.name} ${t.group || ''}`.toLowerCase() + (/bharat/i.test(t.group || '') ? ' india indian' : ''), run: () => onTemplate(i) })),
       ...tabDefs.map(([id, label]) => ({ kind: 'Go to', label, run: () => onTab(id) })),
-      ...MASTERY.flatMap(a => a.items.map(x => ({ kind: 'Practice', label: x.t, run: () => onPractice(x.go) }))),
-    ]
+      ...MASTERY.flatMap(a => a.items.map(x => ({ kind: 'Practice', label: x.t, sub: a.title, run: () => onPractice(x.go) }))),
+    ].filter(r => cat === 'All' || r.kind === cat)
     const needle = q.trim().toLowerCase()
-    if (!needle) return pool.slice(0, 12)
+    if (!needle) {
+      // default view: a taste of every category, in category order
+      const per = cat === 'All' ? 5 : 14
+      return CMDK_CATS.filter(c => c !== 'All').flatMap(k => pool.filter(r => r.kind === k).slice(0, per))
+    }
     const scored = pool
       .map(r => {
         const hay = r.hay || r.label.toLowerCase()
@@ -1566,8 +1580,10 @@ function CmdK({ onClose, onTemplate, onTab, onPractice }) {
       })
       .filter(r => r.s2 < 2)
       .sort((a, b) => a.s2 - b.s2 || a.label.length - b.label.length)
-    return scored.slice(0, 12)
-  }, [q, onTemplate, onTab, onPractice])
+    // keep the ranking, but present grouped: category order, then score within
+    const top = scored.slice(0, 14)
+    return CMDK_CATS.filter(c => c !== 'All').flatMap(k => top.filter(r => r.kind === k))
+  }, [q, cat, onTemplate, onTab, onPractice])
   const clampedIdx = Math.min(idx, Math.max(0, results.length - 1))
   const onKey = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); setIdx(i => Math.min(i + 1, results.length - 1)) }
@@ -1580,12 +1596,23 @@ function CmdK({ onClose, onTemplate, onTab, onPractice }) {
       <div className="cmdk" role="dialog" aria-label="Command palette" onClick={e => e.stopPropagation()}>
         <input ref={inputRef} value={q} placeholder="Load a template, jump to a tab, practice a concept…"
           onChange={e => { setQ(e.target.value); setIdx(0) }} onKeyDown={onKey} />
+        <div className="cmdk-chips" role="tablist" aria-label="Category">
+          {CMDK_CATS.map(c => (
+            <button key={c} type="button" role="tab" aria-selected={cat === c} className={`cmdk-chip ${cat === c ? 'on' : ''}`}
+              onClick={() => { setCat(c); setIdx(0); inputRef.current?.focus() }}>{CMDK_CAT_ICON[c]} {c}</button>
+          ))}
+        </div>
         <ul>
           {results.map((r, i) => (
-            <li key={r.kind + r.label} className={i === clampedIdx ? 'on' : ''}
-              onMouseEnter={() => setIdx(i)} onClick={r.run}>
-              <span className="cmdk-kind">{r.kind}</span> {r.label}
-            </li>
+            <Fragment key={r.kind + r.label}>
+              {(i === 0 || results[i - 1].kind !== r.kind) && (
+                <li className="cmdk-cat" aria-hidden="true">{CMDK_CAT_ICON[r.kind]} {r.kind === 'Load' ? 'Templates' : r.kind === 'Go to' ? 'Tabs' : 'Mastery practice'}</li>
+              )}
+              <li className={i === clampedIdx ? 'on' : ''} onMouseEnter={() => setIdx(i)} onClick={r.run}>
+                <span className="cmdk-kind">{r.kind}</span> {r.label}
+                {r.sub && <span className="cmdk-sub">{r.sub}</span>}
+              </li>
+            </Fragment>
           ))}
           {!results.length && <li className="cmdk-empty">Nothing matches — try a template or tab name.</li>}
         </ul>
