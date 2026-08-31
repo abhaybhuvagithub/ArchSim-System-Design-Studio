@@ -74,7 +74,7 @@ export const TOUR_STEPS = [
     id: 'capacity',
     target: '[data-tour="tab-capacity"]',
     title: 'Capacity — and what each store guarantees',
-    body: 'Click any node to inspect it: replicas, throughput, and where the bottleneck is. Datastores carry replication mode, quorum, isolation and partitioning; caches expose their write policy (through, back, around — with the loss-window warning live); balancers expose their algorithm, and consistent hashing computes the resize math for that exact tier.',
+    body: 'Click any node to inspect it: replicas, throughput, and where the bottleneck is. Datastores carry replication mode, quorum, isolation and partitioning; caches expose their write policy (through, back, around — with the loss-window warning live); balancers expose their algorithm, and consistent hashing computes the resize math for that exact tier. Ledgers expose the money controls — idempotency and commit mode — with verdicts computed from the running simulation.',
     tab: 'capacity',
   },
   {
@@ -87,7 +87,7 @@ export const TOUR_STEPS = [
     id: 'chaos',
     target: '[data-tour="chaos"]',
     title: 'Chaos',
-    body: 'Break things on purpose. Kill a node, sever a link, skew a clock, pause a process. The distributed faults are the interesting ones: they leave the node running, which is exactly why they are hard — a timeout cannot tell a paused process from a dead one.',
+    body: 'Break things on purpose. Kill a node, sever a link, skew a clock, pause a process. The distributed faults are the interesting ones: they leave the node running, which is exactly why they are hard — a timeout cannot tell a paused process from a dead one. The 🔁 Retry Storm is real physics: duplicates inflate demand and cascade downstream — inject it on a ledger with idempotency off and watch money double-book.',
   },
   {
     id: 'cost',

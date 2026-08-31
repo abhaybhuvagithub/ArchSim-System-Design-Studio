@@ -4305,6 +4305,10 @@ try {
       const ids = t.TOUR_STEPS.map(x => x.id);
       return ['slo', 'roi', 'mastery', 'llm-drills', 'acronyms', 'share', 'cmdk', 'hld-lld', 'dac'].every(id => ids.includes(id));
     })());
+    check('the tour tells the newest physics — Retry Storm in Chaos, money controls in Capacity', (() => {
+      const S4 = t.TOUR_STEPS;
+      return /Retry Storm/.test(S4.find(s => s.id === 'chaos')?.body || '') && /idempotency and commit mode/.test(S4.find(s => s.id === 'capacity')?.body || '');
+    })());
     check('the share step points at a real anchor', !!doc.querySelector('[data-tour="share"]'));
     check('stepsFor keeps every step when the full layout is present',
       t.stepsFor(doc).length === t.TOUR_STEPS.length);
