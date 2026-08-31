@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.13.1 — 2026-08-31
+- About opens with "What this is" — the pitch first, the caveats after
+
 ## 1.13.0 — 2026-08-31
 - ⌘ **Command palette in the header**: a ⌘ button beside Guide/Tour opens it for mouse users; the palette gains **categories** — ✦ All · 📦 Templates · 🧭 Tabs · 🎓 Practice chips that filter, grouped results with section headers, and template rows carrying their group (Bharat · fintech…) as a sub-label
 

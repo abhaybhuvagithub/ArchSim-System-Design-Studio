@@ -16,20 +16,20 @@ const tips = TIPS.reduce((n, g) => n + g.items.length, 0)
 
 export const ABOUT = [
   {
-    title: 'How honest are the numbers?',
-    lines: [
-      'This is a flight simulator, not the airplane. The dynamics are engineered to be right — queueing curves, fan-out multiplication, availability composition, cache economics — so the reflexes you build here transfer to real systems. The exact figures are not predictions.',
-      'Every component now carries its receipts: open any 🔍 internals view and the "Where these numbers come from" section labels each figure as **benchmark-anchored**, **vendor-documented**, or a **modeled estimate** — with links where public sources exist.',
-      'Read latencies as bands, not points (the ~ on every chip means roughly ±40%). What no closed-form model captures: GC pauses, retry storms, coordinated omission, the specific ways your code is slow. For real capacity planning, calibrate against your own metrics — for design reasoning and interviews, order-of-magnitude is exactly the right resolution.',
-    ],
-  },
-  {
     title: 'What this is',
     lines: [
       '**ArchSim is a system design studio that runs your architecture instead of just drawing it.**',
       `You place components on a canvas, wire them up, set a traffic level — and every box becomes a thing with capacity, latency and an availability figure. Push traffic through and you get p50, p95 and p99, per-tier utilization, dropped requests, modelled availability and a monthly bill that moves as you edit.`,
       `Today it ships ${components} components across ${PALETTE_GROUPS.length} groups, ${templates} pre-wired designs in ${groups} categories, ${faults} named chaos faults, and cloud mappings for ${clouds} providers.`,
       'It also models the things a diagram cannot show: whether a read can be stale, whether two writes can conflict, what a storage engine costs you in tail latency, how far apart your regions really are, and who is allowed to open what.',
+    ],
+  },
+  {
+    title: 'How honest are the numbers?',
+    lines: [
+      'This is a flight simulator, not the airplane. The dynamics are engineered to be right — queueing curves, fan-out multiplication, availability composition, cache economics — so the reflexes you build here transfer to real systems. The exact figures are not predictions.',
+      'Every component now carries its receipts: open any 🔍 internals view and the "Where these numbers come from" section labels each figure as **benchmark-anchored**, **vendor-documented**, or a **modeled estimate** — with links where public sources exist.',
+      'Read latencies as bands, not points (the ~ on every chip means roughly ±40%). What no closed-form model captures: GC pauses, retry storms, coordinated omission, the specific ways your code is slow. For real capacity planning, calibrate against your own metrics — for design reasoning and interviews, order-of-magnitude is exactly the right resolution.',
     ],
   },
   {

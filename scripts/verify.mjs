@@ -3432,6 +3432,10 @@ try {
       const aboutSrc = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
       check('the About page states the model-honesty contract',
         aboutSrc.includes('How honest are the numbers?') && aboutSrc.includes('flight simulator'));
+      check('About opens with "What this is" — the elevator pitch before the caveats', (() => {
+        const first = aboutSrc.match(/title: '([^']+)'/);
+        return !!first && first[1] === 'What this is';
+      })());
     }
 
     // ── licensing: keys, tiers, and the free set ─────────────────────────────
