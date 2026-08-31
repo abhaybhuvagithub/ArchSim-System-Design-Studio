@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.14.2 — 2026-08-31
+- Guide/Tour: Chaos step names the 🔁 Retry Storm and its ledger demo; Capacity step names the ledger money controls
+
 ## 1.14.1 — 2026-08-31
 - 🧭 Guide/Tour updated: two new steps (HLD/LLD computed live; diagrams-as-code in and out), refreshed copy for templates (Bharat first), Mastery (🎤 as-asked, 🚩 flags), ⌘K (header button, categories) and Acronyms (100+)
 
