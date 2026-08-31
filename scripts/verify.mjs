@@ -4125,9 +4125,9 @@ try {
     const triggers = [...doc.querySelectorAll('.toolbar .menu > button')];
     check('the toolbar has View, Design and Configuration menus',
       ['View', 'Design', 'Configuration'].every(l => triggers.some(b => b.textContent.trim().startsWith(l))));
-    // ── daya by design: the studio grades systems hard and people gently ────
+    // ── karuna by design: the studio grades systems hard and people gently ──
     // Person-facing copy may be direct; it may never aim contempt at the user.
-    check('no person-facing copy is cruel — daya is a build contract', (() => {
+    check('no person-facing copy is cruel — karuna is a build contract', (() => {
       const files = ['src/interview.js', 'src/interview-llm.js', 'src/tour.js', 'src/onboarding.jsx', 'src/mastery.js', 'src/learn.js', 'src/App.jsx', 'src/about.js'];
       const contempt = [
         /\byou(?:'re| are| were)?\s+(?:so\s+)?(?:stupid|dumb|an idiot|idiotic|hopeless|pathetic|useless|lazy|clueless|incompetent)\b/i,
@@ -4146,9 +4146,9 @@ try {
       const src = fs.readFileSync(path.join(root, 'src/interview.js'), 'utf8');
       return src.includes('The shape of an answer is there');
     })());
-    check('the daya principle is stated where visitors can read it', (() => {
+    check('the karuna principle is stated where visitors can read it', (() => {
       const src = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
-      return src.includes('Daya by design') && src.includes('grades systems hard and people gently') && src.includes('Prabhu ni krupa');
+      return src.includes('Karuna by design') && src.includes('grades systems hard and people gently') && src.includes('Prabhu ni krupa');
     })());
 
     check('Bharat leads the template picker — first group wears the flag', (() => {

@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.12.2 — 2026-08-31
+- 🕊️ About: the Karuna by design section refined
+
 ## 1.12.1 — 2026-08-29
 - 🇮🇳 **Bharat first, everywhere**: group labels renamed (Bharat · fintech, Bharat · consumer, Unicorns · Bharat), Bharat groups lead the template picker before anything else, the onboarding wizard opens with UPI and Zomato — and the suite pins the ordering so it can never quietly regress
 
@@ -18,7 +21,7 @@
 - 🔗 Entry deep-links: `?tpl=<name>&tab=<id>` opens the studio exactly where a pitch begins (a CFO on ROI, a student on Mastery), wizard suppressed — built for the outreach kit
 
 ## 1.10.1 — 2026-08-29
-- 🕊️ **Daya by design**: the studio's kindness rule — grade systems hard, people gently — is now stated in About and ENFORCED by the suite: person-facing copy is scanned for contempt on every build, the lowest interview band is pinned to its constructive phrasing, and the principle itself must stay readable
+- 🕊️ **Karuna by design**: the studio's kindness rule — grade systems hard, people gently — is now stated in About and ENFORCED by the suite: person-facing copy is scanned for contempt on every build, the lowest interview band is pinned to its constructive phrasing, and the principle itself must stay readable
 
 ## 1.10.0 — 2026-08-29
 - 🏥 **Telemedicine (Practo)** — healthcare enters the library with its defining inversion: reads are the sensitive operation (consent-gated, audit-on-read committed WITH the read), media-record separation (the note is the record, not the recording), e-prescriptions on the append-only ledger, break-the-glass as a designed and paged door; wall: regulation sets the floor forever — health data never cools
