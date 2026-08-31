@@ -4146,10 +4146,6 @@ try {
       const src = fs.readFileSync(path.join(root, 'src/interview.js'), 'utf8');
       return src.includes('The shape of an answer is there');
     })());
-    check('the karuna principle is stated where visitors can read it', (() => {
-      const src = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
-      return src.includes('Karuna by design') && src.includes('grades systems hard and people gently') && src.includes('Prabhu ni krupa');
-    })());
 
     check('Bharat leads the template picker — first group wears the flag', (() => {
       const og = [...doc.querySelectorAll('.tplpick-native optgroup')].filter(o => o.label !== 'Start from scratch');

@@ -16,14 +16,6 @@ const tips = TIPS.reduce((n, g) => n + g.items.length, 0)
 
 export const ABOUT = [
   {
-    title: '🕊️ Karuna by design',
-    lines: [
-      'One rule governs every sentence this studio speaks: it grades systems hard and people gently. A design can be a SPOF, a quorum can be broken, a cache can be theater — but the person at the keyboard is never stupid here, never mocked, never talked down to. Karuna (કરુણા) — compassion — is treated as an engineering requirement, the same as honest numbers.',
-      'That is why the lowest interview band reads "the shape of an answer is there" instead of a verdict on you; why every 🚩 red flag names a behavior, not a person; why chaos coaching hints at the fix instead of gloating at the failure. Directness stays — kindness is not the absence of truth, it is truth delivered so a person can use it.',
-      'And like every value in this studio, it is enforced, not promised: the verification suite scans all person-facing copy for cruelty on every build. If a future edit ever aims contempt at the user, the build fails. Prabhu ni krupa barsi rahe — may grace keep raining down, and may this tool always deserve it.',
-    ],
-  },
-  {
     title: 'How honest are the numbers?',
     lines: [
       'This is a flight simulator, not the airplane. The dynamics are engineered to be right — queueing curves, fan-out multiplication, availability composition, cache economics — so the reflexes you build here transfer to real systems. The exact figures are not predictions.',
