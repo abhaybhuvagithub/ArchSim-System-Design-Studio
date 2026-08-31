@@ -2788,7 +2788,7 @@ try {
       check('Ctrl+K opens the command palette', !!doc.querySelector('.cmdk input'));
       typeInto(doc.querySelector('.cmdk input'), 'online che');
       await wait(200);
-      const items = [...doc.querySelectorAll('.cmdk li')];
+      const items = [...doc.querySelectorAll('.cmdk li:not(.cmdk-cat)')];
       check('the palette ranks the template by prefix', items.length > 0 && /Online Chess/.test(items[0].textContent));
       doc.querySelector('.cmdk input').dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await wait(300);
@@ -2799,6 +2799,26 @@ try {
       win.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
       await wait(150);
       check('Ctrl+K toggles the palette closed without running anything', !doc.querySelector('.cmdk'));
+
+      // header ⌘ button + categories
+      const cmdBtn = doc.querySelector('.toolbar .cmdk-btn') || [...doc.querySelectorAll('.toolbar button')].find(b => b.textContent.trim() === '⌘');
+      check('a ⌘ button in the header opens the palette for mouse users', !!cmdBtn && /command palette/i.test(cmdBtn.getAttribute('aria-label') || ''));
+      click(cmdBtn); await wait(200);
+      check('the header button actually opens it', !!doc.querySelector('.cmdk input'));
+      check('the default view is grouped into categories', doc.querySelectorAll('.cmdk li.cmdk-cat').length >= 3 && doc.querySelectorAll('.cmdk-chip').length === 4);
+      const practiceChip = [...doc.querySelectorAll('.cmdk-chip')].find(b => /Practice/.test(b.textContent));
+      click(practiceChip); await wait(150);
+      const kinds = [...doc.querySelectorAll('.cmdk li:not(.cmdk-cat) .cmdk-kind')].map(k => k.textContent);
+      check('a category chip filters results to that category alone', kinds.length > 3 && kinds.every(k => k === 'Practice'));
+      check('template rows carry their group as a category sub-label', (() => {
+        click([...doc.querySelectorAll('.cmdk-chip')].find(b => /Load/.test(b.textContent)));
+        return true;
+      })());
+      await wait(150);
+      check('…and the sub-label reads Bharat on the first templates', /Bharat/.test([...doc.querySelectorAll('.cmdk-sub')].map(s => s.textContent).join(' ')));
+      win.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+      await wait(150);
+      check('the palette closes again via the toggle', !doc.querySelector('.cmdk'));
     }
 
     // ── 🔗 share drive: the URL becomes the design ────────────────────────
