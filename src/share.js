@@ -1,3 +1,4 @@
+import { validateDesign } from './integrity.js'
 // Shareable designs: the whole canvas — nodes, edges, traffic — encoded into
 // the URL hash. Send the link, and the studio opens on exactly your design:
 // no account, no server, no expiry. The suite holds encode→decode to a
@@ -23,12 +24,12 @@ export function decodeShare(hash) {
   if (!raw) return null
   try {
     const p = JSON.parse(dec(raw))
-    if (p.v !== 1 || !Array.isArray(p.n) || !Array.isArray(p.e)) return null
-    return {
-      rps: Number(p.r) || 100,
-      nodes: p.n,
-      edges: p.e.map(([from, to]) => ({ id: `${from}->${to}`, from, to, label: '' })),
-    }
+    // v1 is the format every link ever minted uses; it decodes forever.
+    // Newer versions must stay a superset that this branch still reads.
+    if (!(p.v >= 1) || !Array.isArray(p.n) || !Array.isArray(p.e)) return null
+    const v = validateDesign({ rps: Number(p.r) || 100, nodes: p.n, edges: p.e })
+    if (!v.ok) return null
+    return { rps: v.rps, nodes: v.nodes, edges: v.edges, issues: v.issues }
   } catch {
     return null
   }

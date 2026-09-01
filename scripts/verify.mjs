@@ -3885,6 +3885,39 @@ try {
         return !!b0 && b0.type === n0.type && b0.replicas === n0.replicas &&
           back.edges.every(e => e.from && e.to);
       })());
+      // ── six pillars: integrity, endurance, AI-ready ──────────────────────────
+      const IG = await import(pathToFileURL(path.join(root, 'src/integrity.js')).href);
+      check('integrity leaves a clean design untouched — zero issues on every template', T6.every(t => IG.validateDesign({ nodes: t.nodes, edges: t.edges, rps: t.rps }).issues.length === 0));
+      check('integrity repairs corruption and REPORTS every repair', (() => {
+        const r = IG.validateDesign({ nodes: [{ id: 'a', type: 'lb', replicas: 'zz' }, { id: 'a', type: 'nope' }, { id: 'c', type: 'sql', x: NaN }], edges: [['a', 'ghost'], ['a', 'a'], ['a', 'c'], ['a', 'c']], rps: -5 });
+        return r.ok && r.nodes.length === 3 && r.edges.length === 1 && r.rps === 100 && r.issues.length >= 6
+          && r.nodes.find(n => n.id === 'a_2')?.type === 'app' && r.issues.some(s => /missing node/.test(s)) && r.issues.some(s => /looped/.test(s));
+      })());
+      check('a corrupted share link opens repaired instead of crashing or vanishing', (() => {
+        const bad = SH.encodeShare([{ id: 'x', type: 'ghosttype', x: 1, y: 1 }, { id: 'y', type: 'sql', x: 2, y: 2, replicas: 2 }], [{ from: 'x', to: 'y' }, { from: 'y', to: 'nowhere' }], 300);
+        const back = SH.decodeShare('#d=' + bad);
+        return !!back && back.nodes.length === 2 && back.edges.length === 1 && back.issues.length >= 2;
+      })());
+      check('built to endure: a share link minted in 1.x decodes forever (golden payload)', (() => {
+        const back = SH.decodeShare('#d=eyJ2IjoxLCJyIjo1MDAsIm4iOlt7ImlkIjoidSIsInR5cGUiOiJjbGllbnQiLCJsYWJlbCI6IlVzZXJzIiwieCI6NDAsInkiOjIwMCwicmVwbGljYXMiOjF9LHsiaWQiOiJsYiIsInR5cGUiOiJsYiIsImxhYmVsIjoiTEIiLCJ4IjoxODAsInkiOjIwMCwicmVwbGljYXMiOjJ9LHsiaWQiOiJkYiIsInR5cGUiOiJzcWwiLCJsYWJlbCI6Ik9yZGVycyBEQiIsIngiOjMyMCwieSI6MjAwLCJyZXBsaWNhcyI6MywicmVwbGljYXRpb24iOiJzeW5jIn1dLCJlIjpbWyJ1IiwibGIiXSxbImxiIiwiZGIiXV19');
+        return !!back && back.rps === 500 && back.nodes.length === 3 && back.edges.length === 2
+          && back.nodes.find(n => n.id === 'db')?.replication === 'sync' && back.nodes.find(n => n.id === 'lb')?.replicas === 2;
+      })());
+      check('AI ready: the JSON document round-trips a design with inspector state intact', (() => {
+        const t = T6.find(x => x.name === 'Chat (WhatsApp)');
+        const doc = IG.toDesignJSON(t.nodes, t.edges, t.rps);
+        const back = IG.fromDesignJSON(doc);
+        const parsed = JSON.parse(doc);
+        return parsed.$schema === 'archsim-design/v1' && typeof parsed._readme === 'string' && !!back && back.ok && back.issues.length === 0
+          && back.nodes.length === t.nodes.length && back.edges.length === t.edges.length && back.rps === t.rps;
+      })());
+      check('the JSON reader refuses foreign documents', IG.fromDesignJSON('{"x":1}') === null && IG.fromDesignJSON('not json') === null && IG.fromDesignJSON('{"$schema":"other/v1","nodes":[]}') === null);
+      check('pasted text is sniffed as JSON, Mermaid, or refused', IG.detectFormat('{"nodes":[]}') === 'json' && IG.detectFormat('flowchart LR\n a-->b') === 'mermaid' && IG.detectFormat('hello') === null);
+      check('About states the six pillars', (() => {
+        const src = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
+        return ['Strong Foundation', 'Modular Design', 'Data Integrity', 'Flexible and Scalable', 'Built to Endure', 'AI Ready'].every(p => src.includes(p));
+      })());
+
       check('entry deep-links parse exactly and reject junk', (() => {
         const good = SH.parseEntryParams('?tpl=' + encodeURIComponent('Payment System (Stripe-lite)') + '&tab=roi');
         if (!good || good.tplName !== 'Payment System (Stripe-lite)' || good.tab !== 'roi') return false;

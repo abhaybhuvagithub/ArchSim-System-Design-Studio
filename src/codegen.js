@@ -1,3 +1,4 @@
+import { toDesignJSON } from './integrity.js'
 import { toMermaid, toExcalidraw } from './dac.js'
 // Turns the live canvas into runnable artifacts — a docker-compose file, a
 // Terraform skeleton for the selected cloud, and an OpenAPI contract for the
@@ -175,9 +176,11 @@ export const CODE_VIEWS = [
   { id: 'openapi', label: 'OpenAPI', file: 'openapi.yaml', hint: 'API contract for the service tiers, resources inferred from their stores.' },
   { id: 'mermaid', label: 'Mermaid', file: 'architecture.mmd', hint: 'Diagram-as-code for READMEs — GitHub, Notion and Obsidian render it natively. Async edges are dashed; paste it back to simulate.' },
   { id: 'excalidraw', label: 'Excalidraw', file: 'architecture.excalidraw', hint: 'The interview whiteboard, pre-drawn: open the file at excalidraw.com and keep sketching.' },
+  { id: 'json', label: 'ArchSim JSON', file: 'design.json', hint: 'The machine interface: a small, documented, versioned document an agent or script can read and write. Paste one back to simulate it.' },
 ]
 
-export function generateCode(view, nodes, edges, cloud) {
+export function generateCode(view, nodes, edges, cloud, rps = 100) {
+  if (view === 'json') return toDesignJSON(nodes, edges, rps)
   if (view === 'mermaid') return toMermaid(nodes, edges)
   if (view === 'excalidraw') return toExcalidraw(nodes, edges)
   if (view === 'terraform') return generateTerraform(nodes, cloud)
