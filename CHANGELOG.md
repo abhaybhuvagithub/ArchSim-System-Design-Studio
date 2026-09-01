@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.15.0 — 2026-09-01
+- 🚀 Mastery gains its 14th area: **Deploy & Migrate** — blue-green vs canary vs rolling, zero-downtime schema migration (expand → migrate → contract) with the four cutover options graded in a table, feature flags (deploy is not release), backfills that do not take the primary down, dual-write vs CDC. The blue-green/JSON-column scenario is also a Learn quiz question
+
 ## 1.14.2 — 2026-08-31
 - Guide/Tour: Chaos step names the 🔁 Retry Storm and its ledger demo; Capacity step names the ledger money controls
 

@@ -2268,11 +2268,22 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all thirteen areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 13 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 13);
+      check('the mastery hub renders all fourteen areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 14 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 14);
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
+      check('the migration scenario is graded in a table — expand-and-contract wins, dual-write is named the trap', await (async () => {
+        const M5 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const c = M5.MASTERY_CMP['expand-contract'];
+        const flat = c.rows.map(r => r.join(' ')).join(' ');
+        return c.cols.includes('Verdict') && /The answer/.test(flat) && /trap/i.test(flat) && c.rows.length === 4;
+      })());
+      check('Learn quizzes the blue-green schema-migration scenario with expand-and-contract as the answer', await (async () => {
+        const LQ = await import(pathToFileURL(path.join(root, 'src/learn.js')).href);
+        const q = LQ.QUIZ.find(x => /JSON column/.test(x.q));
+        return !!q && /Expand-and-contract/.test(q.options[q.answer]);
+      })());
       check('every production-LLM drill carries proof in its playbook table', await (async () => {
         const M3 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const area = M3.MASTERY.find(a => a.id === 'llm-prod');
@@ -3894,7 +3905,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about']);
-      check('the curriculum covers the thirteen areas — canonical, arithmetic, and production LLM drills', M.MASTERY.length === 13);
+      check('the curriculum covers the fourteen areas — canonical, arithmetic, production LLM drills, deploy & migrate', M.MASTERY.length === 14);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
@@ -3953,7 +3964,7 @@ try {
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
-        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles);
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles);
       })());
     }
 

@@ -427,6 +427,7 @@ export const COMPARISONS = [
 ]
 
 export const QUIZ = [
+  { q: 'A single Postgres primary serves thousands of orders a second. v2 splits a heavy JSON column into a normalized child table with new indexed columns. Blue-green cutover, zero downtime, no data loss. Which approach?', options: ['Stop traffic, run the blocking migration, deploy green, redirect', 'Dual-write old and new shapes from both blue and green, reconcile later', 'Expand-and-contract: additive changes, green reads both shapes behind a flag, background backfill, flip, contract later', 'Replicate to a separate green database, migrate its schema, switch when lag is acceptable'], answer: 2, why: 'Only expand-and-contract keeps one source of truth the whole way: additive changes and CONCURRENTLY-built indexes never block, both app colours run on one schema, the backfill is throttled background work, and the flag flip is the release. The blocking migration is downtime by definition; dual-write cannot be atomic across two shapes and drifts forever; a schema-divergent replica breaks the changed table and leaves a lag window at the switch.' },
   {
     q: '100 million requests per day. Roughly what average QPS should you design around?',
     options: ['~120 QPS', '~1,150 QPS', '~11,500 QPS', '~100,000 QPS'],

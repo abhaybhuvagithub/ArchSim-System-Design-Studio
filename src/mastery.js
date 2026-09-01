@@ -134,6 +134,17 @@ export const MASTERY = [
       { id: 'halluc-triangle', t: 'Low hallucination + low latency + low cost - design it', d: 'The triangle is managed by routing, caching and abstention - never by one big model. Semantic cache so repeats cost zero, a cheap model with an escalation path, retrieve-then-cite with citations forced, an NLI grounding check on the way out, and an abstain path: not-in-context is an ANSWER, and it is the cheapest, fastest, most honest one.', go: { tpl: 'GenAI: RAG Assistant', tab: 'roi', do: 'Price the design per million requests, then say which lever you would pull first and what metric proves it did not hurt quality.' } },
     ],
   },
+  {
+    id: 'deploy', icon: '🚀', title: 'Deploy & Migrate',
+    flag: "'We will do the migration in the maintenance window' - a system doing thousands of orders a second has no window. And dual-write as a reflex: two writes without a transaction is drift with a schedule.",
+    items: [
+      { id: 'release-strategies', t: 'Blue-green vs canary vs rolling', asks: "Your release needs zero downtime and a fast rollback - which strategy, and what does it cost you in infrastructure?", d: 'Blue-green runs two full environments and flips a switch: instant cutover, instant rollback, double the capacity bill, and BOTH versions must work against one database at once. Canary sends a slice of real traffic to the new version behind metrics gates - the cheapest honest signal. Rolling replaces instances in place: no second fleet, slowest rollback.', go: { tpl: 'Amazon (marketplace)', tab: 'capacity', do: 'Count the replicas on the app tier - a rolling deploy takes one out at a time; a blue-green needs that many again, idle.' } },
+      { id: 'expand-contract', t: 'Zero-downtime schema migration: expand, migrate, contract', asks: "v2 splits a heavy JSON column into a normalized child table with new indexed columns, on a single Postgres primary serving thousands of orders a second - blue-green, zero downtime, no data loss. Walk me through it.", d: 'Expand first: additive, backward-compatible changes only - new tables, nullable columns, indexes built CONCURRENTLY so nothing blocks. Deploy code that reads both shapes behind a feature flag. Backfill in the background, idempotently and throttled. Flip the flag. Contract weeks later, when nothing reads the old column. One source of truth the entire time - that is why the other options lose.', go: { tpl: 'Amazon (marketplace)', tab: 'capacity', do: 'Select the primary store and open its replication controls - now say why a schema-divergent replica cannot be your cutover target.' } },
+      { id: 'feature-flags', t: 'Feature flags: deploy is not release', asks: "Why did you ship code that isn't turned on yet?", d: 'Deployment moves bytes; release moves users - flags separate the two. They are what let blue and green coexist on one schema, they turn rollback into a switch flip instead of a redeploy, and they carry debt: every flag needs an owner and an expiry, or the codebase becomes a museum of if-statements.', go: { tpl: 'µsvc: E-commerce (Saga)', tab: 'breakdown', do: 'Find where a compensating step could be flagged off in production without a deploy - that is the operational value of a flag.' } },
+      { id: 'backfills', t: 'Backfills that do not take the primary down', asks: "The backfill touches 400 million rows and the primary is serving live traffic - how do you run it?", d: 'Never one UPDATE. Chunk by key range (thousands of rows a batch), throttle on replica lag and CPU, make every batch idempotent so a crash resumes from a checkpoint instead of restarting, and verify with row counts plus sampled diffs before anyone flips a flag. The proof is a flat replica-lag graph across the entire run.', go: { tpl: 'Flipkart (Big Billion Days)', tab: 'capacity', do: 'Note the primary\'s utilization at peak - the backfill must fit in the headroom that is left, not in the headroom you wish you had.' } },
+      { id: 'dual-write', t: 'Dual-write and CDC: the trap and the tool', asks: "Can't we just have the app write to both the old and the new table?", d: 'Two writes from application code cannot be atomic across two shapes: the first succeeds, the second fails, and now you reconcile forever. When two stores must agree, one is the truth and the other follows it - change data capture or the outbox pattern replays committed changes in order. Dual-write is the reflex; CDC is the discipline.', go: { tpl: 'µsvc: E-commerce (Saga)', tab: 'breakdown', do: 'Read how the saga keeps stores consistent without a distributed transaction - the same reason CDC beats dual-write.' } },
+    ],
+  },
 ]
 
 export const MASTERY_TOTAL = MASTERY.reduce((n, a) => n + a.items.length, 0)
@@ -335,6 +346,40 @@ export const MASTERY_CMP = {
     ['Grounding check (NLI)', 'Unsupported claims caught on the way out', 'A small model call per answer'],
     ['Abstain path', '"Not in context" replaces the worst hallucinations', 'Product courage - it must count as an answer'],
     ['Prove the triangle', 'Hallucination eval + p95 + cost per 1M on ONE dashboard', 'A lever that moves one without hurting the others is measured, not assumed'],
+  ]},
+  'release-strategies': { cols: ['Blue-green', 'Canary', 'Rolling'], rows: [
+    ['Rollback', 'Instant - flip the switch back', 'Fast - route the slice away', 'Slow - redeploy the old build'],
+    ['Extra capacity', 'A whole second fleet, idle most of the time', 'A few percent', 'None'],
+    ['Blast radius', 'Everyone, at the moment of the flip', 'The slice - the honest signal', 'Grows with each instance replaced'],
+    ['Schema constraint', 'Both versions live on ONE database', 'Both versions live on ONE database', 'Both versions live on ONE database'],
+    ['Prove it', 'Error budget flat across the flip', 'Slice vs control on the same SLO dashboard', 'Per-instance health as each one turns'],
+  ]},
+  'expand-contract': { cols: ['Availability', 'Data-loss risk', 'Complexity', 'Verdict'], rows: [
+    ['Blocking migration at the cutover', 'Down for the whole migration', 'Low - if it finishes', 'Low', 'Fails zero-downtime by definition'],
+    ['Dual-write in the app', 'Up', 'Drift: two writes, no atomicity', 'High, plus reconciliation forever', 'The classic trap'],
+    ['Expand -> flags -> backfill -> contract', 'Up throughout', 'None - one source of truth the whole way', 'Moderate, well-trodden', 'The answer'],
+    ['Separate green DB via replication', 'Lag window at the switch', 'A schema-divergent replica breaks the changed table', 'High', 'Cutover gap - and two truths'],
+  ]},
+  'feature-flags': { cols: ['Use it for', 'Retire it when'], rows: [
+    ['Release flag', 'Turning new code paths on for slices of users', 'The feature is at 100% and stable for a release'],
+    ['Ops kill switch', 'Shedding load or disabling a dependency mid-incident', 'Never - but review its owner quarterly'],
+    ['Migration flag', 'Reading the new schema shape while both exist', 'The contract step lands and the old shape is gone'],
+    ['Experiment flag', 'A/B tests with a metric and an end date', 'The end date - written down on day one'],
+    ['Prove it', 'Flag flips visible on the SLO dashboard as annotations', 'A flag inventory with zero orphans'],
+  ]},
+  'backfills': { cols: ['Why', 'The number to watch'], rows: [
+    ['Chunk by key range', 'Small batches keep locks short and let the primary breathe between them', 'Lock wait time per batch stays in milliseconds'],
+    ['Throttle on replica lag', 'Lag is the primary telling you it is drowning - listen before users do', 'Replica lag under your read-path tolerance, always'],
+    ['Idempotent batches', 'A crash resumes from a checkpoint instead of starting the 400 million over', 'Rows processed is monotonic across restarts'],
+    ['Verify before the flip', 'Row counts plus sampled diffs - the flag waits for the proof', 'Count parity and a zero-diff sample'],
+    ['Prove it worked', 'The live path never noticed', 'Replica lag flat and p99 unchanged for the whole run'],
+  ]},
+  'dual-write': { cols: ['App dual-write', 'CDC / outbox'], rows: [
+    ['Atomicity', 'None across two shapes - first write lands, second fails', 'Changes leave the commit log already committed'],
+    ['Failure mode', 'Silent drift, reconciled forever', 'Lag - visible, measurable, catches up'],
+    ['Ordering', 'Whatever the app threads did', 'Commit order, replayable'],
+    ['Who owns truth', 'Unclear - two writers, two stories', 'One source, one follower, by construction'],
+    ['Prove it', 'You cannot - reconciliation reports are the confession', 'Consumer offset lag plus a periodic checksum'],
   ]},
   'latency-ladder': { cols: ['Time', 'What it means'], rows: [
     ['L1 cache reference', '~0.5 ns', 'the speed of thought'],
