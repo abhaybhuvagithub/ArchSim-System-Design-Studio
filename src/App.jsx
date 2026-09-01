@@ -39,6 +39,7 @@ import { QUESTION_BANK, QUESTION_LEVELS, questionsAt } from './questions.js'
 import { explainFlow, isBidir } from './explain.js'
 import { generateCode, CODE_VIEWS } from './codegen.js'
 import { fromMermaid } from './dac.js'
+import { validateDesign, fromDesignJSON, detectFormat } from './integrity.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 import { Onboarding } from './onboarding.jsx'
@@ -135,7 +136,7 @@ export default function App() {
     const shared = decodeShare(window.location.hash)
     if (!shared) return
     setNodes(shared.nodes); setEdges(shared.edges); setRps(shared.rps)
-    notify('🔗 Opened a shared design — every knob is yours now.', 'info')
+    notify(shared.issues?.length ? `🔗 Opened a shared design — repaired ${shared.issues.length} issue${shared.issues.length === 1 ? '' : 's'} on the way in (${shared.issues[0]})` : '🔗 Opened a shared design — every knob is yours now.', 'info')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [license, setLicenseState] = useState(getLicense)
@@ -1285,7 +1286,7 @@ export default function App() {
           ) : tab === 'about' ? (
             <About />
           ) : tab === 'code' ? (
-            <CodeGen nodes={nodes} edges={edges} cloud={cloud} sugs={sugs} onImport={(n, e) => { setNodes(n); setEdges(e); setSel(null); notify(`📥 Imported ${n.length} components from Mermaid`) }} />
+            <CodeGen nodes={nodes} edges={edges} cloud={cloud} sugs={sugs} rps={rps} onImport={(n, e, r) => { setNodes(n); setEdges(e); if (r) setRps(r); setSel(null); notify(`📥 Imported ${n.length} components`) }} />
           ) : tab === 'assist' ? (
             <Assistant nodes={nodes} edges={edges} sim={sim} cost={cost} sugs={sugs}
               faults={faults} rps={rps} cloud={cloud} template={template} simOn={simOn} />
@@ -2026,14 +2027,18 @@ function Assistant({ nodes, edges, sim, cost, sugs, faults, rps, cloud, template
 // The Code tab: three generated artifacts, re-derived from nodes and edges on
 // every change — which is what makes "the code evolves with Improve and Quick
 // Fix" true by construction rather than by bookkeeping.
-function CodeGen({ nodes, edges, cloud, sugs, onImport }) {
+function CodeGen({ nodes, edges, cloud, sugs, rps, onImport }) {
   const [mmIn, setMmIn] = useState('')
   const [mmMsg, setMmMsg] = useState(null)
   const importMermaid = () => {
-    const parsed = fromMermaid(mmIn)
-    if (!parsed) { setMmMsg({ bad: true, text: 'Could not read that as a Mermaid flowchart — it needs a flowchart/graph line and at least two connected nodes.' }); return }
-    onImport?.(parsed.nodes, parsed.edges)
-    setMmMsg({ text: `Imported ${parsed.nodes.length} components and ${parsed.edges.length} edges — types were inferred from names; adjust any in the inspector, then push traffic.` })
+    const fmt = detectFormat(mmIn)
+    if (!fmt) { setMmMsg({ bad: true, text: 'Could not read that — paste a Mermaid flowchart (a flowchart/graph line plus connected nodes) or an ArchSim JSON document.' }); return }
+    // every ingress passes through integrity: repaired, never dropped, always reported
+    const v = fmt === 'json' ? fromDesignJSON(mmIn) : (() => { const p = fromMermaid(mmIn); return p ? validateDesign({ nodes: p.nodes, edges: p.edges, rps }) : null })()
+    if (!v || !v.ok) { setMmMsg({ bad: true, text: fmt === 'json' ? 'That JSON is not an ArchSim design — it needs a nodes array (see the ArchSim JSON view for the shape).' : 'Could not read that as a Mermaid flowchart — it needs a flowchart/graph line and at least two connected nodes.' }); return }
+    onImport?.(v.nodes, v.edges, fmt === 'json' ? v.rps : undefined)
+    const repairs = v.issues.length ? ` Repaired ${v.issues.length} issue${v.issues.length === 1 ? '' : 's'}: ${v.issues.slice(0, 2).join('; ')}${v.issues.length > 2 ? '; …' : ''}.` : ''
+    setMmMsg({ text: `Imported ${v.nodes.length} components and ${v.edges.length} edges${fmt === 'mermaid' ? ' — types were inferred from names' : ''}.${repairs} Adjust anything in the inspector, then push traffic.` })
   }
   const [view, setView] = useState('project')
   const [copied, setCopied] = useState(false)
@@ -2043,8 +2048,8 @@ function CodeGen({ nodes, edges, cloud, sugs, onImport }) {
   const meta = CODE_VIEWS.find(v => v.id === view) || CODE_VIEWS[0]
   const curFile = isProject ? (project.find(f => f.path === file) || project[0]) : null
   const code = useMemo(
-    () => isProject ? (curFile?.content || '') : generateCode(view, nodes, edges, cloud),
-    [isProject, curFile, view, nodes, edges, cloud])
+    () => isProject ? (curFile?.content || '') : generateCode(view, nodes, edges, cloud, rps),
+    [isProject, curFile, view, nodes, edges, cloud, rps])
   const copy = async () => {
     try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* clipboard denied */ }
   }
@@ -2097,14 +2102,14 @@ function CodeGen({ nodes, edges, cloud, sugs, onImport }) {
         {isProject && <button className="btn" onClick={downloadZip} title="Every generated file plus docker-compose.yml, zipped">📦 project .zip</button>}
       </div>
       <pre className="code-out" aria-label={isProject ? `Generated ${curFile?.path}` : `Generated ${meta.label}`}>{code}</pre>
-      {view === 'mermaid' && (
+      {(view === 'mermaid' || view === 'json') && (
         <details className="dac-import" open>
-          <summary>📥 Import a Mermaid diagram — any README flowchart becomes a live simulation</summary>
+          <summary>📥 Import — paste a Mermaid flowchart or an ArchSim JSON document and it becomes a live simulation</summary>
           <textarea className="dac-in" rows={6} value={mmIn} onChange={e => { setMmIn(e.target.value); setMmMsg(null) }}
             placeholder={'flowchart LR\n  U[Users] --> LB[Load Balancer] --> API[Order Service]\n  API --> PG[(Postgres)]\n  API --> R[Redis cache]\n  API -.-> K[Kafka events]'} />
           <div className="dac-row">
             <button className="btn" onClick={importMermaid} disabled={!mmIn.trim()}>Import to canvas</button>
-            <span className="muted">Types are inferred from names — cache, kafka, postgres, redis, s3, load balancer, users… Diagrams exported from ArchSim round-trip exactly.</span>
+            <span className="muted">Mermaid: types inferred from names (cache, kafka, postgres, redis, s3, load balancer, users…). JSON: the exact ArchSim shape, ideal for agents. Everything is validated on the way in — repairs are reported, never silent.</span>
           </div>
           {mmMsg && <div className={`dac-msg ${mmMsg.bad ? 'bad' : ''}`}>{mmMsg.text}</div>}
         </details>

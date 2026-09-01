@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.16.0 — 2026-09-01
+- 🏛️ **Six pillars**, stated in About and built where they were missing: **Data Integrity** — every design entering from outside (share link, Mermaid, JSON) is validated: dangling edges dropped, unknown types coerced, duplicates renamed, every repair reported; **Built to Endure** — a golden share link from 1.x is pinned to decode forever, the codec version is a superset contract; **AI Ready** — a documented, versioned ArchSim JSON view in the Code tab, importable back (the import box now sniffs Mermaid vs JSON)
+
 ## 1.15.0 — 2026-09-01
 - 🚀 Mastery gains its 14th area: **Deploy & Migrate** — blue-green vs canary vs rolling, zero-downtime schema migration (expand → migrate → contract) with the four cutover options graded in a table, feature flags (deploy is not release), backfills that do not take the primary down, dual-write vs CDC. The blue-green/JSON-column scenario is also a Learn quiz question
 

@@ -25,6 +25,17 @@ export const ABOUT = [
     ],
   },
   {
+    title: 'Six pillars',
+    lines: [
+      '**Strong Foundation** — the physics are real formulas (queueing knees, availability composition, fan-out multiplication), the numbers carry provenance, and over a thousand automated checks run on every build. Nothing here is a promise; it is a check that passes.',
+      '**Modular Design** — 116 components with one contract each, a catalog every template is composed from, and pure modules (simulation, anatomy, integrity, diagrams-as-code, sharing) that the interface merely renders. Add a component and the whole studio learns it.',
+      '**Data Integrity** — every design that enters from outside (a share link, a Mermaid paste, a JSON document) passes through validation: dangling edges dropped, unknown types coerced, duplicates renamed — and every repair is reported, never silent. Money-grade thinking, applied to your diagram.',
+      '**Flexible and Scalable** — 99 designs from a URL shortener to a national payments switch, entry deep-links that open exactly where a conversation begins, Mermaid in and out, and a picker that starts in Bharat and reaches the world.',
+      '**Built to Endure** — a share link minted on day one decodes forever; the codec version is a superset contract the suite pins, the changelog is public, and the check count only goes up.',
+      '**AI Ready** — the design itself is a small, documented JSON document any agent can read and write; LLM systems are first-class components with honest capacities; and the Mastery drills teach operating them in production, not just naming them.',
+    ],
+  },
+  {
     title: 'How honest are the numbers?',
     lines: [
       'This is a flight simulator, not the airplane. The dynamics are engineered to be right — queueing curves, fan-out multiplication, availability composition, cache economics — so the reflexes you build here transfer to real systems. The exact figures are not predictions.',
