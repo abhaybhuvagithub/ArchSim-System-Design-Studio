@@ -12,6 +12,9 @@ export const ACRONYM_CATS = {
 }
 
 export const ACRONYMS = [
+  { a: 'FAISS', f: 'Facebook AI Similarity Search', d: 'The in-process vector library: fast, filterless, one machine. Perfect for research and offline batch; the moment you need a server, filters or tenants, you have outgrown it.', c: 'ai' },
+  { a: 'MLOps', f: 'Machine Learning Operations', d: 'CI/CD for models and prompts: versioned artifacts, evals as build gates, shadow deploys, rollback by flag. In LLM systems the eval set IS the test suite.', c: 'ai' },
+  { a: 'SaaS', f: 'Software as a Service', d: 'Many tenants, one deployment. In AI features it adds a second data plane that must respect every boundary the first one enforces - isolation, budgets, erasure. See the SaaS AI Copilot template.', c: 'business' },
   { a: 'AYUSH', f: 'Ayurveda, Yoga, Unani, Siddha, Homoeopathy', d: 'India\'s ministry and ecosystem for traditional medicine - the reason ayurvedic teleconsultation has formal practice guidelines and a digital grid to integrate with.', c: 'business' },
   { a: 'ABDM', f: 'Ayushman Bharat Digital Mission', d: 'India\'s national digital-health backbone: health ids, registries, consent-driven record exchange - the rails an AYUSH platform interoperates with rather than rebuilds.', c: 'business' },
   { a: 'NAMASTE', f: 'National AYUSH Morbidity and Standardized Terminologies Electronic portal', d: 'Standardized codes for Ayurveda, Siddha and Unani terms - the vocabulary half of dual coding. See the Ayurveda Gyaan template.', c: 'business' },

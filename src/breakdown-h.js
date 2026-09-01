@@ -1194,4 +1194,63 @@ export default {
   },
 },
 
+
+'SaaS AI Copilot (Multi-tenant RAG)': {
+  meta: 'GenAI - SaaS integration - hard - many tenants, one model, zero leakage',
+  overview: 'Adding AI to a SaaS product is not adding a chatbot; it is adding a second data plane that must respect every boundary the first one already enforces. Tenant A\'s documents become tenant A\'s vectors, tenant A\'s questions cost tenant A\'s budget, and tenant A\'s answers must be traceable to tenant A\'s sources - while every tenant shares the same orchestrator, the same LLM gateway, and the same vector cluster. The design lives in the enforcement points: where the tenant filter is applied, where tokens are metered, and how deletions reach an index that was never built to forget.',
+  scope: 'Tenant-scoped ingestion (chunk, embed, version, delete), tenant-filtered retrieval, orchestration with budgets, LLM gateway with fallbacks, per-tenant metering and semantic caching, token-level observability. Model training, billing invoices, and the host SaaS product\'s own features are out.',
+  fr: {
+    core: ['Ingest tenant documents into tenant-scoped vectors with versioning and deletion', 'Answer questions from a tenant\'s own knowledge only, with citations', 'Meter tokens per tenant and enforce plan budgets', 'Orchestrate multi-step answers (retrieve, reason, call a tool) under a step and cost budget', 'Trace every answer: sources, tokens, model, latency'],
+    out: ['Fine-tuning per tenant (a different product)', 'Cross-tenant benchmarking or shared knowledge', 'Billing and invoicing (metering feeds it; does not do it)'],
+  },
+  nfr: {
+    core: ['Zero cross-tenant retrieval - enforced by the query filter, tested by canary documents', 'A deleted document is unretrievable within the erasure SLA - vectors included', 'One tenant\'s spike cannot exhaust another tenant\'s latency or budget', 'Embedding-model changes are planned reindexes with dual-read during migration', 'Every answer carries token counts and sources in its trace'],
+    out: ['Real-time index freshness - seconds-to-minutes is the honest ingestion SLA'],
+  },
+  nums: [['1 filter', 'tenant_id on every vector query - at the DB, never in the prompt'], ['tokens', 'the unit of cost, metered per tenant before the answer'], ['1 canary', 'planted document per tenant that must never appear elsewhere'], ['reindex', 'what an embedding-model upgrade actually is']],
+  entities: [
+    ['Tenant', 'plan, token budget, embedding model version, erasure SLA - the row every other row points at'],
+    ['Document', 'tenant-owned, versioned; supersede replaces its chunks, delete removes its vectors'],
+    ['Chunk', 'text span + embedding + (tenant_id, doc_id, version) - the filterable unit'],
+    ['Conversation', 'tenant-scoped turns with the sources and tokens each answer consumed'],
+    ['UsageRecord', 'tokens in/out per request per tenant - metering is written before the response leaves'],
+  ],
+  apiIntro: 'Tenant identity arrives once, at the gateway, and travels as context - never as a parameter a client can set.',
+  api: [
+    { dir: '->', name: 'POST /v1/ask (tenant from auth)', body: '{ question, conversation_id }\n-> stream of tokens, then { sources: [chunk ids], usage: { in, out } }' },
+    { dir: '->', name: 'POST /v1/documents (tenant from auth)', body: '{ file }\n-> 202 { doc_id, version } - chunks and vectors land asynchronously' },
+    { dir: '->', name: 'DELETE /v1/documents/{id}', body: '-> 202 - vectors, chunks and cache entries purged within the erasure SLA' },
+  ],
+  dives: [
+    {
+      title: 'Isolation is a retrieval invariant', focus: ['gw', 'api', 'guard', 'vec'],
+      blocks: [
+        ['p', 'The gateway resolves the tenant from the credential and the API never accepts it from the body. Every vector query carries tenant_id as a hard filter in the database - a namespace or a metadata predicate - so the wrong documents are not merely down-ranked, they are unreachable. The guard checks the tenant on the way in AND on the way out: any retrieved chunk whose tenant does not match the request is a bug that pages someone, not a sentence in an answer.'],
+        ['bul', [
+          'Filter at the database, never in the prompt: "only answer from this tenant\'s documents" is a wish; a WHERE clause is a guarantee.',
+          'Canary documents make the invariant testable: each tenant gets a planted secret sentence, and a nightly job asks every OTHER tenant for it - the correct result is silence.',
+          'Namespaces per tenant simplify deletion and quotas; metadata filters scale to more tenants - the trade is operational, and the guard does not care which you chose.',
+        ]],
+        ['warn', 'The classic breach is not the vector store - it is the semantic cache. A per-tenant question answered from a global cache serves tenant A\'s answer to tenant B who asked the same words. The cache key includes tenant_id or the cache does not exist.'],
+      ],
+    },
+    {
+      title: 'Budgets, pipelines, and the schema nobody calls a schema', focus: ['orch', 'llm', 'meter', 'ing', 'emb'],
+      blocks: [
+        ['p', 'The orchestrator runs a graph - retrieve, reason, maybe call a tool - under a step budget and a token budget per tenant plan. Metering writes the usage record before the answer streams out, so a crash mid-stream still bills honestly. Ingestion is asynchronous: uploads land on a log, workers chunk and embed, and every chunk carries the embedding model version - because the embedding model IS a schema, and changing it means every vector in the tenant must be recomputed, dual-read during the migration, and cut over deliberately.'],
+        ['bul', [
+          'Noisy neighbours in AI SaaS are budget problems first: per-tenant token buckets at the API keep one tenant\'s runaway agent from consuming the gateway everyone shares.',
+          'Deletion must reach the index: a DPDP or GDPR erasure that clears the row and leaves the vectors is a compliance incident with a similarity score.',
+          'The semantic cache is where margin lives - the tenth identical question in a tenant costs nothing - and it inherits every isolation rule above.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A RAG chatbot with a tenant_id column.',
+    senior: 'Tenant from credential only, filter enforced at the vector store with canary-document tests, per-tenant semantic cache and token metering written before the response, versioned ingestion with deletion propagating to vectors, embedding-model version as a schema with dual-read reindex, orchestration under step and cost budgets, token-level tracing.',
+    staff: 'Design the tenant-tier isolation model (shared cluster vs dedicated namespaces vs dedicated indexes by plan), the reindex program across thousands of tenants when the embedding model changes, the erasure SLA proof a regulator accepts, and the eval program that catches quality regressions per tenant before customers do.',
+  },
+},
+
 }

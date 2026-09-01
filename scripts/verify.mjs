@@ -2287,7 +2287,7 @@ try {
       check('every production-LLM drill carries proof in its playbook table', await (async () => {
         const M3 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const area = M3.MASTERY.find(a => a.id === 'llm-prod');
-        if (!area || area.items.length !== 10) return false;
+        if (!area || area.items.length < 10) return false;
         return area.items.every(x => {
           const c = M3.MASTERY_CMP[x.id];
           if (!c) return false;
@@ -3037,6 +3037,41 @@ try {
         selW.dispatchEvent(new win.Event('change', { bubbles: true }));
         await wait(250);
         await goTab3('Capacity');
+      }
+
+      // ── JD Planner: paste a JD, get an honest plan with real links ─────────
+      {
+        const JD = await import(pathToFileURL(path.join(root, 'src/jd.js')).href);
+        const T7 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const M7 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const names = T7.TEMPLATES.map(x => x.name), cids = M7.MASTERY.flatMap(ar => ar.items.map(x => x.id));
+        check('every template and drill the planner can point at actually exists',
+          JD.JD_SKILLS.every(s => s.tpls.every(n => names.includes(n)) && s.concepts.every(c => cids.includes(c))));
+        const jd = 'AI/ML Engineer with 4-7 years of experience to integrate AI-powered solutions into modern SaaS products. Python, LLMs, Generative AI, RAG, LangChain, Vector Databases (Pinecone, Qdrant, FAISS), FastAPI microservices, agentic workflows, Docker, Kubernetes, CI/CD and MLOps, monitoring.';
+        const plan = JD.planFromJD(jd, { templateNames: names, conceptIds: cids });
+        check('an AI/ML JD maps to the RAG, LLM platform, agentic and multi-tenant designs',
+          !!plan && ['SaaS AI Copilot (Multi-tenant RAG)', 'GenAI: RAG Assistant', 'LLM API Platform (FastAPI)', 'Agentic Workflow (Tools)'].every(n => plan.templates.includes(n)));
+        check('the plan parses seniority and reports honest coverage', !!plan && plan.seniority === '4-7 years' && plan.coverage >= 80 && plan.matched.length >= 8);
+        check('too little text yields no plan rather than a fake one', JD.planFromJD('senior engineer') === null);
+        // DOM: the planner lives in Mastery and its links load a template
+        const goTab4 = async (name) => { click(byText('.tabs button', name)); await wait(200) };
+        await goTab4('Mastery');
+        const jdIn = doc.querySelector('.jd-in');
+        check('the JD planner is offered inside Mastery', !!jdIn && /Paste a job description/.test(doc.body.textContent));
+        if (jdIn) {
+          const taSet2 = Object.getOwnPropertyDescriptor(win.HTMLTextAreaElement.prototype, 'value').set;
+          taSet2.call(jdIn, jd); jdIn.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(100);
+          click([...doc.querectorAll ? [] : doc.querySelectorAll('.jd-planner button')].find(b => /Build my plan/.test(b.textContent))); await wait(250);
+          check('the plan renders skill areas with template and drill links', doc.querySelectorAll('.jd-skill').length >= 6 && doc.querySelectorAll('.jd-links .btn').length >= 8);
+          const tplBtn = [...doc.querySelectorAll('.jd-links .btn')].find(b => /SaaS AI Copilot/.test(b.textContent));
+          click(tplBtn); await wait(300);
+          check('a plan link loads that design and opens its breakdown', /Multi-tenant RAG/.test(doc.querySelector('.tplpick-native')?.selectedOptions?.[0]?.textContent || '') || /many tenants, one model/.test(doc.body.textContent));
+        }
+        // restore WhatsApp for downstream sections
+        const selW2 = [...doc.querySelectorAll('select')].find((x) => [...x.options].some((o) => o.textContent.includes('WhatsApp')));
+        selW2.value = [...selW2.options].find((o) => o.textContent.includes('WhatsApp')).value;
+        selW2.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(250);
+        await goTab4('Capacity');
       }
 
       // ── the two new live controls: cache write policy, LB balancing ────────

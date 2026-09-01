@@ -1930,4 +1930,19 @@ T('Ayurveda Gyaan (Charak Samhita)', 'A 2000-year-old corpus served honestly: im
     'Formulations carry provenance on the ledger: herb batch to classical formulation to prescription - one chain a regulator or a patient can walk',
     'The safety guard sits UPSTREAM of the model: contraindication and interaction checks are deterministic rules, not model vibes - the system is a librarian, never the vaidya',
   ], 'Bharat · consumer'),
+T('SaaS AI Copilot (Multi-tenant RAG)', 'AI inside a SaaS product: every tenant gets their own knowledge, budget and audit trail - and never anyone else\'s', 900, [
+    ['u', 'client', 'Tenant Users', 40, 240], ['gw', 'gateway', 'API Gateway (tenant auth)', 170, 240, 3],
+    ['api', 'fastapi', 'Copilot API (FastAPI)', 320, 240, 4], ['orch', 'agentgraph', 'Orchestrator (LangGraph)', 470, 180, 3],
+    ['guard', 'guard', 'Tenant Guard & Safety', 470, 320, 2], ['sc', 'cache', 'Semantic Cache (per tenant)', 620, 100, 2],
+    ['vec', 'vector', 'Vector DB (namespaces)', 620, 240, 3], ['llm', 'llm', 'LLM Gateway', 780, 180, 10],
+    ['meter', 'sql', 'Usage Metering', 780, 330, 2], ['ing', 'kafka', 'Ingestion Log', 320, 420, 2],
+    ['emb', 'embed', 'Chunk + Embed Workers', 470, 460, 3], ['docs', 'blob', 'Tenant Documents', 620, 460, 2],
+    ['obs', 'otel', 'Traces + Token Telemetry', 780, 460, 2],
+  ], [['u','gw'],['gw','api'],['api','orch'],['orch','guard'],['orch','sc'],['orch','vec'],['orch','llm'],['api','meter'],['api','ing'],['ing','emb'],['emb','vec'],['emb','docs'],['orch','obs']], [
+    'Tenant isolation is a retrieval invariant, not a prompt instruction: the vector query carries the tenant filter at the database layer, and a canary document per tenant proves it never leaks',
+    'Every request is metered in tokens per tenant before it is answered - the noisy neighbour in an AI SaaS is a budget problem first and a latency problem second',
+    'Ingestion is a pipeline with versions: a re-uploaded document supersedes its chunks, a deleted document deletes its vectors - the right to erasure reaches the index',
+    'The embedding model is a schema: change it and every vector must be recomputed - reindex is a planned migration, not a hotfix',
+    'The orchestrator is a graph with a budget, the LLM sits behind a gateway with fallbacks, and the semantic cache makes the tenth identical question free',
+  ], 'GenAI'),
 ]
