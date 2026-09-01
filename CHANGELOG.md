@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.17.0 — 2026-09-01
+- 🎯 **JD Planner** (in Mastery): paste any job description and get a deterministic practice plan — skill areas matched to designs and drills with one-click links, honest coverage %, seniority parsed, the acronyms to know cold. Nothing leaves the browser
+- 🤖 **SaaS AI Copilot (Multi-tenant RAG)** — the 100th template: tenant isolation as a retrieval invariant (filter at the DB, canary documents), per-tenant token metering and semantic cache, versioned ingestion with deletion reaching the index, the embedding model as a schema; wall: the model is shared, the promises are not
+- 🎓 LLM-prod drills +3: vector DB choice (Pinecone/Qdrant/Weaviate/Chroma/FAISS/pgvector), multi-tenant RAG isolation, LangChain vs LangGraph vs LlamaIndex vs no framework · 🔤 +3: FAISS, MLOps, SaaS
+
 ## 1.16.0 — 2026-09-01
 - 🏛️ **Six pillars**, stated in About and built where they were missing: **Data Integrity** — every design entering from outside (share link, Mermaid, JSON) is validated: dangling edges dropped, unknown types coerced, duplicates renamed, every repair reported; **Built to Endure** — a golden share link from 1.x is pinned to decode forever, the codec version is a superset contract; **AI Ready** — a documented, versioned ArchSim JSON view in the Code tab, importable back (the import box now sniffs Mermaid vs JSON)
 

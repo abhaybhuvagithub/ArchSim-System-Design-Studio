@@ -135,7 +135,7 @@ export const TOUR_STEPS = [
     id: 'mastery',
     target: '[data-tour="tab-mastery"]',
     title: 'Mastery — the 80/20',
-    body: 'The fourteen areas that carry most system design interviews - the arithmetic, production LLM drills and deploy & migrate included - itemized into 54 tracked concepts, each with its 🎤 as-asked phrasing and every area with its 🚩 red flag — each with a teaching line, an inline ⇄ Compare table where the concept is a trade-off, and a ▶ Practice button that lands on the exact template and control. Shuffled every visit, because positional memory is the enemy of review.',
+    body: 'The fourteen areas that carry most system design interviews - the arithmetic, production LLM drills and deploy & migrate included - itemized into 57 tracked concepts, each with its 🎤 as-asked phrasing and every area with its 🚩 red flag — each with a teaching line, an inline ⇄ Compare table where the concept is a trade-off, and a ▶ Practice button that lands on the exact template and control. Shuffled every visit, because positional memory is the enemy of review.',
     tab: 'mastery',
   },
   {

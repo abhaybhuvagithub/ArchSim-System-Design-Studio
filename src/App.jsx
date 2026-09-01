@@ -40,6 +40,7 @@ import { explainFlow, isBidir } from './explain.js'
 import { generateCode, CODE_VIEWS } from './codegen.js'
 import { fromMermaid } from './dac.js'
 import { validateDesign, fromDesignJSON, detectFormat } from './integrity.js'
+import { planFromJD } from './jd.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 import { Onboarding } from './onboarding.jsx'
@@ -1545,6 +1546,44 @@ function About() {
 // is a checkbox you earn, persisted locally.
 // ⌘K / Ctrl+K: one keystroke to anywhere — load a template, jump to a tab,
 // or open a mastery concept where it is practiced. Ranked by prefix match.
+// ── JD Planner: paste a job description, get the practice plan ──────────────
+function JDPlanner({ onTemplate, onConcept }) {
+  const [txt, setTxt] = useState('')
+  const [plan, setPlan] = useState(null)
+  const names = useMemo(() => TEMPLATES.map(t => t.name), [])
+  const ids = useMemo(() => MASTERY.flatMap(ar => ar.items.map(x => x.id)), [])
+  const titleOf = (id) => { for (const ar of MASTERY) { const it = ar.items.find(x => x.id === id); if (it) return it.t } return id }
+  const run = () => setPlan(planFromJD(txt, { templateNames: names, conceptIds: ids }) || { empty: true })
+  return (
+    <details className="jd-planner">
+      <summary>🎯 Paste a job description — get the practice plan for exactly that role</summary>
+      <textarea className="jd-in" rows={5} value={txt} onChange={e => { setTxt(e.target.value); setPlan(null) }}
+        placeholder="Paste the JD here — responsibilities, required skills, good-to-haves. Nothing leaves your browser; the matching is plain pattern rules." />
+      <div className="dac-row">
+        <button className="btn" onClick={run} disabled={txt.trim().length < 40}>Build my plan</button>
+        <span className="muted">Skills are matched by name to designs and drills already in the studio. Coverage says how much of the JD this tool can rehearse — honestly.</span>
+      </div>
+      {plan?.empty && <div className="dac-msg bad">That is too short to be a job description — paste the responsibilities and skills sections.</div>}
+      {plan && !plan.empty && (
+        <div className="jd-plan">
+          <p><b>{plan.matched.length} skill areas</b> found{plan.seniority ? <> · seniority: <b>{plan.seniority}</b></> : null} · the studio rehearses <b>{plan.coverage}%</b> of them with {plan.templates.length} designs and {plan.concepts.length} drills.</p>
+          <ul className="jd-skills">
+            {plan.matched.map(m => (
+              <li key={m.id} className="jd-skill">
+                <div className="jd-skill-h"><b>{m.label}</b> <span className="muted">— seen as: {m.evidence.join(', ')}</span></div>
+                {m.tpls.length > 0 && <div className="jd-links">{m.tpls.map(n => <button key={n} className="btn tiny" onClick={() => onTemplate(n)}>📦 {n}</button>)}</div>}
+                {m.concepts.length > 0 && <div className="jd-links">{m.concepts.map(c => <button key={c} className="btn tiny" onClick={() => onConcept(c)}>🎓 {titleOf(c)}</button>)}</div>}
+                {!m.tpls.length && !m.concepts.length && <div className="muted" style={{ fontSize: 12.5 }}>Nothing in the studio rehearses this yet — an honest gap.</div>}
+              </li>
+            ))}
+          </ul>
+          {plan.acronyms.length > 0 && <p className="muted">Glossary to know cold: {plan.acronyms.join(' · ')} — all in 🔤 Acronyms.</p>}
+        </div>
+      )}
+    </details>
+  )
+}
+
 const CMDK_CATS = ['All', 'Load', 'Go to', 'Practice']
 const CMDK_CAT_ICON = { All: '✦', Load: '📦', 'Go to': '🧭', Practice: '🎓' }
 function CmdK({ onClose, onTemplate, onTab, onPractice }) {
@@ -1674,7 +1713,7 @@ function MasteryTab({ onGo }) {
             <div className="ms-h">{area.icon} {area.title} <span className="muted">{area.items.filter(x => done.has(x.id)).length}/{area.items.length}</span></div>
             {area.flag && <div className="ms-flag">🚩 {area.flag}</div>}
             {items.map(x => (
-              <div key={x.id} className={`ms-item ${done.has(x.id) ? 'done' : ''}`}>
+              <div key={x.id} data-ms-item={x.id} className={`ms-item ${done.has(x.id) ? 'done' : ''}`}>
                 <label className="ms-check">
                   <input type="checkbox" checked={done.has(x.id)} onChange={() => toggle(x.id)} aria-label={`Mark ${x.t} mastered`} />
                 </label>
@@ -1694,6 +1733,7 @@ function MasteryTab({ onGo }) {
         )
       })}
       <p className="muted ms-note">Checked means you could teach it, not that you clicked it — the boxes are yours to earn. Interview mode grades the same material under pressure.</p>
+      <JDPlanner onTemplate={(name) => onGo({ tpl: name, tab: 'breakdown' })} onConcept={(id) => { const el = document.querySelector(`[data-ms-item="${id}"]`); el?.scrollIntoView?.({ block: 'center' }); el?.classList.add('ms-pulse'); setTimeout(() => el?.classList.remove('ms-pulse'), 1600) }} />
     </section>
   )
 }

@@ -365,4 +365,22 @@ export default {
   wall: { t: 'Authority does not shard', d: 'Past every cache and index, the binding constraint is scholarly: new commentaries, concordance disputes, terminology mappings and safety rules all require lineage-grade human consensus, and sampradaya does not autoscale. Compute multiplies; authority is validated one careful review at a time. The honest design accepts it - interpretation queues behind scholars, not GPUs - and the metric that matters at scale is review throughput with provenance, which is a governance system wearing an architecture.' },
 },
 
+
+'SaaS AI Copilot (Multi-tenant RAG)': {
+  constraint: 'Every tenant shares the orchestrator, the gateway and the vector cluster, and none may share data, budget or latency. Scale means more tenants and more tokens with the isolation invariants holding at every rung.',
+  ladder: [
+    ['10 tenants', '~1 rps', 'One vector index with a tenant_id filter, one LLM key, metering in a table. The canary-document test exists from day one - retrofitting proof is harder than retrofitting code.'],
+    ['1K tenants', '~50 rps', 'Namespaces or partitioned metadata; per-tenant token buckets; semantic cache keyed by tenant; ingestion workers autoscale on log lag.'],
+    ['50K tenants', '~1K rps', 'Tiered isolation by plan (shared cluster for starter, dedicated namespaces for enterprise); LLM gateway with model routing and fallbacks; reindex tooling that walks tenants in batches.'],
+    ['1M tenants', '~15K rps', 'Multi-region with data residency per tenant, embedding-model migrations as a months-long program, evals per tenant cohort - the platform is now an AI cloud with a product on top.'],
+  ],
+  levers: [
+    { t: 'Enforce isolation where queries run', d: 'tenant_id as a database-level filter (namespace or predicate) makes leakage impossible rather than unlikely; the guard and the canary test verify it continuously.', n: ['vec', 'guard'] },
+    { t: 'Meter and cap per tenant, before the answer', d: 'Token buckets per tenant at the API and usage records written pre-stream: budgets are enforced, bills are honest, and one tenant cannot starve another.', n: ['api', 'meter'] },
+    { t: 'Cache semantically, per tenant', d: 'Repeated questions within a tenant cost nothing - and the cache key carries the tenant or the cache is a breach in waiting.', n: ['sc'] },
+    { t: 'Treat the embedding model as a schema', d: 'Version every chunk by embedding model; upgrades are dual-read reindexes walked tenant by tenant, cut over deliberately - never a hotfix.', n: ['emb', 'vec'] },
+  ],
+  wall: { t: 'The model is shared; the promises are not', d: 'Past every namespace and bucket, one LLM gateway serves every tenant, and a provider incident, a model deprecation, or a price change lands on all of them at once. Isolation can be engineered at the data plane; it cannot be engineered at the model provider. The honest design multiplies providers behind the gateway, versions prompts per model, and tells enterprise tenants the truth in the SLA: their data is theirs alone, their model is everyone\'s.' },
+},
+
 }

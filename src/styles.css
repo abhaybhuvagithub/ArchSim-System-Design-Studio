@@ -1854,3 +1854,15 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .dac-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; font-size: 12.5px; }
 .dac-msg { margin-top: 6px; font-size: 12.5px; padding: 6px 8px; border-radius: 6px; background: rgba(60,180,120,.12); }
 .dac-msg.bad { background: rgba(224,86,97,.12); }
+
+/* ── JD planner ── */
+.jd-planner { margin: 6px 0 14px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 8px; }
+.jd-planner summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
+.jd-in { width: 100%; margin-top: 8px; font-size: 12.5px; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: inherit; }
+.jd-plan { margin-top: 8px; font-size: 13px; }
+.jd-skills { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+.jd-skill { padding: 6px 8px; border-left: 3px solid var(--accent); }
+.jd-skill-h { font-size: 13px; }
+.jd-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.btn.tiny { font-size: 12px; padding: 2px 8px; }
+.ms-pulse { outline: 2px solid var(--accent); outline-offset: 2px; transition: outline .3s; }
