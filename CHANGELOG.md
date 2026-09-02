@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.19.0 — 2026-09-02
+- 🧪 Mastery gains its 16th area: **Testing & Quality** — the pyramid for distributed systems (the payments-microservices scenario graded four ways: the flake factory, green-but-drifting mocks, shift-left with contracts + ephemeral envs + canaries as **the answer**, customers-as-test-suite), consumer-driven contracts (Pact, can-i-deploy), test doubles and the lies they tell, ephemeral environments vs shared staging, flakiness as a reliability bug with a budget. Scenario also lands in the Learn quiz; Backend, DevOps, AI Data Scientist and Full-Stack tracks now include the area
+
 ## 1.18.0 — 2026-09-02
 - 🗺️ **Tracks**: six roadmap.sh paths (Backend, DevOps, AI & Data Scientist, Network Engineer, Full Stack, AI Product Builder) mapped onto the studio as ordered stages with capstone designs — progress is your own mastery boxes, reorganized; honest link-outs for the halves that live outside a systems studio
 - 🌐 Mastery gains its 15th area: **Networking** — DNS as TTL choreography, TCP vs UDP and why QUIC exists, the TLS handshake tax, HTTP/1.1 vs 2 vs 3, and OS limits (file descriptors, ephemeral ports, TIME_WAIT) · 🚀 Deploy & Migrate gains **Kubernetes requests & limits** (the OOM at 60% free) — 63 concepts, 48 tables

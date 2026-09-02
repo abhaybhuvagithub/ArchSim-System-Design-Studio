@@ -160,6 +160,17 @@ export const MASTERY = [
       { id: 'os-limits', t: 'OS limits: file descriptors, ports, and TIME_WAIT', asks: "At 30,000 concurrent connections the service starts throwing 'too many open files', and an hour later 'cannot assign requested address' - two different walls; name both and raise them.", d: 'Every socket is a file descriptor, and the default ulimit (often 1024) was set for a gentler internet - the first wall is per-process fd limits, raised in systemd and sysctl. The second is client-side: an outbound connection consumes an ephemeral port per (src, dst) pair, closed sockets linger in TIME_WAIT, and a chatty non-pooled client exhausts ~28K ports in minutes - the fix is connection pooling and keep-alive, not a bigger port range alone. Linux is part of the design; the roadmap was right.', go: { tpl: 'LLM API Platform (FastAPI)', tab: 'capacity', do: 'Every held connection during a slow LLM call is one fd and one worker - connect this concept to the one-GPU admission-control drill.' } },
     ],
   },
+  {
+    id: 'testing', icon: '🧪', title: 'Testing & Quality',
+    flag: "'We test everything in staging before deploy' - a shared staging for dozens of teams is a queue with opinions, and a suite that is green-but-flaky trains engineers to click retry, which is exactly how the real break ships.",
+    items: [
+      { id: 'testing-pyramid', t: 'The pyramid, for a distributed system', asks: "Dozens of payment microservices, async events plus HTTP, teams need fast CI and no downstream surprises - full e2e against shared staging is slow and flaky. Pick the testing strategy and defend it.", d: 'The pyramid is a statement about feedback latency versus realism. Fast unit and component tests answer in seconds; consumer-driven contracts verify every service seam without booting the neighbours; ephemeral environments make true end-to-end a periodic, owned exercise instead of a per-merge lottery; and canaries with real observability catch the class of failure no pre-production test can. The gate is layered - not one giant flaky door.', go: { tpl: 'µsvc: E-commerce (Saga)', tab: 'breakdown', do: 'Count the service seams in the saga - each arrow is a contract that can drift; that number is why e2e-everything cannot be the gate.' } },
+      { id: 'contract-testing', t: 'Consumer-driven contracts (Pact)', asks: "How do you know your change will not break a downstream consumer - without running all of them?", d: 'The consumer writes down exactly what it needs from the provider - endpoints, fields, event shapes - and that expectation file is verified in the PROVIDER\'s CI on every change. A broker records which versions are compatible, and can-i-deploy becomes a query instead of a prayer. Async events get the same discipline as message contracts. The seam is tested; the neighbours stay off.', go: { tpl: 'UPI Switch (NPCI)', tab: 'breakdown', do: 'Every bank integration on this switch is a contract surface - imagine verifying a bank change without the bank in the room; that is the broker\'s job.' } },
+      { id: 'test-doubles', t: 'Mocks, stubs, fakes - and when they lie', asks: "The suite is green and production is down. What did the mocks hide?", d: 'A double encodes an assumption, and assumptions drift. Mocks that assert call shapes test your imagination of the dependency; prefer fakes - real in-memory implementations - for stores and queues, and pin every double to a contract or a recorded interaction so drift fails a build instead of a customer. The rule: a double may simplify reality, never contradict it.', go: { tpl: 'Card Payments (Auth + Settlement)', tab: 'breakdown', do: 'Find the stand-in path - production itself runs a controlled double when the issuer is slow; the test double must match that contract, not a happy-path fantasy.' } },
+      { id: 'ephemeral-envs', t: 'Ephemeral environments beat shared staging', asks: "Staging has been broken for three days and nobody knows whose change did it. What now?", d: 'That is not an incident, it is the architecture: a shared environment is a contended singleton with unowned state. Spin environments per branch - namespaced, seeded, torn down on a TTL - so every team debugs its own reality. Keep one long-lived environment only for what genuinely cannot be duplicated (third-party sandboxes), and treat its breakage as a paged incident with an owner.', go: { tpl: 'Cloud-Native Gateway API Platform', tab: 'capacity', do: 'Read the platform tiers and ask: which of these could a per-branch namespace stamp out in five minutes, and which is the one shared sandbox worth an on-call?' } },
+      { id: 'flaky-tests', t: 'Flakiness is a reliability bug, not a nuisance', asks: "The suite is only 2% flaky - why are you treating it as an emergency?", d: 'Two percent per test compounds: fifty flaky tests make most runs red for no reason, engineers learn to click retry, and the one honest red ships to production inside the noise. Run a quarantine lane with a burn-down, budget flakes like errors, and hunt the classic sources - wall clocks, shared ports, test order, sleeps standing in for synchronization. Determinism is a feature you build.', go: { tpl: 'Chat (WhatsApp)', tab: 'chaos', do: 'Inject latency and watch ordering wobble - every nondeterminism you can inject here is one your tests must either control or tolerate.' } },
+    ],
+  },
 ]
 
 export const MASTERY_TOTAL = MASTERY.reduce((n, a) => n + a.items.length, 0)
@@ -382,6 +393,40 @@ export const MASTERY_CMP = {
     ['Grounding check (NLI)', 'Unsupported claims caught on the way out', 'A small model call per answer'],
     ['Abstain path', '"Not in context" replaces the worst hallucinations', 'Product courage - it must count as an answer'],
     ['Prove the triangle', 'Hallucination eval + p95 + cost per 1M on ONE dashboard', 'A lever that moves one without hurting the others is measured, not assumed'],
+  ]},
+  'testing-pyramid': { cols: ['Feedback speed', 'Catches integration drift?', 'Flakiness and cost', 'Verdict'], rows: [
+    ['Full e2e against shared staging as the merge gate', 'Hours - a queue of teams', 'Yes, along with everyone else\'s noise', 'Maximal on both counts', 'The flake factory - realism paid for in trust'],
+    ['Unit tests + mocks + periodic manual checks', 'Seconds', 'No - mocks agree with themselves while the seam drifts', 'Low cost, hidden risk', 'Green dashboards, production surprises'],
+    ['Shift left: units + contracts + ephemeral e2e + canary with observability', 'Seconds for the gate, hours for the periodic sweep', 'Yes - at the seam by contract, in the large by schedule, in production by canary', 'Low flake by construction; envs cost compute, not trust', 'The answer - layered gates, each honest about what it can see'],
+    ['Unit-only CI, validate in production with monitoring and rollbacks', 'Instant', 'Only after customers do', 'Cheap until the first incident review', 'Customers as the test suite'],
+  ]},
+  'contract-testing': { cols: ['Unit + mocks', 'Shared-staging e2e', 'Consumer-driven contracts'], rows: [
+    ['What it verifies', 'Your imagination of the dependency', 'Everything at once, indistinctly', 'The exact seam each consumer relies on'],
+    ['Feedback speed', 'Seconds', 'Hours, plus the queue', 'Seconds, in the provider\'s own CI'],
+    ['Who must be running', 'Nobody', 'Everybody', 'Nobody - the broker holds the expectations'],
+    ['Async events', 'Untested shapes', 'Timing-dependent flake', 'Message pacts: schema plus example, verified'],
+    ['Prove it', 'You cannot - green is self-referential', 'A passing run you cannot reproduce', 'can-i-deploy: a recorded compatibility matrix'],
+  ]},
+  'test-doubles': { cols: ['Use it for', 'The lie it can tell'], rows: [
+    ['Stub (canned answers)', 'Simple reads a test needs in place', 'The shape changed upstream and the stub kept smiling'],
+    ['Mock (asserts calls)', 'Verifying a protocol really happened', 'Tests your call script, not the dependency\'s behavior'],
+    ['Fake (working in-memory impl)', 'Stores and queues in component tests', 'Semantics drift - no fsync, no contention, no limits'],
+    ['Recorded/replayed traffic', 'Realistic shapes without the neighbour', 'The recording ages while the API moves on'],
+    ['Prove the double', 'Pin it to a contract or a fresh recording', 'A double nobody verifies is fiction with a green check'],
+  ]},
+  'ephemeral-envs': { cols: ['Shared staging', 'Ephemeral per branch', 'Production canary'], rows: [
+    ['Isolation', 'None - a contended singleton', 'Total - your branch, your universe', 'Real users, tiny slice'],
+    ['State ownership', 'Unowned, drifting, mysterious', 'Seeded fresh, torn down on TTL', 'The real thing'],
+    ['Realism', 'Stale-real', 'As real as your seeds and stamps', 'Perfect'],
+    ['Cost shape', 'Cheap in compute, expensive in trust', 'Compute per branch - budget it, cap it', 'Cheap - the fleet already runs'],
+    ['Prove it', 'You cannot - too many hands', 'Env stamps out in minutes, green twice', 'Canary metrics vs control on one dashboard'],
+  ]},
+  'flaky-tests': { cols: ['Fix', 'Prove it'], rows: [
+    ['Wall-clock time in tests', 'Inject a fake clock; never sleep as sync', 'Zero sleeps in the suite; time-travel tests pass at any speed'],
+    ['Shared ports, files, state', 'Randomize and namespace per test run', 'Full suite passes run in parallel with itself'],
+    ['Order dependence', 'Shuffle test order in CI', 'Green under a shuffled seed, seed printed on failure'],
+    ['Retry culture', 'Quarantine lane with a burn-down and an owner', 'Quarantine count trends to zero; retries need a linked issue'],
+    ['The budget', 'Treat flake rate like an error budget', 'Suite-level flake % on a dashboard, with an alert'],
   ]},
   'release-strategies': { cols: ['Blue-green', 'Canary', 'Rolling'], rows: [
     ['Rollback', 'Instant - flip the switch back', 'Fast - route the slice away', 'Slow - redeploy the old build'],
