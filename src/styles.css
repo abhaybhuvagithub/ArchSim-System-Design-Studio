@@ -1866,3 +1866,17 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .jd-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .btn.tiny { font-size: 12px; padding: 2px 8px; }
 .ms-pulse { outline: 2px solid var(--accent); outline-offset: 2px; transition: outline .3s; }
+
+/* ── tracks ── */
+.tracks { margin: 6px 0 10px; }
+.tracks-h { font-weight: 600; font-size: 13.5px; margin-bottom: 6px; }
+.tracks-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.track-card { display: grid; gap: 3px; text-align: left; padding: 8px 10px; min-width: 170px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+.track-card.on { border-color: var(--accent); }
+.track-t { font-size: 13px; font-weight: 600; }
+.track-p { font-size: 12.5px; }
+.track-bar { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.track-bar > span { display: block; height: 100%; background: var(--accent); }
+.track-detail { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--accent); font-size: 13px; }
+.track-stages { margin: 6px 0 0 18px; display: grid; gap: 6px; }
+.track-out { margin-top: 6px; font-size: 12.5px; }
