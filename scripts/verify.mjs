@@ -2268,9 +2268,9 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all fourteen areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 14 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 14);
+      check('the mastery hub renders all fifteen areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 15 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 15);
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
       check('the migration scenario is graded in a table — expand-and-contract wins, dual-write is named the trap', await (async () => {
@@ -3037,6 +3037,31 @@ try {
         selW.dispatchEvent(new win.Event('change', { bubbles: true }));
         await wait(250);
         await goTab3('Capacity');
+      }
+
+      // ── Tracks: roadmap.sh paths over real content ─────────────────────────
+      {
+        const TR = await import(pathToFileURL(path.join(root, 'src/tracks.js')).href);
+        const T8 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const M8 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const names = T8.TEMPLATES.map(x => x.name), aids = new Set(M8.MASTERY.map(ar => ar.id));
+        check('every track stage points at areas and capstones that exist',
+          TR.TRACKS.every(tr => tr.stages.every(st => st.areas.every(x => aids.has(x)) && (!st.tpl || names.includes(st.tpl)))));
+        check('six tracks, each an ordered path with a roadmap.sh home',
+          TR.TRACKS.length === 6 && TR.TRACKS.every(tr => tr.stages.length >= 3 && tr.href.startsWith('https://roadmap.sh/')));
+        check('track progress is the mastery boxes, reorganized', (() => {
+          const areasById = Object.fromEntries(M8.MASTERY.map(ar => [ar.id, ar]));
+          const zero = TR.trackProgress(TR.TRACKS[0], areasById, new Set());
+          const two = TR.trackProgress(TR.TRACKS[0], areasById, new Set(['dns', 'tcp-udp']));
+          return zero.pct === 0 && two.done === 2 && two.total === zero.total && two.pct > 0;
+        })());
+        const goTab5 = async (name) => { click(byText('.tabs button', name)); await wait(200) };
+        await goTab5('Mastery');
+        check('the tracks strip renders all six with a percentage', doc.querySelectorAll('.track-card').length === 6 && /%/.test(doc.querySelector('.track-p')?.textContent || ''));
+        click([...doc.querySelectorAll('.track-card')].find(b => /Backend/.test(b.textContent))); await wait(150);
+        check('opening a track shows its ordered stages and an honest roadmap link',
+          doc.querySelectorAll('.track-stages li').length >= 3 && /roadmap ↗/.test(doc.querySelector('.track-detail')?.textContent || ''));
+        await goTab5('Capacity');
       }
 
       // ── JD Planner: paste a JD, get an honest plan with real links ─────────
@@ -3972,8 +3997,8 @@ try {
       const M = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
-      const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about']);
-      check('the curriculum covers the fourteen areas — canonical, arithmetic, production LLM drills, deploy & migrate', M.MASTERY.length === 14);
+      const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about', 'hld', 'lld', 'brief']);
+      check('the curriculum covers the fifteen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking', M.MASTERY.length === 15);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
@@ -4032,7 +4057,7 @@ try {
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
-        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles);
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles);
       })());
     }
 

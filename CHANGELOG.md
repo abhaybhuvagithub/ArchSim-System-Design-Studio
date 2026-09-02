@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.18.0 — 2026-09-02
+- 🗺️ **Tracks**: six roadmap.sh paths (Backend, DevOps, AI & Data Scientist, Network Engineer, Full Stack, AI Product Builder) mapped onto the studio as ordered stages with capstone designs — progress is your own mastery boxes, reorganized; honest link-outs for the halves that live outside a systems studio
+- 🌐 Mastery gains its 15th area: **Networking** — DNS as TTL choreography, TCP vs UDP and why QUIC exists, the TLS handshake tax, HTTP/1.1 vs 2 vs 3, and OS limits (file descriptors, ephemeral ports, TIME_WAIT) · 🚀 Deploy & Migrate gains **Kubernetes requests & limits** (the OOM at 60% free) — 63 concepts, 48 tables
+
 ## 1.17.0 — 2026-09-01
 - 🎯 **JD Planner** (in Mastery): paste any job description and get a deterministic practice plan — skill areas matched to designs and drills with one-click links, honest coverage %, seniority parsed, the acronyms to know cold. Nothing leaves the browser
 - 🤖 **SaaS AI Copilot (Multi-tenant RAG)** — the 100th template: tenant isolation as a retrieval invariant (filter at the DB, canary documents), per-tenant token metering and semantic cache, versioned ingestion with deletion reaching the index, the embedding model as a schema; wall: the model is shared, the promises are not

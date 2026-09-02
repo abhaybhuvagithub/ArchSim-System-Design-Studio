@@ -41,6 +41,7 @@ import { generateCode, CODE_VIEWS } from './codegen.js'
 import { fromMermaid } from './dac.js'
 import { validateDesign, fromDesignJSON, detectFormat } from './integrity.js'
 import { planFromJD } from './jd.js'
+import { TRACKS, trackProgress } from './tracks.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
 import { Onboarding } from './onboarding.jsx'
@@ -1249,7 +1250,7 @@ export default function App() {
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
               ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
               ['acr', 'Acronyms', null, 'Every acronym in the studio, expanded - searchable'],
-              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum plus production LLM drills and deploy & migrate: fourteen areas, tracked, wired to practice'],
+              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: fifteen areas from networking to LLM production, roadmap.sh tracks, a JD planner — all wired to practice'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1546,6 +1547,48 @@ function About() {
 // is a checkbox you earn, persisted locally.
 // ⌘K / Ctrl+K: one keystroke to anywhere — load a template, jump to a tab,
 // or open a mastery concept where it is practiced. Ranked by prefix match.
+// ── Tracks: roadmap.sh paths mapped onto the studio ──────────────────────────
+function TracksStrip({ done, onGo, onArea }) {
+  const [openId, setOpenId] = useState(null)
+  const areasById = useMemo(() => Object.fromEntries(MASTERY.map(ar => [ar.id, ar])), [])
+  return (
+    <div className="tracks">
+      <div className="tracks-h">🗺️ Tracks <span className="muted">— roadmap.sh paths, practiced here. Progress is your own mastery boxes, reorganized.</span></div>
+      <div className="tracks-row">
+        {TRACKS.map(tr => {
+          const p = trackProgress(tr, areasById, done)
+          return (
+            <button key={tr.id} className={`track-card ${openId === tr.id ? 'on' : ''}`} onClick={() => setOpenId(openId === tr.id ? null : tr.id)}>
+              <span className="track-t">{tr.icon} {tr.title}</span>
+              <span className="track-p">{p.pct}%<span className="muted"> · {p.done}/{p.total}</span></span>
+              <span className="track-bar"><span style={{ width: p.pct + '%' }} /></span>
+            </button>
+          )
+        })}
+      </div>
+      {openId && (() => {
+        const tr = TRACKS.find(x => x.id === openId)
+        return (
+          <div className="track-detail">
+            <p>{tr.blurb} <a href={tr.href} target="_blank" rel="noreferrer" className="muted">the roadmap ↗</a></p>
+            <ol className="track-stages">
+              {tr.stages.map((st, i) => (
+                <li key={i}>
+                  <b>{st.t}</b> — {st.areas.map(aid => (
+                    <button key={aid} className="btn tiny" onClick={() => onArea(aid)}>{areasById[aid]?.icon} {areasById[aid]?.title}</button>
+                  ))}
+                  {st.tpl && <button className="btn tiny" onClick={() => onGo({ tpl: st.tpl, tab: 'breakdown' })}>▶ Capstone: {st.tpl}</button>}
+                </li>
+              ))}
+            </ol>
+            {tr.out && <p className="muted track-out">Beyond this studio: {tr.out}</p>}
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
 // ── JD Planner: paste a job description, get the practice plan ──────────────
 function JDPlanner({ onTemplate, onConcept }) {
   const [txt, setTxt] = useState('')
@@ -1709,7 +1752,7 @@ function MasteryTab({ onGo }) {
         const items = ui.hideMastered ? area.items.filter(x => !done.has(x.id)) : area.items
         if (!items.length) return null
         return (
-          <div key={area.id} className="ms-area">
+          <div key={area.id} data-ms-area={area.id} className="ms-area">
             <div className="ms-h">{area.icon} {area.title} <span className="muted">{area.items.filter(x => done.has(x.id)).length}/{area.items.length}</span></div>
             {area.flag && <div className="ms-flag">🚩 {area.flag}</div>}
             {items.map(x => (
@@ -1733,6 +1776,7 @@ function MasteryTab({ onGo }) {
         )
       })}
       <p className="muted ms-note">Checked means you could teach it, not that you clicked it — the boxes are yours to earn. Interview mode grades the same material under pressure.</p>
+      <TracksStrip done={done} onGo={onGo} onArea={(aid) => { const el = document.querySelector(`[data-ms-area="${aid}"]`); el?.scrollIntoView?.({ block: 'start' }) }} />
       <JDPlanner onTemplate={(name) => onGo({ tpl: name, tab: 'breakdown' })} onConcept={(id) => { const el = document.querySelector(`[data-ms-item="${id}"]`); el?.scrollIntoView?.({ block: 'center' }); el?.classList.add('ms-pulse'); setTimeout(() => el?.classList.remove('ms-pulse'), 1600) }} />
     </section>
   )
