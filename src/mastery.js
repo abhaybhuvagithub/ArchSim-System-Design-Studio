@@ -171,6 +171,17 @@ export const MASTERY = [
       { id: 'flaky-tests', t: 'Flakiness is a reliability bug, not a nuisance', asks: "The suite is only 2% flaky - why are you treating it as an emergency?", d: 'Two percent per test compounds: fifty flaky tests make most runs red for no reason, engineers learn to click retry, and the one honest red ships to production inside the noise. Run a quarantine lane with a burn-down, budget flakes like errors, and hunt the classic sources - wall clocks, shared ports, test order, sleeps standing in for synchronization. Determinism is a feature you build.', go: { tpl: 'Chat (WhatsApp)', tab: 'chaos', do: 'Inject latency and watch ordering wobble - every nondeterminism you can inject here is one your tests must either control or tolerate.' } },
     ],
   },
+  {
+    id: 'analytics', icon: '📊', title: 'Analytics & Data Platform',
+    flag: "'Point the BI tool at the production replica' - the analyst's full-table scan and the checkout query must not share a fate. And a metric defined in four dashboards is four metrics wearing one name.",
+    items: [
+      { id: 'oltp-olap', t: 'OLTP vs OLAP: rows for transactions, columns for questions', asks: "The CFO's dashboard is timing out against the orders database. Walk me through what you change - and what you refuse to change.", d: 'Row stores serve transactions: fetch one order, all its fields, guarded by indexes. Analytics asks the opposite - two columns across a billion rows - and a columnar store reads exactly those two, compressed, in parallel. The design is not either/or: OLTP keeps the writes, a pipeline replicates into the columnar side, and the refusal is the point - BI never queries the primary, however urgent the CFO sounds.', go: { tpl: 'Data Platform (Lakehouse)', tab: 'breakdown', do: 'Find where the row world hands off to the column world - that boundary is the whole answer to the dashboard question.' } },
+      { id: 'pipelines-elt', t: 'ETL vs ELT, and pipelines that rerun', asks: "Yesterday's load double-counted revenue after a retry. Fix the pipeline, not the number.", d: 'A pipeline that cannot rerun is a pipeline that lies under failure. Load raw first (ELT), transform inside the warehouse with versioned SQL, and make every load idempotent - merge on natural keys or overwrite whole partitions, so a retry lands the same rows once. Late data gets a window and a rule, and a backfill is just a rerun over an older range, never a hand-patched UPDATE.', go: { tpl: 'Data Platform (Lakehouse)', tab: 'scale', do: 'Read the ladder for where transform moved into the warehouse - then say which loads must be partition-overwrites and why a retry is now boring.' } },
+      { id: 'warehouse-modeling', t: 'Facts, dimensions, and slowly changing truth', asks: "A customer moved cities in March. Do last year's orders move with them?", d: 'No - and the schema must make that impossible to get wrong. Facts are immutable events at a declared grain; dimensions describe the world and change slowly. SCD Type 2 keeps every version of the customer with validity ranges, so last year\'s orders join to last year\'s city and this quarter\'s join to the new one. Declare the grain first; every modeling argument afterwards is really an argument about the grain.', go: { tpl: 'Data Platform (Lakehouse)', tab: 'breakdown', do: 'Locate the dimension tables in the model and ask each one: what happens here when the truth changes on Tuesday?' } },
+      { id: 'metrics-layer', t: 'One metric, one definition', asks: "Two dashboards disagree on yesterday's revenue. Which one is right?", d: 'Both - each faithfully computes a different definition, and that is the disease. A metrics layer defines revenue once - filters, grain, currency, timezone - and every dashboard, notebook and API queries THAT, not its own SQL. Definitions change by review like code, with version history, so when the number moves the first question is which definition moved, answered in one place.', go: { tpl: 'Data Platform (Lakehouse)', tab: 'roi', do: 'The ROI panel is a metric with a stated basis - notice how much of its trustworthiness is the definition being written down next to the number.' } },
+      { id: 'experiments', t: 'A/B testing as a system', asks: "Design the experimentation platform - and tell me what SRM is before I have to ask.", d: 'Assignment is deterministic - hash(unit id, experiment salt) - so a user sees one arm forever with no coordination. Exposure is logged at the decision point, because intent-to-treat starts there, not at login. Sample-ratio mismatch is the canary: if the split is 50/50 by design and 52/48 by count, the experiment is invalid before any stats run. The stats engine joins exposures to metrics from the SAME metrics layer - an experiment platform with its own revenue definition is two experiments.', go: { tpl: 'News Feed (Instagram)', tab: 'breakdown', do: 'Pick one ranking change on this feed and narrate its experiment: unit, assignment, exposure point, guardrail metrics - in that order.' } },
+    ],
+  },
 ]
 
 export const MASTERY_TOTAL = MASTERY.reduce((n, a) => n + a.items.length, 0)
@@ -393,6 +404,41 @@ export const MASTERY_CMP = {
     ['Grounding check (NLI)', 'Unsupported claims caught on the way out', 'A small model call per answer'],
     ['Abstain path', '"Not in context" replaces the worst hallucinations', 'Product courage - it must count as an answer'],
     ['Prove the triangle', 'Hallucination eval + p95 + cost per 1M on ONE dashboard', 'A lever that moves one without hurting the others is measured, not assumed'],
+  ]},
+  'oltp-olap': { cols: ['OLTP (row store)', 'OLAP (column store)'], rows: [
+    ['Unit of work', 'One entity, all its fields', 'Few columns, a billion rows'],
+    ['Layout', 'Rows together - fetch is one seek', 'Columns together - scan reads only what the question names'],
+    ['Speedup source', 'Indexes finding the needle', 'Compression + vectorized scans skipping the haystack'],
+    ['Writes', 'The whole point', 'Batched, appended, replicated in'],
+    ['Prove it', 'Checkout p99 flat during month-end reporting', 'The 2-column scan touches 5% of the bytes a row store would'],
+  ]},
+  'pipelines-elt': { cols: ['ETL (transform first)', 'ELT (load raw, transform inside)'], rows: [
+    ['Where logic lives', 'In pipeline code outside the warehouse', 'In versioned SQL the warehouse runs'],
+    ['Rerun a bad day', 'Re-execute custom code and pray it matched', 'Overwrite the partition; same rows land once'],
+    ['Late data', 'Awkward - transform already happened', 'A window and a rule; reprocess the slice'],
+    ['Debugging', 'Raw truth was never kept', 'Raw layer is the evidence locker'],
+    ['Prove it', 'Two runs, identical outputs, documented', 'Retry a load twice; row counts do not move'],
+  ]},
+  'warehouse-modeling': { cols: ['Why it matters', 'The trap it prevents'], rows: [
+    ['Declare the grain first', 'Every join and rollup is defined by it', 'Half-aggregated facts that double-count on join'],
+    ['Facts immutable; corrections as new rows', 'The past is evidence, not a draft', 'History rewritten under a dashboard mid-quarter'],
+    ['SCD2 dimensions with validity ranges', 'Truth changes on Tuesday; history should not', "Last year's orders teleporting to this year's city"],
+    ['Surrogate keys to dimension versions', 'A fact points at the version that was true', 'Natural keys silently spanning two truths'],
+    ['Prove it', 'Rerun last quarter today', 'If the numbers drift from the March board deck, the model leaks'],
+  ]},
+  'metrics-layer': { cols: ['Every dashboard its own SQL', 'One metrics layer'], rows: [
+    ['Definitions of revenue', 'As many as there are dashboards', 'One, with filters, grain, currency stated'],
+    ['A definition changes', 'Silently, in one chart, on a Tuesday', 'By review, versioned, announced'],
+    ['Two numbers disagree', 'A week of archaeology', 'Impossible by construction - same query path'],
+    ['New surface (notebook, API)', 'Copy-paste the SQL, fork the truth', 'Query the layer; inherit the truth'],
+    ['Prove it', 'You cannot - the definitions live in charts', 'grep the codebase: revenue is defined once'],
+  ]},
+  'experiments': { cols: ['Contract', 'Prove it'], rows: [
+    ['Assignment: hash(unit, salt)', 'Same user, same arm, forever - no lookup table', 'Replay a month of assignments; zero flips'],
+    ['Exposure logged at the decision point', 'Intent-to-treat starts where the fork happens', 'Exposure count = users who reached the fork, not logins'],
+    ['SRM as the canary', 'A 52/48 on a designed 50/50 invalidates before stats', 'Automated chi-square gate; failed SRM blocks readout'],
+    ['Metrics from the shared layer', 'The experiment and the CFO see one revenue', 'Experiment readout query names the metrics layer'],
+    ['Stats engine last', 'No peeking; fixed horizon or sequential by design', 'Readout page shows the pre-registered stop rule'],
   ]},
   'testing-pyramid': { cols: ['Feedback speed', 'Catches integration drift?', 'Flakiness and cost', 'Verdict'], rows: [
     ['Full e2e against shared staging as the merge gate', 'Hours - a queue of teams', 'Yes, along with everyone else\'s noise', 'Maximal on both counts', 'The flake factory - realism paid for in trust'],

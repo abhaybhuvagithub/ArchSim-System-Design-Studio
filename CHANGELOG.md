@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.20.0 — 2026-09-02
+- 📊 Mastery gains its 17th area: **Analytics & Data Platform** — OLTP vs OLAP (rows for transactions, columns for questions), ETL vs ELT and pipelines that rerun, facts/dimensions/SCD2 (a customer moves cities; last year's orders stay put), one-metric-one-definition, A/B testing as a system (deterministic assignment, exposure at the decision point, SRM as the canary). New 📊 Data Analyst track with an honest link-out; +3 acronyms: ELT, SCD, BI
+
 ## 1.19.0 — 2026-09-02
 - 🧪 Mastery gains its 16th area: **Testing & Quality** — the pyramid for distributed systems (the payments-microservices scenario graded four ways: the flake factory, green-but-drifting mocks, shift-left with contracts + ephemeral envs + canaries as **the answer**, customers-as-test-suite), consumer-driven contracts (Pact, can-i-deploy), test doubles and the lies they tell, ephemeral environments vs shared staging, flakiness as a reliability bug with a budget. Scenario also lands in the Learn quiz; Backend, DevOps, AI Data Scientist and Full-Stack tracks now include the area
 

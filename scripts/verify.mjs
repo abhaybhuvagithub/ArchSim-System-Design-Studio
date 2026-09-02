@@ -2268,9 +2268,9 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all sixteen areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 16 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 16);
+      check('the mastery hub renders all seventeen areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 17 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 17);
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
       check('the testing scenario is graded — shift-left wins, the flake factory and customers-as-test-suite are named', await (async () => {
@@ -4009,7 +4009,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about', 'hld', 'lld', 'brief']);
-      check('the curriculum covers the sixteen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing', M.MASTERY.length === 16);
+      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics', M.MASTERY.length === 17);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
@@ -4068,7 +4068,7 @@ try {
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
-        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles);
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles) && /Analytics & Data Platform/.test(titles);
       })());
     }
 

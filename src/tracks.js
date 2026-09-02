@@ -72,6 +72,17 @@ export const TRACKS = [
     ],
     out: 'UX research and product discovery live on roadmap.sh (/ux-design, /product-design); the systems that keep the product honest live here.',
   },
+  {
+    id: 'data-analyst', icon: '📊', title: 'Data Analyst', href: 'https://roadmap.sh/data-analyst',
+    blurb: 'The systems half of the analyst craft: where the data lives, how it moves, and why the dashboard is fast and the metric is trustworthy.',
+    stages: [
+      { t: 'Rows vs columns', areas: ['storage', 'analytics'], tpl: 'Data Platform (Lakehouse)' },
+      { t: 'Pipelines that rerun', areas: ['async', 'analytics'] },
+      { t: 'Metrics & serving', areas: ['analytics', 'caching'], tpl: 'Flipkart (Big Billion Days)' },
+      { t: 'Experimentation', areas: ['analytics'], tpl: 'News Feed (Instagram)' },
+    ],
+    out: 'Excel, chart craft, Tableau and the statistics live on roadmap.sh/data-analyst; what makes the dashboard fast, the pipeline rerunnable and the metric trustworthy is practiced here.',
+  },
 ]
 
 export function trackProgress(track, areasById, doneSet) {
