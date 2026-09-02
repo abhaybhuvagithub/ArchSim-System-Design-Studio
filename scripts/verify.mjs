@@ -3058,8 +3058,8 @@ try {
         const names = T8.TEMPLATES.map(x => x.name), aids = new Set(M8.MASTERY.map(ar => ar.id));
         check('every track stage points at areas and capstones that exist',
           TR.TRACKS.every(tr => tr.stages.every(st => st.areas.every(x => aids.has(x)) && (!st.tpl || names.includes(st.tpl)))));
-        check('six tracks, each an ordered path with a roadmap.sh home',
-          TR.TRACKS.length === 6 && TR.TRACKS.every(tr => tr.stages.length >= 3 && tr.href.startsWith('https://roadmap.sh/')));
+        check('seven tracks, each an ordered path with a roadmap.sh home',
+          TR.TRACKS.length === 7 && TR.TRACKS.every(tr => tr.stages.length >= 3 && tr.href.startsWith('https://roadmap.sh/')));
         check('track progress is the mastery boxes, reorganized', (() => {
           const areasById = Object.fromEntries(M8.MASTERY.map(ar => [ar.id, ar]));
           const zero = TR.trackProgress(TR.TRACKS[0], areasById, new Set());
@@ -3068,7 +3068,7 @@ try {
         })());
         const goTab5 = async (name) => { click(byText('.tabs button', name)); await wait(200) };
         await goTab5('Mastery');
-        check('the tracks strip renders all six with a percentage', doc.querySelectorAll('.track-card').length === 6 && /%/.test(doc.querySelector('.track-p')?.textContent || ''));
+        check('the tracks strip renders all seven with a percentage', doc.querySelectorAll('.track-card').length === 7 && /%/.test(doc.querySelector('.track-p')?.textContent || ''));
         click([...doc.querySelectorAll('.track-card')].find(b => /Backend/.test(b.textContent))); await wait(150);
         check('opening a track shows its ordered stages and an honest roadmap link',
           doc.querySelectorAll('.track-stages li').length >= 3 && /roadmap ↗/.test(doc.querySelector('.track-detail')?.textContent || ''));
