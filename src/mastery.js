@@ -182,6 +182,18 @@ export const MASTERY = [
       { id: 'experiments', t: 'A/B testing as a system', asks: "Design the experimentation platform - and tell me what SRM is before I have to ask.", d: 'Assignment is deterministic - hash(unit id, experiment salt) - so a user sees one arm forever with no coordination. Exposure is logged at the decision point, because intent-to-treat starts there, not at login. Sample-ratio mismatch is the canary: if the split is 50/50 by design and 52/48 by count, the experiment is invalid before any stats run. The stats engine joins exposures to metrics from the SAME metrics layer - an experiment platform with its own revenue definition is two experiments.', go: { tpl: 'News Feed (Instagram)', tab: 'breakdown', do: 'Pick one ranking change on this feed and narrate its experiment: unit, assignment, exposure point, guardrail metrics - in that order.' } },
     ],
   },
+  {
+    id: 'fde', icon: '🤝', title: 'FDE & Customer Engineering',
+    flag: "'I will tell engineering to build it' - the FDE owns the outcome: understand the business requirement, exhaust configuration and integration, then carry a documented case to product. And never blame another team in front of the customer.",
+    items: [
+      { id: 'customer-discovery', t: 'Discovery before design', asks: "'We need your platform integrated with our HR system.' What do you ask before you draw a single box?", d: 'The amateur draws Kafka; the FDE asks questions until the shape of the problem appears. Business outcome first - who consumes this and why. Then traffic (batch or realtime, peak not average), data (schema, size, PII, retention), the integration surface they can actually offer, the security regime you must live inside, and the reliability numbers they will sign. Every answer removes an architecture; what survives is the design.', go: { tpl: 'SaaS AI Copilot (Multi-tenant RAG)', tab: 'breakdown', do: 'Read the scope and NFRs as discovery ANSWERS - then reconstruct the questions that must have produced them.' } },
+      { id: 'integration-surfaces', t: 'The six doors into an enterprise', asks: "The customer offers a nightly SFTP drop and a webhook. Which do you build first - and how does each stay honest?", d: 'Enterprises expose what they have: REST when there is an API team, webhooks when they can push, SFTP when there is a mainframe in the story, database pulls when there is nothing else, and an event bus when you are lucky. Build the surface that unblocks value soonest (usually the drop), design the contract for the one you want long-term, and give every surface the same honesty kit: schema validation at the door, idempotent ingestion, a dead-letter path, and per-source lag metrics.', go: { tpl: 'UPI Switch (NPCI)', tab: 'breakdown', do: 'Count the integration contracts this switch holds with banks - then name the honesty kit each one carries.' } },
+      { id: 'env-debug-ladder', t: 'Works on my machine, fails in theirs', asks: "Your service works from your environment but cannot reach the customer's database. Go.", d: 'Climb in order and say each rung out loud: DNS resolves to what you expect? A route exists and the firewall permits it? The security group opens that port from YOUR subnet? TLS completes - full chain, right SNI? Credentials authenticate? THEN the application. Each rung has a two-line check and rules out a family of causes; skipping rungs is how engineers spend a day inside the wrong layer. Works-from-Postman-on-their-laptop proves their side of the wall, not yours.', go: { tpl: 'Cloud-Native Gateway API Platform', tab: 'chaos', do: 'Run the TLS incident in 🚨 Incident Mode - the mobile-vs-browser asymmetry is this ladder, rung four.' } },
+      { id: 'poc-vs-production', t: 'The POC and what it must never pretend', asks: "The POC wowed them. What changes before it takes production traffic - and what must not change?", d: 'A POC exists to answer one question fast, and over-engineering it is a failure. What must not change is the truth of the demo: real integration shape, real data shapes, honest limits stated. What must change for production: identity (SSO, not a shared key), secrets out of configs, deployment repeatable from zero, observability before traffic, and the load and failure tests the POC skipped on purpose. The FDE names that gap in the demo itself - it builds trust and books the next meeting.', go: { tpl: 'GenAI: RAG Assistant', tab: 'scale', do: 'The ladder IS the POC-to-production story - read rung one as the demo and rung three as the contract.' } },
+      { id: 'comms-levels', t: 'One problem, four rooms', asks: "Explain the same Kafka consumer lag to the engineer, the engineering manager, the CTO, and the customer executive.", d: 'Same truth, different resolution. Engineer: partitions, drain rate, the command to run. EM: scope, owner, ETA, customer impact. CTO: the architectural cause and the prevention that makes it structural. Executive: what it means for their business, what we did, why it will not recur - zero jargon, zero blame. The discipline is that all four are TRUE simultaneously; the failure is telling the executive the engineer version, or the engineer the executive version.', go: { tpl: 'Zomato', tab: 'chaos', do: 'Run the dinner-rush incident in 🚨 Incident Mode and read its four comms tabs - then write the fifth: the support-team version.' } },
+      { id: 'deployment-runbook', t: 'The customer deployment runbook', asks: "Walk me through your customer deployment runbook - the artifact, not the vibes.", d: 'A runbook is a sequence of exit criteria, not a to-do list. Discovery exits with signed requirements and SLOs; security review exits with an approved data-flow diagram; network validation exits with the debug ladder green from THEIR environment; integration exits with contract tests passing both directions; load and SLO validation exits with the simulator numbers reproduced in staging; cutover exits with rollback rehearsed, not described; handover exits when their on-call closes an injected incident without you. Each stage owns its evidence.', go: { tpl: 'Card Payments (Auth + Settlement)', tab: 'slo', do: 'The SLO tab is stage five of the runbook - decide what number would let you sign the exit criterion.' } },
+    ],
+  },
 ]
 
 export const MASTERY_TOTAL = MASTERY.reduce((n, a) => n + a.items.length, 0)
@@ -404,6 +416,54 @@ export const MASTERY_CMP = {
     ['Grounding check (NLI)', 'Unsupported claims caught on the way out', 'A small model call per answer'],
     ['Abstain path', '"Not in context" replaces the worst hallucinations', 'Product courage - it must count as an answer'],
     ['Prove the triangle', 'Hallucination eval + p95 + cost per 1M on ONE dashboard', 'A lever that moves one without hurting the others is measured, not assumed'],
+  ]},
+  'customer-discovery': { cols: ['Ask', 'Why it changes the design'], rows: [
+    ['What business outcome, for whom?', 'Decides what "working" means', 'A dashboard nobody reads is a successful deploy and a failed engagement'],
+    ['Traffic: batch or realtime? Peak?', 'Sync vs async is decided here', 'An SFTP nightly and a 50K-rps stream are different products'],
+    ['Data: schema, size, PII, retention', 'Storage, residency, erasure design', 'PII discovered late reopens the security review'],
+    ['Which surfaces can you offer?', 'You integrate with what exists', 'The beautiful API they do not have loses to the ugly drop they do'],
+    ['Security regime: SSO, mTLS, allowlists', 'Sets the identity architecture', 'A shared API key in an enterprise is a finding, not a feature'],
+    ['Reliability: SLO, RTO, RPO - signed', 'Sizes redundancy and the bill', 'Unsigned nines become renegotiated nines during the first incident'],
+  ]},
+  'integration-surfaces': { cols: ['When it is the right door', 'The honesty kit it needs'], rows: [
+    ['REST pull', 'They have an API team and rate limits', 'Pagination cursors, backoff, idempotent upserts, lag metric per source'],
+    ['Webhook push', 'They can call you on change', 'Signature verification, replay tolerance, dead-letter path, ack fast + process async'],
+    ['SFTP / file drop', 'A mainframe or vendor export is upstream', 'Schema validation at the door, checksum + row counts, idempotent re-ingest of the same file'],
+    ['Database pull', 'Nothing else exists and they grant a replica', 'Read the REPLICA, watermark columns, never their primary, schema-drift alarms'],
+    ['Event bus', 'They already publish domain events', 'Consumer-group lag SLO, schema registry, poison-message quarantine'],
+    ['Prove any of them', 'Same discipline regardless of door', 'Contract test both directions; reconciliation counts match at day end'],
+  ]},
+  'env-debug-ladder': { cols: ['Two-line check', 'What it rules out'], rows: [
+    ['DNS', 'Resolve the name from THEIR network; compare answers', 'Split-horizon DNS, stale records, wrong environment entirely'],
+    ['Route + firewall', 'Trace the path; does anything answer on that IP?', 'Missing peering, VPN down, corporate firewall egress rules'],
+    ['Security group / port', 'Open a raw TCP connection to the port from your subnet', 'The rule that allows their office but not your cluster'],
+    ['TLS', 'Handshake with a STRICT client; inspect the full chain and SNI', 'Expired intermediates browsers forgive and mobile stacks refuse'],
+    ['Credentials', 'Authenticate with the same principal the service uses', 'The human account that works vs the service account that was never granted'],
+    ['Application', 'Only now read the app logs', 'Everything above - which is why it is the LAST rung, not the first'],
+  ]},
+  'poc-vs-production': { cols: ['The POC keeps it', 'Production demands'], rows: [
+    ['Scope', 'One flow, end to end, honestly', 'Every flow, or a signed statement of what is out'],
+    ['Identity', 'A named test user', 'SSO/OIDC, service accounts, least privilege'],
+    ['Data', 'A representative sample, real shapes', 'Full volume, PII controls, retention and erasure'],
+    ['Deploy', 'One environment, hand-built is fine', 'Reproducible from zero: IaC, pipeline, rollback rehearsed'],
+    ['Observability', 'Console logs are acceptable', 'Structured logs, metrics, traces, alerts - before traffic, not after'],
+    ['Failure', 'Skipped, and SAID so in the demo', 'Load tested to the signed SLO; chaos on the critical path'],
+  ]},
+  'comms-levels': { cols: ['Audience', 'The sentence that lands'], rows: [
+    ['Engineer', 'Facts + the command', 'Partition 7 is hot; one consumer down; scale to N+2 and drain oldest-first - lag-minutes, not depth'],
+    ['Eng manager', 'Scope, owner, ETA', 'Contained to assignment; payments unaffected; backlog clears ~12 min after scale-up; I own it'],
+    ['CTO', 'Cause + structural prevention', 'Depth alarms hid a drain-rate problem; we are alarming on lag-minutes and setting a peak consumer floor'],
+    ['Customer executive', 'Business meaning, zero jargon, zero blame', 'Orders and payments were never at risk; matching fell behind and is cleared; it now pages us before customers feel it'],
+    ['The rule', 'All four are true at once', 'Never the engineer version to the executive - and never blame another team in front of the customer'],
+  ]},
+  'deployment-runbook': { cols: ['Stage', 'Exit criterion - the evidence'], rows: [
+    ['Discovery', 'Requirements and SLOs written and SIGNED', 'Unsigned nines get renegotiated mid-incident'],
+    ['Security review', 'Data-flow diagram approved; identities and secrets named', 'PII path and residency on one page'],
+    ['Network validation', 'Debug ladder green FROM THEIR ENVIRONMENT', 'Screenshots of each rung, dated'],
+    ['Integration', 'Contract tests passing in both directions', 'can-i-deploy green; reconciliation counts match'],
+    ['Load + SLO validation', 'Simulator numbers reproduced in staging at signed rps', 'p99 and error budget within SLO on the dashboard'],
+    ['Cutover', 'Rollback REHEARSED, not described', 'The rollback ran in staging this week, timed'],
+    ['Handover', 'Their on-call closes an injected incident without you', 'The incident report they wrote, not you'],
   ]},
   'oltp-olap': { cols: ['OLTP (row store)', 'OLAP (column store)'], rows: [
     ['Unit of work', 'One entity, all its fields', 'Few columns, a billion rows'],

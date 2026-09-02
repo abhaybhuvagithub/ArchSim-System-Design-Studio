@@ -1880,3 +1880,21 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .track-detail { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--accent); font-size: 13px; }
 .track-stages { margin: 6px 0 0 18px; display: grid; gap: 6px; }
 .track-out { margin-top: 6px; font-size: 12.5px; }
+
+/* ── 🚨 incident mode ── */
+.inc-mode { margin: 6px 0 12px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; }
+.inc-mode summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
+.inc-list { display: grid; gap: 8px; margin-top: 8px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.inc-card { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; display: grid; gap: 6px; }
+.inc-t { font-size: 13px; } .inc-tpl { font-size: 12px; }
+.inc-live { border-style: solid; border-color: var(--accent); }
+.inc-head { display: flex; align-items: center; gap: 8px; } .inc-end { margin-left: auto; }
+.inc-symptom, .inc-comm { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--accent); font-size: 13.5px; font-style: italic; }
+.inc-clues { margin: 6px 0; font-size: 13px; } .inc-clues li { margin: 4px 0; }
+.inc-lineup { display: grid; gap: 6px; margin: 10px 0; }
+.inc-opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.inc-opt.right { border-color: #3cb478; background: rgba(60,180,120,.10); }
+.inc-opt.wrong { border-color: #e05661; background: rgba(224,86,97,.10); }
+.inc-verdict { margin-top: 8px; font-size: 13.5px; }
+.inc-good { color: #3cb478; font-weight: 600; } .inc-bad { color: #e05661; font-weight: 600; }
+.inc-voices { display: flex; gap: 6px; margin: 8px 0 2px; flex-wrap: wrap; }
