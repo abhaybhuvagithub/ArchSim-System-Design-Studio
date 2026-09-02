@@ -12,6 +12,9 @@ export const ACRONYM_CATS = {
 }
 
 export const ACRONYMS = [
+  { a: 'ELT', f: 'Extract, Load, Transform', d: 'Load raw into the warehouse first, transform inside it with versioned SQL. Reruns become partition overwrites and the raw layer is the evidence locker - the pipeline discipline in the Analytics area.', c: 'data' },
+  { a: 'SCD', f: 'Slowly Changing Dimension', d: 'How a warehouse remembers that truth changes: Type 2 keeps every version with validity ranges, so last quarter joins to last quarter\'s world. The answer to "the customer moved cities - do old orders move too?"', c: 'data' },
+  { a: 'BI', f: 'Business Intelligence', d: 'The dashboards and reporting layer over the warehouse. The house rule: BI queries the columnar side and the metrics layer - never the OLTP primary, however urgent the CFO sounds.', c: 'data' },
   { a: 'FAISS', f: 'Facebook AI Similarity Search', d: 'The in-process vector library: fast, filterless, one machine. Perfect for research and offline batch; the moment you need a server, filters or tenants, you have outgrown it.', c: 'ai' },
   { a: 'MLOps', f: 'Machine Learning Operations', d: 'CI/CD for models and prompts: versioned artifacts, evals as build gates, shadow deploys, rollback by flag. In LLM systems the eval set IS the test suite.', c: 'ai' },
   { a: 'SaaS', f: 'Software as a Service', d: 'Many tenants, one deployment. In AI features it adds a second data plane that must respect every boundary the first one enforces - isolation, budgets, erasure. See the SaaS AI Copilot template.', c: 'business' },
