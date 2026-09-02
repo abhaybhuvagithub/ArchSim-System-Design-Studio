@@ -41,6 +41,7 @@ import { generateCode, CODE_VIEWS } from './codegen.js'
 import { fromMermaid } from './dac.js'
 import { validateDesign, fromDesignJSON, detectFormat } from './integrity.js'
 import { planFromJD } from './jd.js'
+import { INCIDENTS } from './incidents.js'
 import { TRACKS, trackProgress } from './tracks.js'
 import { generateProject } from './syscode.js'
 import { buildContext, assistantSystemPrompt, offlineAnswer } from './assistant.js'
@@ -151,6 +152,17 @@ export default function App() {
   const [maxed, setMaxed] = useState(null)          // 'left' | 'right' | null
   const [floatPanel, setFloatPanel] = useState({ left: null, right: null }) // {x,y,w,h} when detached
   const [faults, setFaults] = useState([])       // [{key, faultId, targetId, until}]
+  const [incidentId, setIncidentId] = useState(null)
+  const startIncident = (inc) => {
+    const i = TEMPLATES.findIndex(t2 => t2.name === inc.tpl)
+    if (i >= 0) loadTemplate(String(i))
+    if (inc.rps) setRps(inc.rps)
+    setFaults(inc.faults.map((f, k) => ({ key: `inc_${inc.id}_${k}`, faultId: f.faultId, targetId: f.targetId, until: Infinity })))
+    setIncidentId(inc.id)
+    setTab('chaos')
+    notify(`🚨 ${inc.customer} is on the line — the fault is live. Investigate, then commit to a diagnosis.`)
+  }
+  const endIncident = () => { setFaults(fs => fs.filter(f => !String(f.key).startsWith('inc_'))); setIncidentId(null); notify('Incident closed — faults cleared.') }
   const [visitors, setVisitors] = useState(null)
   const [vw, setVw] = useState(() => (typeof window === 'undefined' ? 1400 : window.innerWidth))
   const [currency, setCur] = useState(readCurrency)
@@ -1250,7 +1262,7 @@ export default function App() {
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
               ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
               ['acr', 'Acronyms', null, 'Every acronym in the studio, expanded - searchable'],
-              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: seventeen areas from networking to LLM production, roadmap.sh tracks, a JD planner — all wired to practice'],
+              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: eighteen areas from networking to LLM production, roadmap.sh tracks, a JD planner — all wired to practice'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
@@ -1311,8 +1323,11 @@ export default function App() {
           ) : tab === 'lld' ? (
             <LLD template={template} nodes={nodes} edges={edges} sim={sim} />
           ) : tab === 'chaos' ? (
-            <Chaos faults={faults} nodes={nodes} sel={sel} onInject={injectFault}
-              onClear={clearFault} onRecoverAll={recoverAll} sim={sim} fx={fx} />
+            <>
+              <IncidentMode activeId={incidentId} onStart={startIncident} onEnd={endIncident} />
+              <Chaos faults={faults} nodes={nodes} sel={sel} onInject={injectFault}
+                onClear={clearFault} onRecoverAll={recoverAll} sim={sim} fx={fx} />
+            </>
           ) : tab === 'cost' ? (
             <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} cloud={cloudInfo}
               plan={rightSizePlan(nodes, sim, cloudInfo.mult)}
@@ -1585,6 +1600,59 @@ function TracksStrip({ done, onGo, onArea }) {
           </div>
         )
       })()}
+    </div>
+  )
+}
+
+// ── 🚨 Incident Mode: the FDE hour ──────────────────────────────────────────
+function IncidentMode({ activeId, onStart, onEnd }) {
+  const [picked, setPicked] = useState(null)
+  const [revealed, setRevealed] = useState(false)
+  const [voice, setVoice] = useState('engineer')
+  const inc = INCIDENTS.find(i => i.id === activeId) || null
+  useEffect(() => { setPicked(null); setRevealed(false); setVoice('engineer') }, [activeId])
+  if (!inc) return (
+    <details className="inc-mode" open>
+      <summary>🚨 Incident Mode — a customer describes symptoms; the fault is live; find it, fix it, say it four ways</summary>
+      <div className="inc-list">
+        {INCIDENTS.map(i => (
+          <div key={i.id} className="inc-card">
+            <div className="inc-t"><b>{i.title}</b> <span className="muted">· {i.customer}</span></div>
+            <div className="muted inc-tpl">on {i.tpl}</div>
+            <button className="btn" onClick={() => onStart(i)}>Take the call</button>
+          </div>
+        ))}
+      </div>
+    </details>
+  )
+  const correct = picked === inc.answer
+  return (
+    <div className="inc-mode inc-live">
+      <div className="inc-head">🚨 <b>{inc.title}</b> <span className="muted">· {inc.customer}</span>
+        <button className="btn tiny inc-end" onClick={onEnd}>End incident</button></div>
+      <blockquote className="inc-symptom">{inc.symptom}</blockquote>
+      <p className="muted">The fault is live in this simulation right now. Investigate — Capacity, Latency, this Chaos tab — then name the root cause.</p>
+      <details className="inc-clues"><summary>Need a nudge? Three places a senior would look</summary>
+        <ul>{inc.clues.map((c, i) => <li key={i}>{c}</li>)}</ul></details>
+      <div className="inc-lineup" role="radiogroup" aria-label="Root cause lineup">
+        {inc.lineup.map((opt, i) => (
+          <label key={i} className={`inc-opt ${revealed ? (i === inc.answer ? 'right' : i === picked ? 'wrong' : '') : ''}`}>
+            <input type="radio" name="inc-lineup" disabled={revealed} checked={picked === i} onChange={() => setPicked(i)} /> {opt}
+          </label>
+        ))}
+      </div>
+      {!revealed && <button className="btn" disabled={picked === null} onClick={() => setRevealed(true)}>Commit to the diagnosis</button>}
+      {revealed && (
+        <div className="inc-verdict">
+          <p className={correct ? 'inc-good' : 'inc-bad'}>{correct ? '✅ Root cause confirmed.' : '❌ Not this one — the evidence points elsewhere. The confirmed root cause is highlighted.'}</p>
+          <p><b>The fix:</b> {inc.fix}</p>
+          <div className="inc-voices">{['engineer', 'em', 'cto', 'exec'].map(vc => (
+            <button key={vc} className={`cmdk-chip ${voice === vc ? 'on' : ''}`} onClick={() => setVoice(vc)}>{vc === 'em' ? 'Eng manager' : vc === 'cto' ? 'CTO' : vc === 'exec' ? 'Customer exec' : 'Engineer'}</button>
+          ))}</div>
+          <blockquote className="inc-comm">{inc.comms[voice]}</blockquote>
+          <p className="muted"><b>RCA skeleton:</b> {inc.rca}</p>
+        </div>
+      )}
     </div>
   )
 }

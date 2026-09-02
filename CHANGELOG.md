@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.21.0 — 2026-09-02
+- 🚨 **Incident Mode** (Chaos tab): six customer-voiced incidents on real designs with real injected faults — enterprise-bank p99 spike (retries amplifying a slow issuer), UPI duplicate debits (idempotency held; partner leg reversed), one-tenant-empty-answers (ingestion, not retrieval), dinner-rush consumer lag, OOMKilled-with-node-memory-free, and the expired-intermediate TLS asymmetry. Investigate the live sim, commit to a diagnosis from a lineup, get the fix, the RCA skeleton, and the same truth in **four voices** — engineer, EM, CTO, customer executive
+- 🤝 Mastery gains its 18th area: **FDE & Customer Engineering** — discovery before design, the six doors into an enterprise, the works-on-my-machine debug ladder (DNS→route→port→TLS→auth→app), POC vs production, one-problem-four-rooms, and the deployment runbook as exit criteria
+- ☸️ **Kubernetes view** in the Code tab: Deployments/Services/HPA with the resource philosophy stated — requests the scheduler reserves, limits the kernel enforces
+
 ## 1.20.0 — 2026-09-02
 - 📊 Mastery gains its 17th area: **Analytics & Data Platform** — OLTP vs OLAP (rows for transactions, columns for questions), ETL vs ELT and pipelines that rerun, facts/dimensions/SCD2 (a customer moves cities; last year's orders stay put), one-metric-one-definition, A/B testing as a system (deterministic assignment, exposure at the decision point, SRM as the canary). New 📊 Data Analyst track with an honest link-out; +3 acronyms: ELT, SCD, BI
 

@@ -87,7 +87,7 @@ export const TOUR_STEPS = [
     id: 'chaos',
     target: '[data-tour="chaos"]',
     title: 'Chaos',
-    body: 'Break things on purpose. Kill a node, sever a link, skew a clock, pause a process. The distributed faults are the interesting ones: they leave the node running, which is exactly why they are hard — a timeout cannot tell a paused process from a dead one. The 🔁 Retry Storm is real physics: duplicates inflate demand and cascade downstream — inject it on a ledger with idempotency off and watch money double-book.',
+    body: 'Break things on purpose. Kill a node, sever a link, skew a clock, pause a process. The distributed faults are the interesting ones: they leave the node running, which is exactly why they are hard — a timeout cannot tell a paused process from a dead one. The 🔁 Retry Storm is real physics: duplicates inflate demand and cascade downstream — inject it on a ledger with idempotency off and watch money double-book. And 🚨 Incident Mode sits at the top of this tab: a customer describes symptoms, the fault is already live, and your diagnosis is graded - then said four ways, engineer to executive.',
   },
   {
     id: 'cost',
@@ -135,7 +135,7 @@ export const TOUR_STEPS = [
     id: 'mastery',
     target: '[data-tour="tab-mastery"]',
     title: 'Mastery — the 80/20',
-    body: 'The seventeen areas that carry most system design interviews - networking through analytics and production LLM drills - itemized into 73 tracked concepts, with roadmap.sh tracks and a JD planner mapping paths and postings onto them, each with its 🎤 as-asked phrasing and every area with its 🚩 red flag — each with a teaching line, an inline ⇄ Compare table where the concept is a trade-off, and a ▶ Practice button that lands on the exact template and control. Shuffled every visit, because positional memory is the enemy of review.',
+    body: 'The eighteen areas that carry most system design interviews - networking through analytics, customer engineering and production LLM drills - itemized into 79 tracked concepts, with roadmap.sh tracks and a JD planner mapping paths and postings onto them, each with its 🎤 as-asked phrasing and every area with its 🚩 red flag — each with a teaching line, an inline ⇄ Compare table where the concept is a trade-off, and a ▶ Practice button that lands on the exact template and control. Shuffled every visit, because positional memory is the enemy of review.',
     tab: 'mastery',
   },
   {

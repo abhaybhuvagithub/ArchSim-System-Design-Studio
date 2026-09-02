@@ -2268,9 +2268,9 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all seventeen areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 17 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 17);
+      check('the mastery hub renders all eighteen areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 18 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 18);
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
       check('the testing scenario is graded — shift-left wins, the flake factory and customers-as-test-suite are named', await (async () => {
@@ -3072,6 +3072,53 @@ try {
         click([...doc.querySelectorAll('.track-card')].find(b => /Backend/.test(b.textContent))); await wait(150);
         check('opening a track shows its ordered stages and an honest roadmap link',
           doc.querySelectorAll('.track-stages li').length >= 3 && /roadmap ↗/.test(doc.querySelector('.track-detail')?.textContent || ''));
+        await goTab5('Capacity');
+      }
+
+      // ── 🚨 Incident Mode: real templates, real faults, four voices ─────────
+      {
+        const IC = await import(pathToFileURL(path.join(root, 'src/incidents.js')).href);
+        const T8 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const F8 = await import(pathToFileURL(path.join(root, 'src/faults.js')).href);
+        const fids = new Set(F8.FAULTS.map(f => f.id));
+        check('every incident points at a real template, real fault ids, and real node targets', IC.INCIDENTS.length >= 6 && IC.INCIDENTS.every(inc => {
+          const t = T8.TEMPLATES.find(x => x.name === inc.tpl);
+          return !!t && inc.faults.every(f => fids.has(f.faultId) && (f.targetId === null || t.nodes.some(n => n.id === f.targetId)))
+            && inc.answer >= 0 && inc.answer < inc.lineup.length && inc.lineup.length >= 4;
+        }));
+        check('every incident speaks four voices and carries an RCA', IC.INCIDENTS.every(inc =>
+          ['engineer', 'em', 'cto', 'exec'].every(k => (inc.comms[k] || '').length > 60) && (inc.rca || '').length > 100 && inc.clues.length >= 3));
+
+        // DOM: take a call, watch the fault go live, commit to the right diagnosis
+        const goTab5 = async (name) => { click(byText('.tabs button', name)); await wait(200) };
+        await goTab5('Chaos');
+        check('Incident Mode is offered in the Chaos tab', /Incident Mode/.test(doc.body.textContent) && doc.querySelectorAll('.inc-card').length >= 6);
+        const takeBtn = [...doc.querySelectorAll('.inc-card button')][0];
+        click(takeBtn); await wait(350);
+        check('taking the call loads the design, injects the fault, and shows the customer symptom',
+          /Meridian Bank/.test(doc.body.textContent) && /2\.8s/.test(doc.body.textContent) && doc.querySelectorAll('.inc-opt').length === 5);
+        const rightOpt = [...doc.querySelectorAll('.inc-opt')].find(o => /amplifying/.test(o.textContent));
+        click(rightOpt.querySelector('input')); await wait(100);
+        click([...doc.querySelectorAll('.inc-mode button')].find(b => /Commit to the diagnosis/.test(b.textContent))); await wait(200);
+        check('committing to the right cause confirms it and opens the fix and the four voices',
+          /Root cause confirmed/.test(doc.body.textContent) && doc.querySelectorAll('.inc-voices .cmdk-chip').length === 4);
+        click([...doc.querySelectorAll('.inc-voices .cmdk-chip')].find(b => /Customer exec/.test(b.textContent))); await wait(120);
+        check('the executive voice has no jargon and no blame', /pushed harder instead of easing off/.test(doc.body.textContent));
+        click([...doc.querySelectorAll('.inc-mode button')].find(b => /End incident/.test(b.textContent))); await wait(200);
+        check('ending the incident clears its faults', ![...doc.querySelectorAll('*')].some(el => el.className && String(el.className).includes('inc-live')));
+
+        // Kubernetes view exists and speaks the resource philosophy
+        await goTab5('Code');
+        const kbtn = [...doc.querySelectorAll('button')].find(b => b.textContent.trim() === 'Kubernetes');
+        check('the Code tab offers a Kubernetes view', !!kbtn);
+        click(kbtn); await wait(200);
+        const ktxt = doc.querySelector('.code-out')?.textContent || '';
+        check('the YAML carries Deployments with requests, limits and probes, plus an HPA on requests',
+          /kind: Deployment/.test(ktxt) && /requests: \{ cpu/.test(ktxt) && /readinessProbe/.test(ktxt) && /HorizontalPodAutoscaler/.test(ktxt) && /kernel KILLS/.test(ktxt));
+        // restore for downstream
+        const selW3 = [...doc.querySelectorAll('select')].find((x) => [...x.options].some((o) => o.textContent.includes('WhatsApp')));
+        selW3.value = [...selW3.options].find((o) => o.textContent.includes('WhatsApp')).value;
+        selW3.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(250);
         await goTab5('Capacity');
       }
 
@@ -4009,7 +4056,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about', 'hld', 'lld', 'brief']);
-      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics', M.MASTERY.length === 17);
+      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE', M.MASTERY.length === 18);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
@@ -4068,7 +4115,7 @@ try {
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
-        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles) && /Analytics & Data Platform/.test(titles);
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles) && /Analytics & Data Platform/.test(titles) && /FDE & Customer Engineering/.test(titles);
       })());
     }
 
