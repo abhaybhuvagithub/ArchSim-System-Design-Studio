@@ -2268,12 +2268,23 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all fifteen areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 15 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 15);
+      check('the mastery hub renders all sixteen areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 16 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 16);
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the migration scenario is graded in a table — expand-and-contract wins, dual-write is named the trap', await (async () => {
+      check('the testing scenario is graded — shift-left wins, the flake factory and customers-as-test-suite are named', await (async () => {
+        const M6 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const c = M6.MASTERY_CMP['testing-pyramid'];
+        const flat = c.rows.map(r => r.join(' ')).join(' ');
+        return !!c && c.cols.includes('Verdict') && c.rows.length === 4 && /The answer/.test(flat) && /flake factory/i.test(flat) && /Customers as the test suite/.test(flat);
+      })());
+      check('Learn quizzes the microservices testing scenario with contracts + ephemeral envs as the answer', await (async () => {
+        const LQ2 = await import(pathToFileURL(path.join(root, 'src/learn.js')).href);
+        const q = LQ2.QUIZ.find(x => /payment microservices/.test(x.q));
+        return !!q && /contract tests \(Pact\)/.test(q.options[q.answer]) && /ephemeral/.test(q.options[q.answer]);
+      })());
+            check('the migration scenario is graded in a table — expand-and-contract wins, dual-write is named the trap', await (async () => {
         const M5 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const c = M5.MASTERY_CMP['expand-contract'];
         const flat = c.rows.map(r => r.join(' ')).join(' ');
@@ -3998,7 +4009,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about', 'hld', 'lld', 'brief']);
-      check('the curriculum covers the fifteen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking', M.MASTERY.length === 15);
+      check('the curriculum covers the sixteen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing', M.MASTERY.length === 16);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
