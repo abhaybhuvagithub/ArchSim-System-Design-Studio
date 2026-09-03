@@ -1,0 +1,5 @@
+node_modules
+dist
+verify-report.txt
+*.local
+.DS_Store
