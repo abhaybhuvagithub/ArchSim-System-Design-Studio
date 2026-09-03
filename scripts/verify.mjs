@@ -3107,6 +3107,14 @@ try {
         click(takeBtn); await wait(350);
         check('taking the call loads the design, injects the fault, and shows the customer symptom',
           /Meridian Bank/.test(doc.body.textContent) && /2\.8s/.test(doc.body.textContent) && doc.querySelectorAll('.inc-opt').length === 5);
+        // With that incident's fault live, Recover all previews exactly what it would heal
+        {
+          const btn = [...doc.querySelectorAll('.chaos-live button')].find(b => /Recover all/.test(b.textContent));
+          check('the Recover all button explains itself on hover', !!btn && /settle|healthy|clear/i.test(btn.getAttribute('title') || ''));
+          const hint = doc.querySelector('.chaos-fixhint');
+          check('a live hint names what Recover all will fix', !!hint && /Recovering clears/.test(hint.textContent) && /restores/.test(hint.textContent));
+          check('the hint names the live fault type and the metrics it restores', !!hint && /latency/i.test(hint.textContent) && /p99 and availability/.test(hint.textContent));
+        }
         const rightOpt = [...doc.querySelectorAll('.inc-opt')].find(o => /amplifying/.test(o.textContent));
         click(rightOpt.querySelector('input')); await wait(100);
         click([...doc.querySelectorAll('.inc-mode button')].find(b => /Commit to the diagnosis/.test(b.textContent))); await wait(200);

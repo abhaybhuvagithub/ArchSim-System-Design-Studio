@@ -1898,3 +1898,6 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .inc-verdict { margin-top: 8px; font-size: 13.5px; }
 .inc-good { color: #3cb478; font-weight: 600; } .inc-bad { color: #e05661; font-weight: 600; }
 .inc-voices { display: flex; gap: 6px; margin: 8px 0 2px; flex-wrap: wrap; }
+
+/* ── recover-all preview hint ── */
+.chaos-fixhint { font-size: 12.5px; opacity: .82; margin: 2px 0 10px; padding: 6px 10px; border-left: 3px solid var(--ok); background: rgba(60,180,120,.08); border-radius: 6px; }

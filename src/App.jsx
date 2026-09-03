@@ -2334,8 +2334,27 @@ function Chaos({ faults, nodes, sel, onInject, onClear, onRecoverAll, sim, fx })
             <>
               <div className="chaos-live">
                 <span>{faults.length} active · {blastRadius} component{blastRadius === 1 ? '' : 's'} affected</span>
-                <button className="btn danger" onClick={onRecoverAll}>Recover all</button>
+                <button className="btn danger" onClick={onRecoverAll}
+                  title="Clear every active fault at once and let the system settle back to its healthy baseline">Recover all</button>
               </div>
+              {(() => {
+                const kinds = [...new Set(faults.map(f => faultById(f.faultId)?.name).filter(Boolean))]
+                const hitLabels = [...new Set(faults.map(f => f.targetId && byId[f.targetId] ? byId[f.targetId].label : null).filter(Boolean))]
+                const kindList = kinds.length <= 3 ? kinds.join(', ') : `${kinds.slice(0, 3).join(', ')} +${kinds.length - 3} more`
+                const where = hitLabels.length
+                  ? `on ${hitLabels.length <= 2 ? hitLabels.join(' and ') : `${hitLabels.length} components`}`
+                  : 'across the design'
+                const metrics = []
+                if (sim.successRate < 0.999) metrics.push(`success rate (now ${(sim.successRate * 100).toFixed(1)}%)`)
+                if (fx.cut?.size > 0) metrics.push(`${fx.cut.size} severed link${fx.cut.size === 1 ? '' : 's'}`)
+                if (fx.rpsMul && fx.rpsMul !== 1) metrics.push(`the ${fx.rpsMul}× traffic inflation`)
+                metrics.push('p99 and availability')
+                return (
+                  <div className="chaos-fixhint">
+                    ↩ Recovering clears <b>{kindList}</b> {where}, and restores {metrics.join(', ').replace(/, ([^,]*)$/, ' and $1')}.
+                  </div>
+                )
+              })()}
               {faults.map(f => {
                 const spec = faultById(f.faultId)
                 const left = Math.max(0, Math.ceil((f.until - now) / 1000))

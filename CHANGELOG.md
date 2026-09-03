@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.21.3 — 2026-09-03
+- 🌪️ Chaos: the **Recover all** button now previews what it will heal before you click — a live line naming the active fault types, the components hit, and the metrics it restores (success rate, severed links, traffic inflation, p99, availability) — plus a hover tooltip
+
 ## 1.21.2 — 2026-09-03
 - 🔊 Listen: voices limited to US English (en-US) — the picker collapses to a single flat list; a previously saved voice in another language falls back to the best US English voice, and a device with no US English voice still speaks rather than going silent
 
