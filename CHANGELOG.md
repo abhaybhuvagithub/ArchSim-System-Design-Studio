@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.21.2 — 2026-09-03
+- 🔊 Listen: voices limited to US English (en-US) — the picker collapses to a single flat list; a previously saved voice in another language falls back to the best US English voice, and a device with no US English voice still speaks rather than going silent
+
 ## 1.21.0 — 2026-09-02
 - 🚨 **Incident Mode** (Chaos tab): six customer-voiced incidents on real designs with real injected faults — enterprise-bank p99 spike (retries amplifying a slow issuer), UPI duplicate debits (idempotency held; partner leg reversed), one-tenant-empty-answers (ingestion, not retrieval), dinner-rush consumer lag, OOMKilled-with-node-memory-free, and the expired-intermediate TLS asymmetry. Investigate the live sim, commit to a diagnosis from a lineup, get the fix, the RCA skeleton, and the same truth in **four voices** — engineer, EM, CTO, customer executive
 - 🤝 Mastery gains its 18th area: **FDE & Customer Engineering** — discovery before design, the six doors into an enterprise, the works-on-my-machine debug ladder (DNS→route→port→TLS→auth→app), POC vs production, one-problem-four-rooms, and the deployment runbook as exit criteria

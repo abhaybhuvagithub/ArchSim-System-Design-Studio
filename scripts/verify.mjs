@@ -1763,7 +1763,26 @@ try {
       }
       const found = Object.entries(leftovers);
       if (found.length) log('  ! unspoken: ' + found.map(([k, v]) => JSON.stringify(k) + ' x' + v).join(' '));
-      log(`speech: ${strings.length} spoken strings prepared`);
+      // Listen speaks US English only — other languages are never offered
+      {
+        const mockSynth = { getVoices: () => [
+          { name: 'Samantha', lang: 'en-US', localService: true },
+          { name: 'Alex', lang: 'en_US', localService: true },
+          { name: 'Daniel', lang: 'en-GB', localService: true },
+          { name: 'Lekha', lang: 'hi-IN', localService: true },
+          { name: 'Rishi', lang: 'gu-IN', localService: true },
+          { name: 'Amelie', lang: 'fr-FR', localService: true },
+        ] };
+        const offered = sp.listVoices(mockSynth);
+        check('the voice list offers US English voices only', offered.length === 2 && offered.every(x => /^en[-_]US$/i.test(x.lang)));
+        const groups = sp.voicesByLanguage(mockSynth);
+        check('the picker collapses to a single English (US) group', groups.length === 1 && groups[0][0] === 'English (US)');
+        check('a stale saved voice in another language falls back to the best US English voice',
+          /^en[-_]US$/i.test((sp.pickVoice(mockSynth, 'Lekha') || {}).lang || ''));
+        check('a device with no US English voice still gets a voice rather than silence',
+          !!sp.pickVoice({ getVoices: () => [{ name: 'Lekha', lang: 'hi-IN' }] }, null));
+      }
+            log(`speech: ${strings.length} spoken strings prepared`);
       check('nothing in the written content reads as a raw symbol or unconverted unit', found.length === 0);
     }
 
@@ -1827,30 +1846,28 @@ try {
     ];
     check('a female voice is chosen over a male one',
       /Sonia|Samantha/.test(sp.pickVoice(box(mixed)).name));
-    check('a natural voice wins over an older female one',
-      sp.pickVoice(box(mixed)).name.includes('Sonia'));
+    check('among US English voices, a natural one wins over an older formant voice',
+      /Samantha|Ava|Allison|Natural|Online/i.test(sp.pickVoice(box(mixed)).name));
     // Isolates the female preference itself: identical language, locality and
     // quality, with the neutral name sorting first alphabetically, so only the
     // gender signal can decide it. Without that signal this test fails.
-    check('a female name is preferred over an otherwise identical neutral one',
+    check('a female name is preferred over an otherwise identical neutral one (US English)',
       sp.pickVoice(box([
-        { name: 'Alpha', lang: 'en-GB', localService: true },
-        { name: 'Zoe', lang: 'en-GB', localService: true },
+        { name: 'Alpha', lang: 'en-US', localService: true },
+        { name: 'Zoe', lang: 'en-US', localService: true },
       ])).name === 'Zoe');
-    // Other languages are offered deliberately now — the content is English so
-    // an English voice still leads, but Hindi or Tamil is a valid choice.
-    check('other languages are offered, below English',
-      sp.listVoices(box(mixed)).some((v) => v.lang.startsWith('de')) &&
-      /^en/i.test(sp.listVoices(box(mixed))[0].lang));
-    check('male voices rank below female ones in the same language', (() => {
-      const en = sp.listVoices(box(mixed)).filter((v) => /^en/i.test(v.lang));
-      const lastFemale = en.map((v) => /Sonia|Samantha/.test(v.name)).lastIndexOf(true);
-      const firstMale = en.map((v) => /David|Daniel/.test(v.name)).indexOf(true);
-      return lastFemale >= 0 && firstMale >= 0 && lastFemale < firstMale;
+    // US English only now — no non-English voice is ever offered, whatever the device reports.
+    check('only US English voices are offered, whatever the device reports',
+      sp.listVoices(box(mixed)).length > 0 && sp.listVoices(box(mixed)).every((v) => /^en[-_]US$/i.test(v.lang)));
+    check('male voices rank below female ones among US English voices', (() => {
+      const en = sp.listVoices(box(mixed)).filter((v) => /^en[-_]US$/i.test(v.lang));
+      const lastFemale = en.map((v) => /Samantha|Ava|Allison|Sonia/.test(v.name)).lastIndexOf(true);
+      const firstMale = en.map((v) => /David|Mark|Aaron/.test(v.name)).indexOf(true);
+      return lastFemale < 0 || firstMale < 0 || lastFemale < firstMale;
     })());
     check('an explicit choice is honoured', sp.pickVoice(box(mixed), 'Samantha').name === 'Samantha');
-    check('a saved voice that has gone away falls back to the best available',
-      sp.pickVoice(box(mixed), 'Vanished').name.includes('Sonia'));
+    check('a saved voice that has gone away falls back to a US English voice',
+      /^en[-_]US$/i.test((sp.pickVoice(box(mixed), 'Vanished') || {}).lang || ''));
     check('a machine with only male voices still speaks',
       !!sp.pickVoice(box([{ name: 'Daniel', lang: 'en-GB', localService: true }])));
     check('no voices at all does not throw', sp.pickVoice(box([])) === null);
@@ -1872,29 +1889,21 @@ try {
     check('a machine with only novelty voices still speaks',
       !!sp.pickVoice(box([{ name: 'Albert', lang: 'en-US' }])));
 
-    // ── Indian languages ─────────────────────────────────────────────────────
-    const indian = [
-      { name: 'Microsoft Sonia Online (Natural)', lang: 'en-GB' },
+    // ── one language only: US English ─────────────────────────────────────────
+    const multi = [
+      { name: 'Microsoft Aria Online (Natural)', lang: 'en-US' },
       { name: 'Microsoft Heera - English (India)', lang: 'en-IN', localService: true },
       { name: 'Microsoft Swara Online (Natural) - Hindi', lang: 'hi-IN' },
       { name: 'Veena', lang: 'ta-IN', localService: true },
       { name: 'Google Deutsch', lang: 'de-DE' },
+      { name: 'Daniel', lang: 'en-GB', localService: true },
     ];
-    const langs = sp.voicesByLanguage(box(indian)).map(([l]) => l);
-    check('Indian language voices are offered', langs.some((l) => /Hindi/.test(l)) && langs.some((l) => /Tamil/.test(l)));
-    check('languages are named, not shown as codes', !langs.some((l) => /^(hi|ta|bn)\b/.test(l)));
-    check('English is grouped first, since the content is English', /^English/.test(langs[0]));
-    check('an English voice is still the default for English content', /^en/i.test(sp.pickVoice(box(indian)).lang));
-    check('a Hindi voice can be chosen explicitly',
-      sp.pickVoice(box(indian), 'Microsoft Swara Online (Natural) - Hindi').lang === 'hi-IN');
-    check('language labels read properly',
-      sp.languageLabel('hi-IN') === 'Hindi (India)' && sp.languageLabel('ta-IN') === 'Tamil (India)');
-    // Isolates the Indian boost: neutral names, matched quality, and the
-    // non-Indian one sorting first alphabetically, so only that signal decides.
-    // Without it this passes on the female bonus alone, which is how the
-    // equivalent hole hid the female preference earlier.
-    check('an Indian language outranks an unrelated one, all else equal',
-      sp.listVoices(box([{ name: 'Alpha', lang: 'de-DE' }, { name: 'Zeta', lang: 'hi-IN' }]))[0].lang === 'hi-IN');
+    const langs = sp.voicesByLanguage(box(multi)).map(([l]) => l);
+    check('the picker shows exactly one language group', langs.length === 1);
+    check('that group is English (US)', langs[0] === 'English (US)');
+    check('no non-US voice survives the filter', sp.listVoices(box(multi)).every((v) => /^en[-_]US$/i.test(v.lang)));
+    check('a non-US saved voice falls back to US English', /^en[-_]US$/i.test((sp.pickVoice(box(multi), 'Veena') || {}).lang || ''));
+    check('language labels still read properly where used', sp.languageLabel('en-US') === 'English (US)');
     check('there is a pause between paragraphs', sp.BLOCK_PAUSE_MS >= 120);
   }
 
@@ -2370,10 +2379,11 @@ try {
     }
     check('a voice picker is offered', !!doc.querySelector('.ra-voice'));
     check('the voice picker is labelled', !!doc.querySelector('.ra-voice')?.getAttribute('aria-label'));
-    check('the voice picker groups by language',
-      (doc.querySelector('.ra-voice')?.querySelectorAll('optgroup').length || 0) >= 2);
-    check('Indian languages appear in the picker',
-      /Hindi|Tamil/.test(doc.querySelector('.ra-voice')?.innerHTML || ''));
+    check('the picker is a single flat list — one language, no optgroups',
+      (doc.querySelector('.ra-voice')?.querySelectorAll('optgroup').length || 0) === 0 &&
+      (doc.querySelector('.ra-voice')?.querySelectorAll('option').length || 0) >= 2);
+    check('no non-US-English language appears in the picker',
+      !/Hindi|Tamil|Deutsch|\(India\)|United Kingdom/.test(doc.querySelector('.ra-voice')?.innerHTML || ''));
     check('no novelty voice reaches the picker',
       !/Albert|Bad News|Grandma/.test(doc.querySelector('.ra-voice')?.innerHTML || ''));
     check('the picker leads with a female voice',

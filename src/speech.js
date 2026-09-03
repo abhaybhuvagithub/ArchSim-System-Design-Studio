@@ -317,9 +317,12 @@ export function voicesByLanguage(synth) {
 }
 
 // Every usable voice, best first — this is what the picker shows.
+// US English only: the written content is US-English prose, and offering it in
+// one language keeps the picker honest about what it can actually pronounce.
 export function listVoices(synth) {
   const all = (synth?.getVoices && synth.getVoices()) || []
   return all
+    .filter(v => /^en[-_]US$/i.test(String(v.lang || '')))
     .map(v => ({ v, s: scoreVoice(v) }))
     .filter(x => x.s >= 0)
     .sort((a, b) => b.s - a.s || a.v.name.localeCompare(b.v.name))

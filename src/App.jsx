@@ -4317,11 +4317,13 @@ function ReadAloud({ children, label = 'this section' }) {
           {voices.length > 1 && (
             <select className="ra-voice" value={voiceName || (voices[0]?.name ?? '')}
               onChange={e => changeVoice(e.target.value)} aria-label="Voice and language">
-              {voiceGroups.map(([lang, list]) => (
-                <optgroup key={lang} label={lang}>
-                  {list.map(v => <option key={v.name} value={v.name}>{shortVoice(v.name)}</option>)}
-                </optgroup>
-              ))}
+              {voiceGroups.length === 1
+                ? voiceGroups[0][1].map(v => <option key={v.name} value={v.name}>{shortVoice(v.name)}</option>)
+                : voiceGroups.map(([lang, list]) => (
+                  <optgroup key={lang} label={lang}>
+                    {list.map(v => <option key={v.name} value={v.name}>{shortVoice(v.name)}</option>)}
+                  </optgroup>
+                ))}
             </select>
           )}
           <label className="ra-rate">
