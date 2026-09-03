@@ -35,3 +35,8 @@ node scripts/verify.mjs   # the full 971-check suite against the built bundle
 
 - [SIMULATOR.md](./SIMULATOR.md) — how the capacity, latency, and availability math actually works
 - [CHANGELOG.md](./CHANGELOG.md) — what shipped, in order
+
+## Related
+
+**[archsim-gate](https://github.com/abhaybhuvagithub/archsim-gate)** — the CI half of this thesis: fail the PR when the architecture can not keep its promises. Same physics, pointed at your Terraform plan, with the cheapest priced repair in the comment.
+
