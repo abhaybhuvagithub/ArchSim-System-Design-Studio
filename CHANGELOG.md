@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.22.0 — 2026-09-03
+- 🕸️ Analytics area gains a 6th concept: **Data Mesh** — domains own their data as a versioned, contract-first product on async streams; the platform becomes the paved road (schema registry, catalog, lineage, QA, SLAs) not the ETL team; federated governance. The central-warehouse / sync-API / batch-lake alternatives are graded four ways, each failing a specific mesh principle. Scenario also lands in the Learn quiz
+
 ## 1.21.3 — 2026-09-03
 - 🌪️ Chaos: the **Recover all** button now previews what it will heal before you click — a live line naming the active fault types, the components hit, and the metrics it restores (success rate, severed links, traffic inflation, p99, availability) — plus a hover tooltip
 

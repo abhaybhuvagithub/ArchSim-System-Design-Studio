@@ -2282,7 +2282,18 @@ try {
       check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 18);
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the testing scenario is graded — shift-left wins, the flake factory and customers-as-test-suite are named', await (async () => {
+      check('the data-mesh scenario is graded — the true mesh wins, the relocated-bottleneck options are named', await (async () => {
+        const MM = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const c = MM.MASTERY_CMP['data-mesh'];
+        const flat = c.rows.map(r => r.join(' ')).join(' ');
+        return !!c && c.cols.includes('Verdict') && c.rows.length === 4 && /The answer/.test(flat) && /Keeps the bottleneck/.test(flat) && /Relocates the bottleneck/.test(flat);
+      })());
+      check('Learn quizzes the Data Mesh scenario with contract-first products on streams as the answer', await (async () => {
+        const LQ3 = await import(pathToFileURL(path.join(root, 'src/learn.js')).href);
+        const q = LQ3.QUIZ.find(x => /central nightly ETL/.test(x.q));
+        return !!q && /contract-first data products/.test(q.options[q.answer]) && /self-serve platform/.test(q.options[q.answer]);
+      })());
+            check('the testing scenario is graded — shift-left wins, the flake factory and customers-as-test-suite are named', await (async () => {
         const M6 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const c = M6.MASTERY_CMP['testing-pyramid'];
         const flat = c.rows.map(r => r.join(' ')).join(' ');
