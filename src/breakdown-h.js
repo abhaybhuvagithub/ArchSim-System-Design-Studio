@@ -1312,4 +1312,63 @@ export default {
   },
 },
 
+
+'Pine Labs (Merchant POS + EMI)': {
+  meta: 'Fintech - Bharat - hard - merchant acquiring with a physical device fleet',
+  overview: 'Most payment templates model the money rails; this one models the shop counter. Pine Labs is the merchant-acquiring side of payments: 600,000+ Android smart-POS terminals in physical stores, each of which must accept any method a shopper offers (chip, tap, QR, wallet, UPI), turn a card swipe into an EMI plan in the seconds a customer will stand at a till, route the transaction to whichever acquirer clears it cheapest and is healthy right now, and - critically - never refuse a sale because the store\'s network hiccuped. Around the terminal sits a payments-grade fleet-management problem (config, keys, firmware, tamper detection across hundreds of thousands of devices) and a settlement problem (net every merchant\'s captures to a T+1 payout, reconciled three ways). It is a distributed system whose edge nodes are hardware in someone else\'s building.',
+  scope: 'The transaction path from terminal to acquirer/network, the real-time EMI/affordability engine across 200+ banks and NBFCs, least-cost acquirer routing, offline store-and-forward, device fleet management, and merchant settlement/reconciliation. Card issuing, the banks\' and NBFCs\' own lending decisions, and the merchant\'s retail ERP are consumed here, not built.',
+  fr: {
+    core: ['Accept a payment at the terminal by any method and get an authorization', 'Compute EMI eligibility and plans in real time across 200+ financing partners', 'Route each transaction to the cheapest healthy acquirer/network', 'Capture offline and forward when connectivity returns, without double-charging', 'Net captured transactions to a T+1 settlement per merchant, reconciled'],
+    out: ['The issuing bank\'s auth decision and the NBFC\'s credit decision (consumed via connectors)', 'The merchant\'s point-of-sale billing/ERP software', 'Consumer-side card issuing'],
+  },
+  nfr: {
+    core: ['A network blip must never lose a sale: local capture + idempotent forward is non-negotiable at the edge', 'EMI eligibility must answer in counter-time (a few seconds), not bank-call time', 'Money is exact: every capture is double-entry on the ledger, settlement reconciles three ways', 'The device fleet is payments infrastructure: a bricked or tampered terminal is a store that cannot transact', 'Acquirer failure degrades cost or method, never availability - routing fails over'],
+    out: ['Sub-second global consistency of settlement - netting is a batched T+1 promise by design'],
+  },
+  nums: [['600K+', 'terminals in the field - the edge of this system is hardware'], ['~60s', 'to offer EMI at the counter across 200+ partners'], ['T+1', 'merchant settlement - a promise with a clock'], ['200+', 'bank and NBFC financing connectors behind one swipe']],
+  entities: [
+    ['Terminal', 'a registered Android POS device: config, signing keys, firmware version, health and tamper state'],
+    ['Transaction', 'method, amount, merchant, terminal; carries an idempotency key so an offline replay books once'],
+    ['EMIPlan', 'issuer/NBFC + tenure + subvention (no-cost-EMI) math, computed per card at the counter'],
+    ['AcquirerRoute', 'the chosen network for a transaction: least cost among the healthy, with failover'],
+    ['Settlement', 'the netted T+1 payout per merchant, reconciled against acquirer and bank truth'],
+  ],
+  apiIntro: 'The terminal talks to the platform over a link that may vanish, so the API is built around capture-now-reconcile-later and idempotency, not request-response optimism.',
+  api: [
+    { dir: '->', name: 'POST /txn (from terminal, idempotency-key)', body: '{ method, amount, merchant, terminal }\n-> auth result; if the link drops, the terminal queues and retries the SAME key - the ledger books it once' },
+    { dir: '->', name: 'POST /emi/quote', body: '{ card_bin | pan_token, amount }\n-> plans across eligible banks/NBFCs with tenures and no-cost-EMI math, in counter-time' },
+    { dir: '->', name: 'GET /settlement/{merchant}', body: '-> the T+1 netted payout with the transaction-level breakdown reconciliation is built from, not bolted onto' },
+  ],
+  dives: [
+    {
+      title: 'The terminal is a distributed node in a hostile network', focus: ['pos', 'store', 'gw', 'ledger'],
+      blocks: [
+        ['p', 'The hardest truth of merchant POS is that your edge nodes live in other people\'s buildings on other people\'s Wi-Fi, and the network drops mid-transaction as a matter of routine, not exception. So the terminal captures locally and forwards when the link returns, and the entire money path is built around that: every transaction carries an idempotency key, the ledger dedupes the inevitable replay, and a shopper never hears "try again" because the store\'s router blinked. This is store-and-forward as a first-class design, not an error handler bolted on.'],
+        ['bul', [
+          'Idempotency is the load-bearing invariant: the same offline transaction, retried three times when connectivity flaps, books exactly once - the ledger is the arbiter.',
+          'Local capture has limits stated honestly: an offline auth carries risk the platform accepts within floor limits, because refusing every sale during an outage is its own kind of failure.',
+          'The ledger is the source of truth and the dashboard is a view of it - the merchant sees what the ledger records, and reconciliation finds drift before the merchant does.',
+        ]],
+        ['warn', 'The trap is treating the terminal like a browser. A browser retries against a server that was probably up; a POS terminal retries against a link that was probably down, from a device holding money-movement intent. Without idempotency end-to-end, offline retries become double charges - and a double charge at a shop counter is a support call, a refund, and a lost merchant.'],
+      ],
+    },
+    {
+      title: 'EMI at the counter, routing behind it', focus: ['orch', 'emi', 'nbfc', 'route', 'acq'],
+      blocks: [
+        ['p', 'The product that made Pine Labs is EMI at the point of sale, and it is a real-time computation under a human-patience deadline: from a card BIN or a PAN, find the eligible plans across 200+ banks and NBFCs, apply no-cost-EMI subvention math, and present tenure options - all in the few seconds a shopper will wait at a till. Behind the accepted payment, least-cost routing picks the acquirer that clears cheapest and is healthy right now, because the merchant discount rate is the merchant\'s margin and a degraded acquirer must become a re-route, never a declined sale.'],
+        ['bul', [
+          'EMI eligibility is a hot-path lookup, not a batch job: the plan matrix is precomputed and cached per partner so the counter answer is fast and the bank call is avoided.',
+          'Least-cost routing is cost AND health: the cheapest network that is currently clearing, with automatic failover, so an acquirer incident costs basis points, not sales.',
+          'Cardless EMI extends the same engine to shoppers with no credit card via NBFC rails - PAN/Aadhaar eligibility at the terminal, the same counter-time budget.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A card machine that calls a payment API.',
+    senior: 'Store-and-forward with end-to-end idempotency so a network blip never loses or doubles a sale, real-time EMI eligibility across 200+ partners in counter-time, least-cost acquirer routing with health-based failover, double-entry ledger with three-way settlement reconciliation, and fleet management (config, keys, firmware, tamper) treated as payments-grade infrastructure.',
+    staff: 'Design the fleet and money guarantees at 600K terminals: the offline floor-limit risk model, the key-rotation and firmware program across hundreds of thousands of devices in the field, the reconciliation system that a finance auditor and a merchant both trust, and the routing economics that balance cost against acquirer health - because at this scale the edge is hardware you cannot redeploy in an afternoon, and every design choice is also a field-operations choice.',
+  },
+},
+
 }

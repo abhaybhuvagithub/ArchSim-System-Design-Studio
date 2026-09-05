@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.24.0 — 2026-09-03
+- 🏪 New Bharat · fintech template: **Pine Labs (Merchant POS + EMI)** — the merchant-acquiring side of payments, distinct from the issuer (Card Payments) and switch (UPI) templates. A 600K-terminal fleet: store-and-forward with end-to-end idempotency so a network blip never loses or doubles a sale, real-time EMI eligibility across 200+ banks/NBFCs in counter-time, least-cost acquirer routing with health failover, double-entry ledger with T+1 three-way settlement, and device fleet management as payments-grade infrastructure. Wall: the edge is hardware you cannot redeploy in an afternoon. +6 acronyms: POS, EMI, BNPL, MDR, NBFC, DCC
+
 ## 1.23.0 — 2026-09-03
 - 🔐 Mastery gains its 19th area: **Identity & Access (IAM)** — AuthN vs AuthZ (two questions, two owners), OAuth-is-authorization-OIDC-is-login (the classic interview trap), SAML vs OIDC for bridging two eras, local JWT validation vs introspection, conditional access as zero-trust login-as-a-decision, and enterprise SSO for a million employees. New template **Enterprise SSO (Entra/Okta)** — OIDC + SAML behind one broker, MFA, conditional access, JWKS rotation, SCIM deprovisioning. +8 acronyms: OIDC, SAML, MFA, ABAC, PKCE, IdP, SCIM, mTLS. Added to the Backend and DevOps tracks
 

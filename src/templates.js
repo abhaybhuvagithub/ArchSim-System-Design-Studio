@@ -1960,4 +1960,19 @@ T('Enterprise SSO (Entra/Okta)', 'One login for a million employees across 500 a
     'New apps federate by OIDC, legacy enterprise SaaS by SAML - the broker speaks both so the business never waits on a vendor to modernize',
     'Signing-key rotation is routine and overlap-based: publish the new key in JWKS, sign with it, retire the old one only after every cached copy has expired - a key rotation that breaks logins was done wrong',
   ], 'Unicorns · USA'),
+T('Pine Labs (Merchant POS + EMI)', 'A 600K-terminal fleet in physical stores: accept any method, offer EMI in 60 seconds at the counter, never refuse a sale on a network blip', 4000, [
+    ['pos', 'client', 'Smart POS Terminals (600K)', 40, 240], ['edge', 'cdn', 'Edge / TLS Termination', 180, 240, 3],
+    ['gw', 'gateway', 'Transaction Gateway', 320, 240, 5], ['orch', 'micro', 'Payment Orchestrator', 470, 200, 6],
+    ['route', 'micro', 'Acquirer Routing (least-cost)', 620, 120, 4], ['acq', 'app', 'Acquirer / Network Connectors', 780, 120, 5],
+    ['emi', 'micro', 'EMI / Affordability Engine', 620, 260, 4], ['nbfc', 'app', 'Bank & NBFC Connectors (200+)', 780, 260, 4],
+    ['ledger', 'ledger', 'Transaction Ledger', 620, 400, 3], ['settle', 'worker', 'Settlement (T+1)', 780, 400, 3],
+    ['fleet', 'micro', 'Device Fleet & Config', 320, 380, 3], ['store', 'nosql', 'Store-and-Forward Queue', 180, 380, 3],
+    ['merch', 'app', 'Merchant Dashboard', 470, 440, 3], ['audit', 'kafka', 'Txn & Audit Log', 940, 240, 3],
+  ], [['pos','edge'],['edge','gw'],['gw','orch'],['orch','route'],['route','acq'],['orch','emi'],['emi','nbfc'],['orch','ledger'],['ledger','settle'],['gw','fleet'],['pos','store'],['orch','merch'],['orch','audit'],['acq','audit']], [
+    'The terminal is a computer in a hostile network, not a card reader: a store\'s Wi-Fi drops mid-swipe, so payments capture locally and forward when the link returns - a sale is never lost to a blip, and the ledger dedupes the replay on an idempotency key',
+    'EMI at the counter is the product, and it is a real-time eligibility computation: card BIN or PAN to 200+ bank/NBFC plans, no-cost-EMI subvention math, tenure options - answered in the seconds a shopper will wait at a till, not the minutes a bank call would take',
+    'One swipe, many acquirers: least-cost routing picks the network that clears cheapest and is healthiest right now, because the merchant discount rate is the merchant\'s margin and a down acquirer must not become a declined sale',
+    'The fleet is the operational reality: 600K Android terminals need config, key and firmware push, health and tamper signals - a bricked or compromised terminal is a store that cannot take money, so device management is a payments-grade concern',
+    'Merchant settlement is a promise with a clock: captured transactions net to a T+1 payout per merchant, reconciled three ways against acquirer and bank truth - the ledger is the source, the dashboard is the view, and reconciliation drift is found by the system, not the merchant',
+  ], 'Bharat · fintech'),
 ]

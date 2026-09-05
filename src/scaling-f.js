@@ -401,4 +401,22 @@ export default {
   wall: { t: 'The single front door is the single point of failure', d: 'Every efficiency here - one identity, one login, one policy engine - concentrates risk into one system whose outage stops the entire company and whose compromise exposes all of it. Past a point the binding constraint is not throughput but blast radius: the IdP must be engineered like a power grid, with regional redundancy, graceful degradation (cached sessions surviving a brief control-plane blip), rehearsed key rotation, and a break-glass path for when identity itself is down. You cannot federate your way out of needing the front door to be the most reliable thing you run.' },
 },
 
+
+'Pine Labs (Merchant POS + EMI)': {
+  constraint: 'The edge of this system is physical hardware in stores you do not control, on networks you cannot fix. Scaling means more terminals, more methods and more financing partners while the counter stays fast and no sale is ever lost.',
+  ladder: [
+    ['1K terminals', '~40 rps', 'Store-and-forward and idempotency from day one - retrofitting them after the first double-charge is painful. A single acquirer, a handful of EMI partners.'],
+    ['50K terminals', '~400 rps', 'Least-cost routing across several acquirers; the EMI plan matrix is cached per partner; device fleet management (config, firmware) becomes its own service.'],
+    ['600K terminals', '~4K rps', 'Routing weighs cost and live acquirer health; 200+ financing connectors behind a stable EMI contract; settlement nets per merchant at T+1 with three-way reconciliation; tamper and key rotation run as fleet programs.'],
+    ['Multi-country, omnichannel', '~15K rps', 'The same orchestrator serves online (Plural-style) and in-store from one ledger; per-market acquirers and regulation; the fleet spans geographies and the edge-hardware logistics is itself a scaling constraint.'],
+  ],
+  levers: [
+    { t: 'Capture at the edge, reconcile at the center', d: 'Terminals book offline and forward idempotently; the platform is never on the hot path of a sale that a blinking router would otherwise kill.', n: ['pos', 'store', 'ledger'] },
+    { t: 'Cache the EMI matrix, answer in counter-time', d: 'Precompute eligible plans and subvention math per partner so the till answer is a fast lookup, not 200 bank calls.', n: ['emi', 'nbfc'] },
+    { t: 'Route on cost and health together', d: 'Least-cost routing with live acquirer health and failover turns an acquirer outage into basis points, not declined sales.', n: ['route', 'acq'] },
+    { t: 'Run the fleet like infrastructure', d: 'Config, key and firmware push, tamper and health signals across 600K devices - a terminal that cannot transact is a store that cannot earn.', n: ['fleet'] },
+  ],
+  wall: { t: 'The edge is hardware you cannot redeploy in an afternoon', d: 'Every other system in this studio scales its edge by changing a number; here the edge is 600,000 physical terminals in shops across the country, and a design decision - a new key scheme, a firmware dependency, an offline risk limit - is also a field-operations program with logistics, downtime and merchant impact. Past a point the binding constraint is not compute but the physical fleet: how fast you can safely push change to hardware you do not hold, without bricking a store\'s ability to take money. The honest design treats device management as a payments-grade system and accepts that the slowest, most physical part of the loop sets the pace.' },
+},
+
 }

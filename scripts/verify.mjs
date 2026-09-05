@@ -2291,7 +2291,16 @@ try {
         return !!oauth && /ID token/.test(oauth.rows.map(r => r.join(' ')).join(' '))
           && !!tok && /revocation-critical/i.test(tok.rows.map(r => r.join(' ')).join(' '));
       })());
-      check('the Enterprise SSO template exists, is healthy, and speaks both protocols', await (async () => {
+      check('the Pine Labs template exists, is healthy, and teaches offline store-and-forward + EMI', await (async () => {
+        const TP = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const SPn = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const t = TP.TEMPLATES.find(x => x.name === 'Pine Labs (Merchant POS + EMI)');
+        if (!t) return false;
+        const sim = SPn.simulate(t.nodes, t.edges, t.rps, new Set());
+        const notes = t.checklist.join(' ');
+        return sim.successRate > 0.98 && /Bharat/.test(t.group) && /idempotency/i.test(notes) && /EMI/.test(notes) && t.nodes.some(n => n.id === 'store') && t.nodes.some(n => n.type === 'ledger');
+      })());
+            check('the Enterprise SSO template exists, is healthy, and speaks both protocols', await (async () => {
         const T9 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
         const S9 = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
         const t = T9.TEMPLATES.find(x => x.name === 'Enterprise SSO (Entra/Okta)');
