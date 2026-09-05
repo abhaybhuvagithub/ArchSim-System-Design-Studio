@@ -1371,4 +1371,75 @@ export default {
   },
 },
 
+
+'Discovery Loop (Autonomous Research)': {
+  meta: 'Frontier AI - autonomous science - very hard - the system that runs experiments so humans do not have to',
+  overview: 'Almost every system in this studio serves a request and returns an answer. Discovery Loop does something categorically different: it runs the scientific method as a program. An AI proposes a hypothesis, designs an experiment to test it, executes that experiment on real compute, analyzes what came back, and folds the result into the next proposal - thousands of these cycles running in parallel, ideally with no human in the loop. Founded in 2026 by Jeff Dean, Sanjay Ghemawat, Quoc Le and Oriol Vinyals as a public-benefit corporation, its first target is the automation of machine-learning research itself - a system improving the very techniques it is built from. Architecturally this is not a chatbot with tools; it is a closed-loop optimizer whose inner iteration is "run a real experiment on a GPU cluster", whose currency is information gained per GPU-hour, and whose correctness criterion is that a discovery can be reproduced. The three forces that shape every decision: the loop must converge rather than wander, the finite compute must be allocated to the most informative experiments, and autonomous code that spends money and runs itself must be bounded and reproducible.',
+  scope: 'The autonomous experimental loop end to end: hypothesis generation, experiment planning (design of experiments), a compute scheduler that allocates a finite accelerator pool by expected value, sandboxed execution of proposed experiments, results analysis that feeds back as priors, and a provenance system that makes every result reproducible. The foundation models being improved, the physical datacenter, and human peer review of the eventual findings are consumed or downstream, not built here.',
+  fr: {
+    core: ['Propose hypotheses conditioned on all prior results (not from a blank slate)', 'Plan experiments that maximize information per unit compute (design of experiments)', 'Schedule thousands of concurrent experiments across a finite accelerator pool by expected value', 'Execute each experiment sandboxed, resource-capped, and fully instrumented', 'Analyze results and update the shared prior that steers the next generation of hypotheses', 'Record every run reproducibly: code, data, seed, environment, parent hypothesis, outcome'],
+    out: ['Training the base foundation models the hypothesis engine uses (a supplier, not this system)', 'Datacenter and accelerator hardware provisioning (consumed as a pool)', 'Human scientific peer review and publication of confirmed discoveries'],
+  },
+  nfr: {
+    core: ['Convergence: the loop must trend toward discovery, so results must feed back fast enough to steer the next batch - a feedback lag longer than an experiment cycle turns the loop into parallel random search', 'Accelerator utilization is the primary efficiency metric: idle GPUs are the dominant waste, so the scheduler keeps the pool saturated with the highest-value work', 'Safety and cost containment: autonomous, self-executing code must be bounded in compute, blast radius and spend BEFORE it runs, not audited after', 'Reproducibility is absolute: any result can be re-derived from its pinned provenance, or it is not a scientific result', 'Fault tolerance across long runs: multi-hour/day experiments must checkpoint and resume, because at thousands of concurrent runs, hardware failure is constant, not exceptional'],
+    out: ['Low-latency interactive response - this is a throughput-and-convergence system, not a request-response one; a cycle can take minutes to days'],
+  },
+  nums: [['1000s', 'experiments in flight at once - parallelism is the whole point'], ['info/GPU-hr', 'the true currency: expected information gain per unit of scarce compute'], ['1 loop', 'propose to execute to analyze to propose - the iteration that must converge'], ['100%', 'reproducible: every run pins code, data, seed, environment, parent']],
+  entities: [
+    ['Hypothesis', 'a proposed, testable claim conditioned on the prior; carries an expected-information-gain estimate the scheduler ranks by'],
+    ['Experiment', 'the concrete plan to test a hypothesis: code, dataset, resource request, success metric; the schedulable unit of work'],
+    ['Run', 'one execution of an experiment: pinned code+data+seed+env, a checkpoint stream, telemetry, and an outcome - the reproducible atom'],
+    ['Result', 'the analyzed outcome of a run, distilled into a metric AND an update to the shared prior the hypothesis engine conditions on'],
+    ['Prior / Knowledge', 'the accumulated, structured learning from all results so far - the thing that makes cycle N smarter than cycle 1'],
+  ],
+  apiIntro: 'The control plane is deliberately low-QPS and high-consequence: humans and agents submit research goals and guardrails, not per-request traffic. The heavy motion is internal - the loop scheduling itself against the compute pool.',
+  api: [
+    { dir: '->', name: 'POST /campaign', body: '{ goal, budget_gpu_hours, safety_bounds, success_metric }\n-> a research campaign the loop pursues autonomously within the bounds - the human sets the goal and the leash, not the steps' },
+    { dir: '->', name: 'GET /campaign/{id}/frontier', body: '-> the current best results, the live hypotheses in flight, GPU-hours spent vs budget, and the provenance to reproduce any of it' },
+    { dir: '<->', name: '(internal) scheduler.claim(gpu_pool)', body: 'the scheduler continuously ranks queued experiments by expected info-gain per GPU-hour, preempts low-value runs, and keeps the pool saturated' },
+  ],
+  dives: [
+    {
+      title: 'The loop must converge, not wander', focus: ['orch', 'hyp', 'plan', 'eval', 'feat'],
+      blocks: [
+        ['p', 'The defining risk of automated science is not that the AI cannot generate ideas - it is that it generates too many, untethered from what has already been learned, and burns a fortune in compute on a parallel random walk. So the loop is engineered as a closed feedback system with a memory. The hypothesis engine never proposes from a blank slate: it conditions on the accumulated prior, the structured distillation of every result so far. The planner turns a hypothesis into an experiment designed to maximize information - design of experiments, not one-variable-at-a-time - and after execution the analyzer does the load-bearing work of turning a raw outcome back into an update to that prior. The tighter and faster this feedback, the more the system compounds; the looser it is, the closer it slides to expensive brute force.'],
+        ['bul', [
+          'Conditioning on the prior is what separates discovery from search: each result must sharpen the next proposal, or the parallelism just multiplies waste.',
+          'Design of experiments is the multiplier: an experiment chosen for expected information gain teaches more per GPU-hour than a dozen chosen at random.',
+          'The analyzer is the quiet heart: distilling a noisy result into a reliable prior update is harder than proposing or running, and it is where convergence is won or lost.',
+        ]],
+        ['warn', 'The failure mode that looks like success: high GPU utilization with no convergence. The cluster is busy, the dashboards are green, thousands of experiments are running - and the frontier is not moving, because results are not feeding back fast or well enough to steer proposals. Utilization measures that the machine is working; only convergence measures that it is discovering. Optimizing the first while ignoring the second is how you build a very expensive space heater.'],
+      ],
+    },
+    {
+      title: 'The scheduler is the whole ballgame', focus: ['sched', 'queue', 'exec', 'guard', 'store'],
+      blocks: [
+        ['p', 'When ideas are cheap and compute is finite, the allocator of compute becomes the most important component in the system. The scheduler does not run experiments first-come-first-served; it continuously ranks the queue by expected information gain per GPU-hour, starts the most valuable work, and preempts runs whose value has fallen below what is waiting. This is a live, economic decision made thousands of times over: every accelerator-hour spent on a low-value experiment is one stolen from a discovery. Around it sits the reality of long-running work at scale - experiments that take hours or days must checkpoint continuously so a preemption or a hardware failure resumes rather than restarts, because across thousands of concurrent runs on real silicon, failure is the steady state, not the exception.'],
+        ['bul', [
+          'Expected-value scheduling, not FIFO: the queue is a priority market in information-per-GPU-hour, re-ranked as results arrive and estimates update.',
+          'Preemption with checkpoints is mandatory: a day-long run that cannot resume is a day-long run you cannot afford to preempt, which cripples the scheduler.',
+          'Saturation is the target and the trap: keep the pool full, but full of the RIGHT work - a saturated cluster running low-value experiments is worse than an idle one, because it hides the waste.',
+        ]],
+        ['warn', 'Autonomous code that requests its own compute is an agent that can spend your entire budget - and cause real damage - in an afternoon. The safety and resource gate is not optional and it sits UPSTREAM of the scheduler: every experiment is bounded in compute, cost and blast radius before a single accelerator spins, sandboxed from everything it should not touch. An automated scientist without a resource leash is an automated way to set money, and possibly more, on fire.'],
+      ],
+    },
+    {
+      title: 'Reproducibility is the definition, not a feature', focus: ['exec', 'prov', 'results', 'obs'],
+      blocks: [
+        ['p', 'A result that cannot be reproduced is not a scientific result, so provenance is architectural bedrock rather than an audit afterthought. Every run pins the exact code, dataset version, random seed, environment and the parent hypothesis that motivated it onto an append-only ledger, and its outcome is written beside them. This is what lets any claim on the frontier be re-derived on demand, any surprising result be trusted rather than suspected, and the whole campaign be audited - which for a public-benefit corporation automating science is not just engineering hygiene but the basis of scientific and institutional credibility. It is the same append-only-trust-chain shape this studio has used for money and for medical provenance, pointed now at knowledge itself.'],
+        ['bul', [
+          'Pin everything or reproduce nothing: code, data, seed, environment, parent - a single unpinned variable makes a result unrepeatable and therefore worthless.',
+          'The ledger is append-only by design: results are historical facts, and a scientific record you can quietly edit is not a record.',
+          'Provenance is what makes autonomy trustworthy: when no human watched the experiment run, the pinned, reproducible trail is the only thing that lets a human believe the result.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'An agent that calls tools in a loop.',
+    senior: 'A closed feedback loop where results condition the next hypotheses (not blank-slate generation), an expected-information-gain scheduler that allocates a finite accelerator pool and preempts with checkpoints, a safety/resource gate upstream of all execution, sandboxed long-running experiments that checkpoint and resume through constant hardware failure, and append-only provenance that makes every result reproducible.',
+    staff: 'Design the convergence guarantees and the economics: how the prior is represented so distilled results actually sharpen proposals, how the scheduler prices information-gain against GPU-hours under uncertainty, how safety bounds are expressed for code that writes and runs itself, the reproducibility standard that would satisfy external scientific scrutiny, and the failure design for a system whose inner loop is a real experiment on real silicon at massive concurrency - where the meta-risk is a system improving the very methods it runs on, and the guardrails have to hold as it does.',
+  },
+},
+
 }

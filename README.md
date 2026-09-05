@@ -6,7 +6,7 @@
 
 **Live:** https://abhaybhuvagithub.github.io/ArchSim-System-Design-Studio/
 
-ArchSim is an interactive studio for system design — the skill interviews grade and production punishes. You draw an architecture (or load one of **102 templates**, from URL shorteners to WhatsApp to an LLM API platform), and the studio simulates it live: capacity per tier, utilization, latency with honest tails, composed availability. Then you break it with chaos, judge it against SLOs, price it, and practice defending it.
+ArchSim is an interactive studio for system design — the skill interviews grade and production punishes. You draw an architecture (or load one of **103 templates**, from URL shorteners to WhatsApp to an LLM API platform), and the studio simulates it live: capacity per tier, utilization, latency with honest tails, composed availability. Then you break it with chaos, judge it against SLOs, price it, and practice defending it.
 
 ## The tour
 

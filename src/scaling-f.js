@@ -419,4 +419,22 @@ export default {
   wall: { t: 'The edge is hardware you cannot redeploy in an afternoon', d: 'Every other system in this studio scales its edge by changing a number; here the edge is 600,000 physical terminals in shops across the country, and a design decision - a new key scheme, a firmware dependency, an offline risk limit - is also a field-operations program with logistics, downtime and merchant impact. Past a point the binding constraint is not compute but the physical fleet: how fast you can safely push change to hardware you do not hold, without bricking a store\'s ability to take money. The honest design treats device management as a payments-grade system and accepts that the slowest, most physical part of the loop sets the pace.' },
 },
 
+
+'Discovery Loop (Autonomous Research)': {
+  constraint: 'Ideas are cheap and compute is finite, so the system does not scale by serving more requests - it scales by extracting more discovery from more accelerators without the feedback loop breaking or the safety leash slipping. The binding resource is the GPU pool, and the binding risk is a loop that runs faster than it learns.',
+  ladder: [
+    ['1 campaign, tens of GPUs', 'a handful of concurrent runs', 'The loop, the scheduler and the provenance ledger all matter from day one - a research system without reproducibility is not cheaper, it is worthless. Expected-value scheduling can be simple, but it must exist.'],
+    ['many campaigns, hundreds of GPUs', 'hundreds of concurrent runs', 'The scheduler becomes a real priority market in information-per-GPU-hour; checkpoint/resume is mandatory as run lengths grow; the prior store becomes the thing that makes cycles compound rather than repeat.'],
+    ['a domain, thousands of GPUs', 'thousands of concurrent runs', 'Utilization AND convergence are tracked as separate first-class metrics; preemption is constant; the safety gate is a hardened, upstream service; hardware failure is designed-for as steady state with automatic run recovery.'],
+    ['many domains, datacenter scale', 'the full accelerator fleet', 'The loop generalizes beyond ML research to engineering, medicine, materials, energy - each a new experiment-execution backend behind the same propose-schedule-analyze core; the meta-loop (the system improving its own methods) is now a governance and safety problem as much as a scaling one.'],
+  ],
+  levers: [
+    { t: 'Schedule by information, not arrival', d: 'Rank the queue by expected information gain per GPU-hour and preempt low-value runs; the scarce resource must always be doing the most informative work available.', n: ['sched', 'queue'] },
+    { t: 'Checkpoint everything, resume anything', d: 'Long runs stream checkpoints so preemption and the constant hardware failures at scale cost minutes, not days - without this, the scheduler cannot preempt and utilization collapses.', n: ['exec', 'store'] },
+    { t: 'Make results compound as priors', d: 'Distill every outcome into the shared knowledge the hypothesis engine conditions on, so parallelism multiplies learning instead of multiplying random search.', n: ['eval', 'feat', 'hyp'] },
+    { t: 'Bound the autonomy upstream', d: 'Cost, compute and blast-radius limits enforced before execution, per campaign - the leash scales with the loop, or the loop eventually outspends and outreaches it.', n: ['guard', 'sched'] },
+  ],
+  wall: { t: 'A loop that runs faster than it learns is a money fire', d: 'Every scaling lever adds compute and concurrency, and past a point the constraint is not throughput but the ratio of learning to spend. If results do not feed back fast and well enough to sharpen the next proposals, more GPUs simply buy a larger parallel random search - maximum utilization, zero convergence, an extraordinary burn rate with nothing discovered. The deeper wall is reflexive: the flagship campaign is automating ML research, so success means the system improves the very methods and models it runs on, and the safety, reproducibility and resource guarantees have to hold not against a fixed system but against one actively rewriting itself. You do not scale your way past needing the loop to learn faster than it spends, and needing the leash to hold as the thing on it gets smarter.' },
+},
+
 }

@@ -1975,4 +1975,20 @@ T('Pine Labs (Merchant POS + EMI)', 'A 600K-terminal fleet in physical stores: a
     'The fleet is the operational reality: 600K Android terminals need config, key and firmware push, health and tamper signals - a bricked or compromised terminal is a store that cannot take money, so device management is a payments-grade concern',
     'Merchant settlement is a promise with a clock: captured transactions net to a T+1 payout per merchant, reconciled three ways against acquirer and bank truth - the ledger is the source, the dashboard is the view, and reconciliation drift is found by the system, not the merchant',
   ], 'Bharat · fintech'),
+T('Discovery Loop (Autonomous Research)', 'AI that runs the scientific method itself: propose hypotheses, execute thousands of experiments in parallel, analyze, iterate - no human in the loop', 800, [
+    ['sci', 'client', 'Researchers & Agents', 40, 260], ['gw', 'gateway', 'Control Plane API', 180, 260, 4],
+    ['orch', 'agentgraph', 'Loop Orchestrator', 320, 260, 6], ['hyp', 'llm', 'Hypothesis Engine (LLM)', 470, 140, 30],
+    ['plan', 'micro', 'Experiment Planner (DoE)', 470, 260, 5], ['sched', 'scheduler', 'Compute Scheduler', 620, 260, 4],
+    ['queue', 'queue', 'Experiment Queue', 620, 380, 4], ['exec', 'batch', 'Sandboxed Runners (GPU pool)', 780, 260, 8],
+    ['guard', 'guard', 'Safety & Resource Gate', 620, 140, 3], ['eval', 'micro', 'Results Analyzer', 780, 400, 5],
+    ['store', 'blob', 'Artifacts & Checkpoints', 940, 340, 4], ['results', 'warehouse', 'Results & Metrics Warehouse', 940, 480, 3],
+    ['prov', 'ledger', 'Provenance Ledger', 940, 200, 3], ['feat', 'featurestore', 'Knowledge / Prior Store', 470, 400, 3],
+    ['obs', 'otel', 'Experiment Telemetry', 780, 120, 3],
+  ], [['sci','gw'],['gw','orch'],['orch','hyp'],['hyp','feat'],['orch','plan'],['plan','sched'],['sched','guard'],['sched','queue'],['queue','exec'],['exec','store'],['exec','eval'],['eval','results'],['eval','orch'],['exec','prov'],['exec','obs']], [
+    'The loop is the product: propose a hypothesis, plan an experiment, run it, analyze the result, and feed what was learned back into the next proposal - a closed cycle that must converge toward discovery, not wander, so every result updates the prior that steers the next batch',
+    'The bottleneck is never ideas, it is compute: thousands of experiments compete for a finite GPU pool, so the scheduler is the heart of the system - it prioritizes by expected information gain per GPU-hour, preempts low-value runs, and keeps the expensive silicon saturated',
+    'Every experiment runs sandboxed and resource-capped: autonomous code that proposes and executes its own tests is powerful and dangerous, so a safety gate bounds compute, blast radius and cost before a single GPU spins - an agent that can spend is an agent that must be bounded',
+    'Reproducibility is not a feature, it is the definition of science: every run pins its code, data, seed, environment and parent hypothesis on an append-only provenance ledger, so any result can be re-derived and any claim traced to the exact experiment that produced it',
+    'Results feed forward as priors, not just rows: the analyzer distills each experiment into knowledge the hypothesis engine can condition on, so the thousandth cycle is smarter than the first - the system compounds, or it is just a very expensive random search',
+  ], 'Unicorns · USA'),
 ]

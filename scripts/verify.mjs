@@ -2291,7 +2291,22 @@ try {
         return !!oauth && /ID token/.test(oauth.rows.map(r => r.join(' ')).join(' '))
           && !!tok && /revocation-critical/i.test(tok.rows.map(r => r.join(' ')).join(' '));
       })());
-      check('the Pine Labs template exists, is healthy, and teaches offline store-and-forward + EMI', await (async () => {
+      check('the Discovery Loop template exists, is healthy, and models the converge/schedule/provenance core', await (async () => {
+        const TD = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const SD = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const t = TD.TEMPLATES.find(x => x.name === 'Discovery Loop (Autonomous Research)');
+        if (!t) return false;
+        const sim = SD.simulate(t.nodes, t.edges, t.rps, new Set());
+        const notes = t.checklist.join(' ');
+        return sim.successRate > 0.98 && /converge/i.test(notes) && /GPU/.test(notes) && /reproducib/i.test(notes)
+          && t.nodes.some(n => n.type === 'scheduler') && t.nodes.some(n => n.type === 'ledger') && t.nodes.some(n => n.id === 'guard');
+      })());
+      check('the autonomous-research drill teaches the utilization-vs-convergence trap', await (async () => {
+        const MD = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const c = MD.MASTERY_CMP['autonomous-loops'];
+        return !!c && /Convergence/.test(c.rows.map(r => r.join(' ')).join(' ')) && /random search/i.test(c.rows.map(r => r.join(' ')).join(' '));
+      })());
+            check('the Pine Labs template exists, is healthy, and teaches offline store-and-forward + EMI', await (async () => {
         const TP = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
         const SPn = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
         const t = TP.TEMPLATES.find(x => x.name === 'Pine Labs (Merchant POS + EMI)');
