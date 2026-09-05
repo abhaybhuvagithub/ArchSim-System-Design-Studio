@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.25.1 — 2026-09-03
+- 🎯 SLO tab title spelled out: "SLO (Service Level Objectives) & Error Budget" — the acronym is expanded on the tab and its headings; error-budget and burn-rate mechanics unchanged
+
 ## 1.25.0 — 2026-09-03
 - ♾️ New template + drill: **Discovery Loop (Autonomous Research)** — Jeff Dean & co's public-benefit corp automating the scientific method. A closed propose→execute→analyze→iterate loop at massive parallelism, modeled in depth: the loop must converge not wander (results condition the next hypotheses), the compute scheduler is the whole ballgame (expected information gain per GPU-hour, preempt with checkpoints), the safety/resource gate sits upstream of self-executing code, and append-only provenance makes every result reproducible. Wall: a loop that runs faster than it learns is a money fire. Also a 14th LLM-prod drill on the utilization-vs-convergence trap. +4 acronyms: DoE, HPO, NAS, AutoML
 

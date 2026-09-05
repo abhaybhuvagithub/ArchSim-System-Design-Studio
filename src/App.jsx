@@ -1260,7 +1260,7 @@ export default function App() {
               ['code', 'Code', null, 'docker-compose, Terraform and OpenAPI generated live from the canvas'],
               ['assist', 'Ask AI', null, 'Ask the assistant about this design — bottlenecks, cost, failures, scaling'],
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
-              ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
+              ['slo', 'SLO (Service Level Objectives) & Error Budget', null, 'Error budgets and a production-readiness review of this design'],
               ['acr', 'Acronyms', null, 'Every acronym in the studio, expanded - searchable'],
               ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: nineteen areas from networking to LLM production, roadmap.sh tracks, a JD planner — all wired to practice'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
@@ -1901,18 +1901,18 @@ function SLOTab({ nodes, edges, sim, simOn, onFix, resim }) {
     return out
   }, [nodes, edges, sim, simOn, target, resim])
   if (!nodes.length) {
-    return <section className="slo"><h3>🎯 SLO & Error Budget</h3>
+    return <section className="slo"><h3>🎯 SLO (Service Level Objectives) & Error Budget</h3>
       <p className="muted">Load a design — the SLO view reads its structure and live behavior.</p></section>
   }
   if (!simOn) {
-    return <section className="slo"><h3>🎯 SLO & Error Budget</h3>
+    return <section className="slo"><h3>🎯 SLO (Service Level Objectives) & Error Budget</h3>
       <p className="muted">Press <b>▶ Simulate</b> — burn rate is a property of traffic actually flowing.</p></section>
   }
   const r = sloReport(nodes, edges, sim, target)
   const nines = t => (t * 100).toFixed(t >= 0.9999 ? 2 : t >= 0.9995 ? 2 : 1) + '%'
   return (
     <section className="slo">
-      <h3>🎯 SLO & Error Budget</h3>
+      <h3>🎯 SLO (Service Level Objectives) & Error Budget</h3>
       <p className="slo-pick">Target:
         {SLO_TARGETS.map(t => (
           <button key={t} className={`btn ${t === target ? 'active' : ''}`} onClick={() => setTarget(t)}>{nines(t)}</button>
