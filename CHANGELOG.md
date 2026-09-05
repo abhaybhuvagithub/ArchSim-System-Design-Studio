@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.25.2 — 2026-09-03
+- 🎯 SLO tab button kept compact ("SLO"); the spelled-out "SLO (Service Level Objectives) & Error Budget" remains on the in-tab headings only
+
 ## 1.25.1 — 2026-09-03
 - 🎯 SLO tab title spelled out: "SLO (Service Level Objectives) & Error Budget" — the acronym is expanded on the tab and its headings; error-budget and burn-rate mechanics unchanged
 

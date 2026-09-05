@@ -1260,7 +1260,7 @@ export default function App() {
               ['code', 'Code', null, 'docker-compose, Terraform and OpenAPI generated live from the canvas'],
               ['assist', 'Ask AI', null, 'Ask the assistant about this design — bottlenecks, cost, failures, scaling'],
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
-              ['slo', 'SLO (Service Level Objectives) & Error Budget', null, 'Error budgets and a production-readiness review of this design'],
+              ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
               ['acr', 'Acronyms', null, 'Every acronym in the studio, expanded - searchable'],
               ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: nineteen areas from networking to LLM production, roadmap.sh tracks, a JD planner — all wired to practice'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
