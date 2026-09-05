@@ -2291,7 +2291,24 @@ try {
         return !!oauth && /ID token/.test(oauth.rows.map(r => r.join(' ')).join(' '))
           && !!tok && /revocation-critical/i.test(tok.rows.map(r => r.join(' ')).join(' '));
       })());
-      check('the four levels.fyi coverage templates exist, are healthy, and teach their distinctive idea', await (async () => {
+      check('the SQL component is explicitly PostgreSQL, and every existing sql node still resolves', await (async () => {
+        const CC = await import(pathToFileURL(path.join(root, 'src/catalog.js')).href);
+        const TT = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        if (!/PostgreSQL/.test(CC.CATALOG.sql.name)) return false;
+        // relabel must be non-breaking: the type key 'sql' is unchanged, so all sql nodes still map
+        return TT.TEMPLATES.every(t => t.nodes.every(n => CC.CATALOG[n.type]));
+      })());
+      check('the PostgreSQL-at-Scale template exists, is healthy, and teaches primary/replica/lag/pooling', await (async () => {
+        const TP = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const SP = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const t = TP.TEMPLATES.find(x => x.name === 'PostgreSQL at Scale (Primary + Replicas)');
+        if (!t) return false;
+        const sim = SP.simulate(t.nodes, t.edges, t.rps, new Set());
+        const notes = t.checklist.join(' ');
+        return sim.successRate > 0.98 && /replication lag/i.test(notes) && /read-your-writes/i.test(notes) && /pooler|PgBouncer/i.test(notes)
+          && t.nodes.filter(n => n.type === 'sql').length >= 3 && t.nodes.find(n => /Primary/i.test(n.label))?.replicas === 1;
+      })());
+            check('the four levels.fyi coverage templates exist, are healthy, and teach their distinctive idea', await (async () => {
         const TC = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
         const SC = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
         const want = {

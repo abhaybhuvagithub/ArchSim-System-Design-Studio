@@ -506,4 +506,22 @@ export default {
   wall: { t: 'Fragmentation is the enemy of the scarce resource', d: 'The naive path - hand each card to whoever asks - maximizes short-term utilization and quietly destroys long-term capacity, because a fleet fragmented into scattered single-GPU jobs can never assemble the 512 contiguous cards a big training run needs. So the real ceiling is not raw utilization but packing quality: keeping the fleet arranged so the most valuable large jobs can always be placed, which means sometimes leaving a card briefly idle to preserve a contiguous block. Past a point the hard problem is the tension between filling every GPU now and keeping room for the job that matters most next - a bin-packing and preemption problem where the scarce, expensive resource punishes every fragmentation mistake.' },
 },
 
+
+'PostgreSQL at Scale (Primary + Replicas)': {
+  constraint: 'One primary takes every write, so write throughput has a ceiling one node can reach and no further; reads scale out on replicas, but each replica lags. Scaling is the story of pushing that write ceiling up, spreading reads wide, and living honestly with lag - until the day you must shard.',
+  ladder: [
+    ['one node', 'light load', 'A single Postgres instance does everything. Get the WAL fsync durability and a backup/PITR plan right from the start; correctness is not something to add later.'],
+    ['primary + replicas', 'read-heavy load', 'Add read replicas and a read/write router; introduce a connection pooler before thousands of clients arrive; handle read-your-writes by routing fresh reads to the primary.'],
+    ['pooled fleet + cache', 'heavy mixed load', 'PgBouncer everywhere; a cache absorbs the hottest reads so replicas are not doing trivial repeated work; the primary is tuned for write throughput (batching, indexes, offloading heavy reads entirely).'],
+    ['sharded', 'write load beyond one primary', 'The write ceiling is finally hit, so data is sharded across many primaries, each owning a slice and never the same rows - and the application changes, because cross-shard joins and transactions are no longer free.'],
+  ],
+  levers: [
+    { t: 'Scale reads with replicas', d: 'Replicas replay the WAL to serve reads, absorbing load that would crush the primary - but they add read capacity only, never write, and they always lag.', n: ['r1', 'r2', 'wal'] },
+    { t: 'Pool connections or die', d: 'Each Postgres connection is a backend process with real memory; PgBouncer multiplexes thousands of clients onto a bounded pool so connection count never takes the primary down.', n: ['pool'] },
+    { t: 'Cache the hottest reads', d: 'A result cache in front means replicas are not repeatedly answering the same trivial query, freeing them for the reads that actually need a database.', n: ['cache', 'router'] },
+    { t: 'Route by freshness', d: 'Send reads that must reflect the caller\'s own write to the primary and everything lag-tolerant to replicas - the split that makes replica scaling safe.', n: ['router', 'primary'] },
+  ],
+  wall: { t: 'You cannot add a second primary; you shard or you make writes cheaper', d: 'Reads scale almost arbitrarily by adding replicas, but writes have a hard ceiling: one primary, by design, because that single authority is what gives the whole system its simple, correct consistency model. When you truly hit that ceiling there are exactly two honest moves, and a tempting wrong one. The wrong one is a second primary (active-active), which buys write scale by taking on conflict resolution between two authorities - the hardest problem in databases, and rarely what you actually needed. The honest ones are: first, make writes cheaper (batch them, index better, move heavy reads to replicas and heavy analytics off the box entirely), and only then shard - partition the data across many primaries where each owns a disjoint slice - accepting that the application itself must change, because a query can no longer freely join or transact across shards. The ceiling is real; the only ways through it cost either consistency or application simplicity, and choosing which is the senior decision.' },
+},
+
 }

@@ -1675,4 +1675,63 @@ export default {
   },
 },
 
+
+'PostgreSQL at Scale (Primary + Replicas)': {
+  meta: 'Data infrastructure - hard - the single-primary relational database, scaled honestly',
+  overview: 'PostgreSQL is the relational database most of the modern web is built on, and this template is about the shape every serious Postgres deployment converges to when one machine is no longer enough: a single primary that takes all writes, a fleet of read replicas that scale reads by replaying the primary\'s write-ahead log, and a connection pooler in front so the app\'s thousands of threads do not each become a database process. The single-primary model is not a flaw to engineer away - it is precisely what lets Postgres offer strong single-node consistency and real ACID transactions. The entire craft is understanding what that model gives you (correctness, simplicity) and what it costs you (a write ceiling, and replication lag on every read replica), and designing with both eyes open.',
+  scope: 'The primary/replica topology, the write-ahead log as the spine of durability/replication/recovery, connection pooling, read/write routing and its lag pitfalls, point-in-time recovery, and logical decoding for CDC. Query and schema design, and sharding for write scale beyond one primary, are noted at the boundaries.',
+  fr: {
+    core: ['Take all writes on one primary with full ACID guarantees', 'Scale reads across replicas that replay the WAL', 'Pool connections so thousands of clients share a bounded set of backends', 'Route reads to replicas or the primary depending on freshness need', 'Recover to any point in time from base backups + archived WAL', 'Stream changes downstream via logical decoding (CDC)'],
+    out: ['Multi-primary / active-active writes (a different, much harder consistency model)', 'Horizontal write sharding (the next step beyond one primary)', 'The application\'s query and schema design (the biggest performance lever, but the app\'s)'],
+  },
+  nfr: {
+    core: ['Write correctness: one primary, one authority, real serializable-capable transactions', 'Read scalability: replicas absorb read load that would otherwise crush the primary', 'Bounded connections: a pooler keeps backend process count sane under thousands of clients', 'Durability: no committed write is lost - the WAL fsync is the guarantee', 'Recoverability: PITR to any instant, and a promotable replica for primary failure'],
+    out: ['Zero replication lag - it is milliseconds, not zero, and the design must tolerate it'],
+  },
+  nums: [['1 primary', 'all writes, one authority - the source of the consistency model'], ['N replicas', 'read scaling by WAL replay; lag is small but never zero'], ['fsync', 'the commit is not real until the WAL hits disk - that is durability'], ['PITR', 'base backup + archived WAL restores to any moment']],
+  entities: [
+    ['Primary', 'the single node accepting writes; its WAL is the truth every replica and backup derives from'],
+    ['Replica', 'a read-only node continuously replaying the primary\'s WAL, moments behind, promotable on failover'],
+    ['WAL', 'the write-ahead log: fsync\'d before commit ack (durability), streamed to replicas (replication), archived (recovery), decoded (CDC)'],
+    ['Pooler', 'PgBouncer or similar; multiplexes thousands of client connections onto a small pool of real backends'],
+    ['Snapshot', 'the MVCC view a transaction reads - consistent as of its start, so readers never block writers'],
+  ],
+  apiIntro: 'There is no special API - it is SQL over the wire - but the routing decision (primary vs replica) is the design surface, because it is where consistency meets scale.',
+  api: [
+    { dir: '->', name: 'write: INSERT / UPDATE / DELETE -> primary', body: 'always the primary; committed only after the WAL is fsync\'d - the durability contract, paid in ≈10ms of disk latency' },
+    { dir: '->', name: 'read (fresh): SELECT -> primary', body: 'route here when the read must reflect the caller\'s own just-made write - the read-your-writes case' },
+    { dir: '->', name: 'read (lag-tolerant): SELECT -> replica', body: 'route the bulk of reads here to scale, accepting that the data is milliseconds-to-seconds behind the primary' },
+  ],
+  dives: [
+    {
+      title: 'One primary, and the lag on every replica', focus: ['primary', 'r1', 'r2', 'wal', 'router'],
+      blocks: [
+        ['p', 'The defining choice is a single primary for writes. It sounds like a bottleneck, but it is the thing that makes Postgres simple to reason about: one node decides the order of all writes, so there is one truth and no write conflicts to resolve. Reads scale out to replicas, each of which stays current by continuously replaying the primary\'s write-ahead log - and because that replay takes time, every replica is a few milliseconds behind. That replication lag is small, it is normal, and it is the source of the one bug everyone hits: read-your-writes. A user saves their profile (a write, to the primary) and immediately reloads it (a read, routed to a lagging replica) and sees the stale value. The fix is not to eliminate lag - you cannot - but to route reads that must be fresh to the primary, and send only the lag-tolerant majority to replicas.'],
+        ['bul', [
+          'Single primary = single source of write order: no conflicts to merge, which is exactly why the consistency model is easy.',
+          'Replicas scale reads, not writes: adding replicas buys read throughput and nothing else - the write ceiling is unchanged.',
+          'Route by freshness: fresh-required reads to the primary, lag-tolerant reads to replicas; getting this split right is the whole game.',
+        ]],
+        ['warn', 'The seductive wrong answer to a write bottleneck is a second primary (multi-primary / active-active). It trades your simple, correct single-node consistency for the hardest problem in databases - conflicting concurrent writes on two authorities - and most teams that reach for it did not actually need it. The real answers to a write ceiling are cheaper writes (batching, indexing, offloading) first, and sharding (many primaries, each owning a slice of the data, never the same rows) only when you genuinely must.'],
+      ],
+    },
+    {
+      title: 'The WAL does four jobs, and the pooler saves the primary', focus: ['wal', 'pool', 'backup', 'cdc'],
+      blocks: [
+        ['p', 'The write-ahead log is the most load-bearing idea in the system, because it is durability, replication, recovery and change-capture all at once. A commit is not acknowledged until its WAL record is fsync\'d to disk - that single fsync is what durability means, and it is why a commit costs milliseconds. That same log is streamed to replicas to keep them current, archived alongside periodic base backups so the database can be restored to any instant (point-in-time recovery), and decoded logically to feed change-data-capture pipelines downstream - the disciplined alternative to dual-writes. Separately but just as important: connections are expensive in Postgres, because each one is a real backend process holding real memory. Thousands of application threads opening direct connections will exhaust the database on connection count alone, before query load is even the issue - so a pooler like PgBouncer multiplexes them onto a small, bounded set of backends, and it is not optional at scale.'],
+        ['bul', [
+          'One log, four jobs: durability (fsync before ack), replication (stream to replicas), recovery (archive for PITR), and CDC (logical decoding).',
+          'The fsync is the durability contract: commit latency is disk latency, and that is the price of never losing an acknowledged write.',
+          'Pool or perish: each connection is a process; without PgBouncer, connection count - not throughput - is what takes the primary down.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A database with a backup.',
+    senior: 'A single write primary with read replicas replaying the WAL, freshness-aware read/write routing that handles read-your-writes, connection pooling so backend process count stays bounded, WAL as the unified spine of durability/replication/PITR/CDC, and a clear-eyed account of the write ceiling and when (not whether) to reach for sharding.',
+    staff: 'Design the operational guarantees: the failover procedure (replica promotion, fencing the old primary, and the data-loss window of async vs sync replication), the PITR strategy a real recovery would depend on, the connection-pooling topology across many services, the CDC design that keeps downstream systems consistent, and the honest sharding plan for the day one primary is genuinely not enough - including how the application changes when a query can no longer join across shards.',
+  },
+},
+
 }

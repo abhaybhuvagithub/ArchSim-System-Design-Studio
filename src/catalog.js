@@ -29,7 +29,7 @@ export const CATALOG = {
   grpc:        { name: 'gRPC Service',   glyph: '📶', color: '#06b6d4', cap: 6000,    lat: 8,   avail: 0.9995,  desc: 'Internal binary RPC over HTTP/2 — protobuf payloads, multiplexed streams, typed contracts between services.' },
   ws:          { name: 'WebSocket Srv',  glyph: '🔌', color: '#06b6d4', cap: 50000,   lat: 5,   avail: 0.999,  desc: 'Persistent connections for realtime push.' },
   cache:       { name: 'Cache (Redis)',  glyph: '🧠', color: '#ef4444', cap: 100000,  lat: 1,   avail: 0.999,  cacheHit: 0.8, desc: 'In-memory KV store. 80% hit ratio.' },
-  sql:         { name: 'SQL Database',   glyph: '🗄️', color: '#10b981', cap: 5000,    lat: 10,  avail: 0.9995,  desc: 'Relational store (Postgres/MySQL). ACID.' },
+  sql:         { name: 'PostgreSQL',     glyph: '🐘', color: '#10b981', cap: 5000,    lat: 10,  avail: 0.9995,  desc: 'Relational store (PostgreSQL). ACID transactions, MVCC (readers never block writers), WAL-based replication and point-in-time recovery. One primary takes writes; read replicas scale reads. pgvector makes it a vector store too.' },
   nosql:       { name: 'NoSQL DB',       glyph: '📦', color: '#10b981', cap: 20000,   lat: 5,   avail: 0.9999, desc: 'DynamoDB/Cassandra. Partitioned, eventually consistent.' },
   search:      { name: 'Search Index',   glyph: '🔍', color: '#f97316', cap: 8000,    lat: 20,  avail: 0.999,  desc: 'Elasticsearch — inverted index, full-text & geo.' },
   queue:       { name: 'Message Queue',  glyph: '📨', color: '#eab308', cap: 50000,   lat: 3,   avail: 0.999, desc: 'SQS/RabbitMQ — buffering, async decoupling.' },

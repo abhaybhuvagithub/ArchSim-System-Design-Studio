@@ -2048,4 +2048,18 @@ T('Coinbase (Crypto Exchange)', 'Match orders in microseconds, custody billions 
     'One card, many tenants: MIG partitioning slices a GPU so small inference jobs share it without interfering, because giving a whole accelerator to a job that needs a tenth of one is the same waste as an idle card',
     'Long jobs must checkpoint or preemption is unaffordable: training runs for days across thousands of failure-prone cards, so frequent checkpoints let the scheduler preempt for higher-priority work and resume, turning a rigid queue into a living market for compute',
   ], 'Unicorns · USA'),
+T('PostgreSQL at Scale (Primary + Replicas)', 'One primary takes every write; a fleet of read replicas scales reads - the whole art is living with the replication lag between them', 8000, [
+    ['app', 'client', 'Application Servers', 40, 240], ['pool', 'micro', 'Connection Pooler (PgBouncer)', 200, 240, 4],
+    ['router', 'micro', 'Read/Write Router', 360, 240, 4], ['primary', 'sql', 'Primary (writes)', 540, 140, 1],
+    ['r1', 'sql', 'Read Replica A', 540, 260, 2], ['r2', 'sql', 'Read Replica B', 540, 380, 2],
+    ['wal', 'kafka', 'WAL Stream (replication)', 720, 200, 3], ['cache', 'cache', 'Query / Result Cache', 360, 400, 4],
+    ['backup', 'blob', 'Base Backups + WAL Archive (PITR)', 720, 360, 3], ['cdc', 'worker', 'CDC / Logical Decoding', 720, 120, 2],
+    ['obs', 'otel', 'Replication & Query Telemetry', 720, 460, 3],
+  ], [['app','pool'],['pool','router'],['router','primary'],['router','r1'],['router','r2'],['router','cache'],['primary','wal'],['wal','r1'],['wal','r2'],['primary','backup'],['primary','cdc'],['primary','obs']], [
+    'One primary takes every write - that is not a limitation to engineer around, it is what makes a single-node consistency model possible; you scale writes by making them cheaper (batching, better indexes) or by sharding, never by adding a second primary that could disagree with the first',
+    'Read replicas scale reads by replaying the primary\'s write-ahead log, and the gap between a commit on the primary and its appearance on a replica is replication lag - usually milliseconds, but never zero, and everything hard about this design lives in that gap',
+    'The read-your-writes trap is the classic bug: a user updates their profile (write to primary) then reloads it (read from a lagging replica) and sees the old value - route reads that must be fresh to the primary, and only the lag-tolerant ones to replicas',
+    'A connection is not free: every Postgres connection is a backend process with real memory, so thousands of app threads must funnel through a pooler (PgBouncer) - without it, connection count, not query load, is what takes the database down',
+    'The WAL is the source of durability, replication AND recovery all at once: it is fsync\'d before a commit is acknowledged, streamed to replicas to keep them current, archived with base backups for point-in-time recovery, and decoded logically to feed CDC downstream',
+  ], 'Unicorns · USA'),
 ]

@@ -110,10 +110,10 @@ export const COMPONENT_INTERNALS = {
     mechanism: 'TTL entries checked lazily (on access) or via background expiry thread every 100ms. Partial replication for HA.',
   },
   sql: {
-    algorithm: 'B-tree indexes + MVCC (multi-version concurrency)',
-    dataStructure: 'B-tree for indexes, write-ahead log (WAL), undo logs for MVCC',
-    internal: 'Write: append to WAL (disk sync 10ms), update in-memory buffer. Commit when WAL written. Read: scan B-tree index or table scan depending on query plan.',
-    mechanism: 'MVCC: reads see consistent snapshot at transaction start time. Conflicts detected at commit time. Rollback undoes via undo log.',
+    algorithm: 'B-tree / GIN / GiST indexes + MVCC (multi-version concurrency); the planner is cost-based',
+    dataStructure: 'Heap tables + B-tree indexes, a write-ahead log (WAL), and per-row version tuples for MVCC (Postgres keeps old row versions in the table itself, not a separate undo log)',
+    internal: 'Write: append to WAL and fsync (≈10ms) — the commit is not acknowledged until the WAL hits disk, which is the durability guarantee. Then the in-memory buffer (shared_buffers) is updated. Read: the cost-based planner chooses an index scan or a sequential scan; readers see a snapshot and never take row locks, so reads never block writes.',
+    mechanism: 'MVCC keeps multiple row versions; a reader sees the snapshot as of its transaction start, writers create new versions, and conflicts surface at commit. Dead versions are reclaimed by VACUUM — the price of lock-free reads. WAL is also the replication and point-in-time-recovery stream: replicas replay it, and a base backup plus WAL restores to any instant. With the pgvector extension the same engine serves ANN vector search.',
   },
   nosql: {
     algorithm: 'LSM tree (Log-Structured Merge)',

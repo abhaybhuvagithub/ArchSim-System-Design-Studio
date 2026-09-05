@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.27.0 — 2026-09-03
+- 🐘 **PostgreSQL, first-class**: the SQL component is now explicitly PostgreSQL — richer description (MVCC readers never block writers, WAL-based replication + PITR, pgvector) and a deepened internals view (VACUUM as the price of lock-free reads, the cost-based planner, WAL as durability+replication+recovery+CDC). +2 acronyms: OLTP, ACID
+- 🗄️ New template **PostgreSQL at Scale (Primary + Replicas)** — the shape every serious Postgres deployment reaches: one write primary, read replicas replaying the WAL, connection pooling (PgBouncer), freshness-aware read/write routing (the read-your-writes trap), PITR, and logical-decoding CDC. Wall: you cannot add a second primary — you make writes cheaper, then shard
+
 ## 1.26.1 — 2026-09-03
 - 📝 About & Guide refreshed to current scope: the Six-pillars counts now read live from the catalog (templates, components) so they never drift again, the AI-Ready pillar names the autonomous-research curriculum, and the tour concept count is corrected to 87
 
