@@ -2291,7 +2291,30 @@ try {
         return !!oauth && /ID token/.test(oauth.rows.map(r => r.join(' ')).join(' '))
           && !!tok && /revocation-critical/i.test(tok.rows.map(r => r.join(' ')).join(' '));
       })());
-      check('the Discovery Loop template exists, is healthy, and models the converge/schedule/provenance core', await (async () => {
+      check('the four levels.fyi coverage templates exist, are healthy, and teach their distinctive idea', await (async () => {
+        const TC = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const SC = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const want = {
+          'Coinbase (Crypto Exchange)': /matching engine|deterministic|MPC/i,
+          'Databricks (Lakehouse Compute)': /compute and storage|lineage|transaction log/i,
+          'Snowflake (Cloud Warehouse)': /virtual warehouse|micro-partition|shared/i,
+          'Nvidia (GPU Cloud Scheduler)': /gang|topology|idle/i,
+        };
+        for (const [name, rx] of Object.entries(want)) {
+          const t = TC.TEMPLATES.find(x => x.name === name);
+          if (!t) return false;
+          const sim = SC.simulate(t.nodes, t.edges, t.rps, new Set());
+          if (!(sim.successRate > 0.98)) return false;
+          if (!rx.test(t.checklist.join(' '))) return false;
+        }
+        return true;
+      })());
+      check('Coinbase keeps the matching engine unsharded and custody split (the two non-negotiables)', await (async () => {
+        const TC2 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const t = TC2.TEMPLATES.find(x => x.name === 'Coinbase (Crypto Exchange)');
+        return t.nodes.some(n => n.type === 'ledger') && t.nodes.some(n => /custody/i.test(n.label)) && t.nodes.some(n => /matching/i.test(n.label));
+      })());
+            check('the Discovery Loop template exists, is healthy, and models the converge/schedule/provenance core', await (async () => {
         const TD = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
         const SD = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
         const t = TD.TEMPLATES.find(x => x.name === 'Discovery Loop (Autonomous Research)');

@@ -437,4 +437,73 @@ export default {
   wall: { t: 'A loop that runs faster than it learns is a money fire', d: 'Every scaling lever adds compute and concurrency, and past a point the constraint is not throughput but the ratio of learning to spend. If results do not feed back fast and well enough to sharpen the next proposals, more GPUs simply buy a larger parallel random search - maximum utilization, zero convergence, an extraordinary burn rate with nothing discovered. The deeper wall is reflexive: the flagship campaign is automating ML research, so success means the system improves the very methods and models it runs on, and the safety, reproducibility and resource guarantees have to hold not against a fixed system but against one actively rewriting itself. You do not scale your way past needing the loop to learn faster than it spends, and needing the leash to hold as the thing on it gets smarter.' },
 },
 
+
+'Coinbase (Crypto Exchange)': {
+  constraint: 'Volume is bursty and correlated with volatility - everyone trades at the same moment - and every trade touches a single deterministic sequencer and an irreversible settlement layer. Scaling means absorbing spikes without sharding the one thing you cannot shard.',
+  ladder: [
+    ['a few markets', 'hundreds of orders/s', 'One in-memory matching engine per market, a hot/cold custody split, KYC at signup. Determinism and the audit log matter from the first trade.'],
+    ['many markets', 'thousands of orders/s', 'Market data moves to an isolated read fan-out; pre-trade risk is hardened; MPC custody with sanctioned-address screening on withdrawals.'],
+    ['a major exchange', 'tens of thousands of orders/s at peak', 'Matching scales vertically and per-market (one sequencer per pair); continuous ledger-to-chain reconciliation; surge capacity sized for volatility events, not average days.'],
+    ['global, many assets', 'volatility-driven megaspikes', 'Multi-jurisdiction regulatory posture; the binding limit becomes custody operations and reconciliation integrity, not match throughput.'],
+  ],
+  levers: [
+    { t: 'Scale the book vertically and by market', d: 'Never shard a single order book for throughput - keep it in memory, run one sequencer per trading pair, and make everything around it fast.', n: ['match'] },
+    { t: 'Isolate market data as a read fan-out', d: 'Stream a projection of the book to thousands of clients on a path that never touches the writer, so spectators never slow the match.', n: ['md'] },
+    { t: 'Bound the hot wallet', d: 'Keep the online float small and the bulk in cold storage with MPC signing, so a compromise of the online system caps the loss.', n: ['custody', 'chain'] },
+    { t: 'Reconcile ledger to chain continuously', d: 'The internal ledger is instant, settlement is eventual - a continuous reconciliation proves the two agree to the satoshi.', n: ['ledger', 'settle'] },
+  ],
+  wall: { t: 'You cannot shard your way past a single order of events', d: 'Every other system scales by adding parallelism, but a price-time-priority order book is defined by a single total ordering, and that determinism is non-negotiable - shard it and you get two books that disagree about who traded first, which in a market is fraud. So the matching engine does not scale horizontally; it scales vertically and per-market, and the real limits at global scale move off the match entirely onto the parts that touch irreversible money: custody operational security and the integrity of ledger-to-chain reconciliation. Past a point the hard problem is not speed - it is proving, continuously and to the satoshi, that the fast internal world and the final on-chain world still agree.' },
+},
+
+'Databricks (Lakehouse Compute)': {
+  constraint: 'Data grows without bound and cheaply; compute is bursty and expensive. Scaling means acquiring and releasing thousands of nodes fast while jobs survive constant machine loss and concurrent writers never corrupt a table.',
+  ladder: [
+    ['one team', 'a few jobs', 'Compute-storage separation and the transaction log from day one - a lake without ACID is a corruption waiting to happen. Clusters per job.'],
+    ['an org', 'many concurrent jobs', 'Warm pools hide cold-start; lineage-based recovery handles routine executor loss; the catalog centralizes governance.'],
+    ['a platform', 'thousands of tenants sharing the control plane', 'Multi-tenant isolation on the control plane; shuffle-aware planning as jobs grow; SQL warehouses autoscale for BI concurrency.'],
+    ['global data platform', 'petabytes, constant burst', 'The transaction log must stay correct under heavy concurrent writes; pooling economics balance cold-start against idle cost across regions.'],
+  ],
+  levers: [
+    { t: 'Separate compute from storage', d: 'Data permanent and cheap in object storage; compute summoned per job and released - cost tracks work, not capacity owned.', n: ['lake', 'pool'] },
+    { t: 'Recover from lineage, not restart', d: 'Executors die routinely on spot compute; recompute lost partitions on survivors so a thousand-node job finishes instead of restarting.', n: ['exec', 'drv'] },
+    { t: 'Hide cold-start with warm pools', d: 'Pre-provisioned nodes let a cluster form in seconds, keeping interactive work snappy without paying for always-on clusters.', n: ['pool', 'orch'] },
+    { t: 'Give the lake a transaction log', d: 'ACID, time travel and schema enforcement over object storage - the lakehouse trick that avoids a warehouse\'s price.', n: ['meta', 'lake'] },
+  ],
+  wall: { t: 'The shuffle and the transaction log are the real ceilings', d: 'Adding nodes is easy; two things resist it. First, the shuffle - regrouping data across executors over the network - grows superlinearly with bad query plans, so past a point more nodes just move more data, not finish faster, and planning beats provisioning. Second, the transaction log that makes the lake ACID becomes a coordination point under heavy concurrent writes, and keeping it correct and fast as thousands of jobs commit is the deep problem. The honest design accepts that elasticity solved the cheap part - capacity - and the remaining limits are the network physics of shuffles and the concurrency correctness of the log.' },
+},
+
+'Snowflake (Cloud Warehouse)': {
+  constraint: 'Storage grows steadily; query load is spiky and multi-tenant across teams. Scaling means isolating workloads so none slows another while the shared storage and central services layer stay consistent and available.',
+  ladder: [
+    ['one team', 'light query load', 'Three-layer separation and micro-partition pruning from the start. A single virtual warehouse that auto-suspends.'],
+    ['many teams', 'concurrent mixed workloads', 'A warehouse per team for isolation; result caching; zero-copy clones for sandboxes; right-sizing and auto-suspend discipline.'],
+    ['an enterprise', 'heavy concurrent analytics', 'Multi-cluster warehouses absorb concurrency bursts; secure data sharing replaces extracts; the services layer is the availability-critical brain.'],
+    ['a data cloud', 'cross-org sharing at scale', 'Metadata pruning kept effective as data explodes; shared-storage consistency across many independent clusters; services-layer HA is existential.'],
+  ],
+  levers: [
+    { t: 'One warehouse per workload', d: 'Isolated compute over shared data means team A\'s load never touches team B\'s - contention is architecturally impossible.', n: ['wh1', 'wh2', 'wh3'] },
+    { t: 'Prune with micro-partition metadata', d: 'Skip partitions a query cannot need, so a selective scan reads a sliver of a huge table - pay for what the question needs.', n: ['store', 'opt'] },
+    { t: 'Cache results, auto-suspend compute', d: 'Identical queries return from cache free; warehouses park when idle, so the expensive resource costs nothing between questions.', n: ['rescache', 'wh2'] },
+    { t: 'Clone and share by metadata', d: 'Zero-copy clones and live shares move pointers, not bytes - full-scale sandboxes and cross-account data with no duplication.', n: ['clone', 'share'] },
+  ],
+  wall: { t: 'The shared brain is the thing you cannot separate', d: 'The whole design is about separation - compute from storage, team from team - but the cloud services layer that coordinates all of it (auth, metadata, query planning, transaction management) is the one thing every query depends on and that cannot itself be split per-tenant. Isolate compute all you like; the services layer is the shared brain, and its availability is the availability of the entire warehouse. Past a point the binding constraint is not query throughput - warehouses scale out trivially - but keeping that central coordination layer consistent and highly available as it mediates thousands of independent clusters reading and writing one shared copy of the data.' },
+},
+
+'Nvidia (GPU Cloud Scheduler)': {
+  constraint: 'The accelerators are scarce and expensive, and the jobs are lumpy - big all-or-nothing gangs mixed with tiny inference. Scaling means packing more valuable work onto the fleet without ever letting a card go idle or a big job starve.',
+  ladder: [
+    ['a small cluster', 'tens of GPUs', 'Gang scheduling and checkpointing from the start - a partially-placed job and an un-resumable one both waste the scarce resource.'],
+    ['a large cluster', 'hundreds of GPUs', 'Topology-aware placement across NVLink and fabric; MIG partitioning for inference sharing; quota and fair-share across teams.'],
+    ['a GPU cloud', 'thousands of GPUs, many tenants', 'Bin-packing that keeps room for large gangs; preemption as a priority market; health monitoring as failure becomes constant.'],
+    ['datacenter fleet', 'the full accelerator estate', 'Packing quality and fragmentation control dominate; multi-tenant fairness and topology optimization decide effective capacity.'],
+  ],
+  levers: [
+    { t: 'Gang-schedule and bin-pack', d: 'Place distributed jobs all-or-nothing and pack the fleet so the next large gang still fits - never strand capacity or half-commit.', n: ['sched', 'queue'] },
+    { t: 'Place topology-aware', d: 'Co-locate a job\'s workers on fast NVLink; scattering them across slow fabric can hurt more than using fewer GPUs.', n: ['fabric', 'train'] },
+    { t: 'Slice cards with MIG', d: 'Share one GPU among small inference jobs so a card is never handed whole to a job that needs a fraction.', n: ['infer', 'health'] },
+    { t: 'Checkpoint to enable preemption', d: 'Frequent checkpoints make long jobs resumable, so the scheduler can reclaim GPUs for urgent work and resume later - a living market for compute.', n: ['ckpt', 'train'] },
+  ],
+  wall: { t: 'Fragmentation is the enemy of the scarce resource', d: 'The naive path - hand each card to whoever asks - maximizes short-term utilization and quietly destroys long-term capacity, because a fleet fragmented into scattered single-GPU jobs can never assemble the 512 contiguous cards a big training run needs. So the real ceiling is not raw utilization but packing quality: keeping the fleet arranged so the most valuable large jobs can always be placed, which means sometimes leaving a card briefly idle to preserve a contiguous block. Past a point the hard problem is the tension between filling every GPU now and keeping room for the job that matters most next - a bin-packing and preemption problem where the scarce, expensive resource punishes every fragmentation mistake.' },
+},
+
 }

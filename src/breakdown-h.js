@@ -1442,4 +1442,237 @@ export default {
   },
 },
 
+
+'Coinbase (Crypto Exchange)': {
+  meta: 'Fintech - crypto - very hard - a matching engine over irreversible money',
+  overview: 'A crypto exchange is two hard systems fused: a low-latency trading engine and a vault holding billions in bearer assets. The trading side must match orders in a single deterministic sequence at microsecond speed; the custody side must keep private keys safe against an adversary who, if they succeed once, takes the money forever. What makes it harder than a stock exchange is finality: a blockchain transfer has no chargeback, no settlement reversal, no regulator who can claw it back - a bug that moves coins wrong is simply a theft. Every design choice bends to that fact.',
+  scope: 'The order-matching path (market data, pre-trade risk, matching, internal ledger), custody (hot/cold split, MPC key management), on-chain settlement and reconciliation, and the regulatory spine (KYC/AML, sanctioned-address screening, immutable audit). The blockchains themselves and the banking rails for fiat on-ramp are consumed, not built.',
+  fr: {
+    core: ['Match buy and sell orders by price-time priority in a deterministic sequence', 'Check pre-trade risk (balance, limits) faster than the match', 'Keep an internal balances ledger that is instant and always correct', 'Custody assets safely: cold storage for the bulk, a bounded hot float for withdrawals', 'Settle deposits and withdrawals on-chain and reconcile against the ledger', 'Screen identity (KYC/AML) and withdrawals (sanctioned addresses)'],
+    out: ['The consensus of the underlying blockchains (consumed via nodes)', 'Fiat banking rails (integrated, not operated)', 'Lending, staking and other products layered on top'],
+  },
+  nfr: {
+    core: ['Determinism: the order book must process one sequence - the same orders in the same order produce the same trades, always', 'Custody safety is existential: no single failure, key or insider can move funds, because on-chain transfers are irreversible', 'Matching latency in microseconds; market data fan-out to thousands without slowing the book', 'The internal ledger is exact and auditable to the satoshi; reconciliation with the chain is continuous', 'Availability under load spikes - crypto volume is bursty and correlated with volatility, exactly when everyone arrives at once'],
+    out: ['Instant on-chain finality - confirmation takes a variable number of blocks and cannot be rushed'],
+  },
+  nums: [['1 sequence', 'the order book is single-threaded by design - determinism over throughput'], ['~95%+', 'of funds in cold storage offline; only a bounded float is hot'], ['irreversible', 'the property that shapes everything: no chargebacks on-chain'], ['N blocks', 'to real finality - internal balance is instant, settlement is not']],
+  entities: [
+    ['Order', 'side, price, size, account; enters the book only after pre-trade risk clears'],
+    ['OrderBook', 'the in-memory price-time-priority structure per market; the single sequencer of truth for who traded'],
+    ['Balance', 'the internal ledger entry - instantly correct, reconciled against on-chain reality continuously'],
+    ['Wallet', 'hot (bounded float, online) or cold (bulk, offline); keys split by MPC so no one party can sign alone'],
+    ['Settlement', 'an on-chain transaction for a deposit or withdrawal, final after N confirmations, matched back to the ledger'],
+  ],
+  apiIntro: 'The API separates the fast path (trading against internal balances) from the slow path (on-chain movement), because one is microseconds and the other is minutes, and confusing them is how exchanges lose money.',
+  api: [
+    { dir: '->', name: 'POST /orders (pre-trade risk, then match)', body: '{ market, side, price, size }\n-> fill(s) against the book, sequenced deterministically; balances update on the internal ledger instantly' },
+    { dir: '->', name: 'POST /withdrawals', body: '{ asset, amount, address }\n-> screened (sanctions), signed from the hot wallet via MPC, broadcast; final after N confirmations' },
+    { dir: '<->', name: 'WS /market-data', body: 'the order book streamed to thousands of clients from a read path that never touches or slows the matching sequencer' },
+  ],
+  dives: [
+    {
+      title: 'The matching engine is single-threaded on purpose', focus: ['match', 'risk', 'ledger', 'md'],
+      blocks: [
+        ['p', 'An order book enforces price-time priority: the best price wins, and at equal price the earliest order wins. That "earliest" is the trap - it requires a single, total ordering of events, which is why serious matching engines run as one deterministic in-memory sequencer per market rather than a distributed system. The instant you shard the book across machines for throughput, you have two structures that can disagree about who was first, and in a market that disagreement is a lawsuit. So throughput is bought other ways: keep the book in memory, do pre-trade risk before the sequencer, and fan market data out on a completely separate read path so a million spectators never slow the one writer.'],
+        ['bul', [
+          'Determinism is the product: replay the same order sequence and get identical trades - it is how you audit, recover, and prove fairness.',
+          'Pre-trade risk sits upstream of the match and must be faster than it: a trade that violated a limit cannot be un-sequenced, so the check happens before the order reaches the book.',
+          'Market data is a read fan-out, isolated from the write path: thousands of streaming clients read a projection of the book, never the book itself.',
+        ]],
+        ['warn', 'The tempting mistake is to scale the matching engine horizontally like a web service. It is the one component you must NOT distribute for throughput, because correctness here is a single total order. You scale it vertically and by market (one sequencer per trading pair), and you make everything around it fast instead.'],
+      ],
+    },
+    {
+      title: 'Custody: where a bug is a theft', focus: ['custody', 'chain', 'settle', 'kyc'],
+      blocks: [
+        ['p', 'On a blockchain, whoever holds the private key holds the money, and a transfer once broadcast is final. That single fact dictates custody: keep the overwhelming majority of assets in cold storage - keys offline, air-gapped, physically secured - and keep only a bounded float hot for day-to-day withdrawals, so a total compromise of the online system caps the loss. Modern custody splits keys with MPC (multi-party computation) so that signing requires several parties and no single machine, person or breach ever holds a whole key. Withdrawals are screened against sanctioned addresses before signing, because sending to the wrong address is not a support ticket - it is gone.'],
+        ['bul', [
+          'Hot/cold split bounds the blast radius: the online float is the most you can lose to an online attack, by design.',
+          'MPC means no single key exists to steal: the signing authority is distributed, so one compromised component cannot move funds.',
+          'The internal ledger is instant; on-chain settlement is eventual: a user sees their balance immediately, but the coins are only truly theirs after N confirmations, and the system reconciles the two continuously.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A database of balances with a buy button.',
+    senior: 'A single-threaded deterministic matching engine per market with pre-trade risk upstream and market data on an isolated read path, an exact internal ledger reconciled continuously against chain, hot/cold custody with MPC key splitting and sanctioned-address screening, and the whole thing built around the irreversibility of on-chain settlement.',
+    staff: 'Design the guarantees at exchange scale: the recovery model for the matching engine (deterministic replay from the log), the custody threshold scheme and its operational security, the reconciliation system that proves internal balances match on-chain reality to the satoshi, the surge design for volatility-correlated load, and the regulatory posture of a money transmitter operating in microseconds across dozens of jurisdictions.',
+  },
+},
+
+'Databricks (Lakehouse Compute)': {
+  meta: 'Data platform - very hard - separate compute from storage and make failure normal',
+  overview: 'Databricks is built on one architectural bet: separate compute from storage completely. Data sits permanently and cheaply in object storage; compute is summoned on demand, does its work, and disappears. That lets a data engineer request a thousand machines, crunch a petabyte for a few minutes, and release them - paying for the work, not for an always-on cluster sized to the worst case. Layered on top is the lakehouse idea: a transaction log over the data lake that gives cheap object storage the ACID guarantees, schema enforcement and time travel of an expensive warehouse. It is Spark\'s distributed-compute model turned into a managed product, where losing a machine mid-job is expected rather than catastrophic.',
+  scope: 'The control plane (job and cluster orchestration, catalog, governance) and the data plane (Spark driver/executor compute over object storage with a transaction log), plus SQL warehouse endpoints and the ML lifecycle. The object store, the underlying cloud VMs, and the analytics questions themselves are consumed or downstream.',
+  fr: {
+    core: ['Provision compute clusters on demand and release them when the job ends', 'Run distributed Spark jobs (driver plans, executors crunch) over lake data', 'Give the lake ACID transactions, schema enforcement and time travel via a transaction log', 'Serve SQL queries through warehouse endpoints over the same data', 'Govern schema, lineage and access centrally across workspaces (the catalog)'],
+    out: ['The object storage service itself (consumed)', 'The cloud provider\'s VM provisioning (abstracted)', 'The business meaning of the data (the customer\'s)'],
+  },
+  nfr: {
+    core: ['Elasticity: thousands of nodes acquired in minutes and released after, so cost tracks work not capacity', 'Fault tolerance as the norm: executors die (spot reclaims, hardware) constantly, and jobs must recover from lineage, not restart', 'Transactional correctness on object storage: concurrent writes to a table do not corrupt it', 'Shuffle efficiency: the network regrouping of data between stages is the usual bottleneck of large jobs', 'Governance at scale: lineage and access control across every workspace and dataset'],
+    out: ['Low-latency single-row lookups - this is analytical batch and SQL, not an OLTP key-value store'],
+  },
+  nums: [['1000s', 'of nodes per job, acquired and released on demand'], ['compute != storage', 'the core split - scale and bill each independently'], ['ACID on a lake', 'what the Delta transaction log buys the cheap object store'], ['seconds', 'the billing granularity - pay for work, not idle clusters']],
+  entities: [
+    ['Job', 'a unit of work (a notebook, a pipeline) the orchestrator schedules onto a cluster it may create just for this'],
+    ['Cluster', 'an ephemeral driver + executor fleet, sized per job, released when done'],
+    ['DeltaTable', 'data files in object storage plus a transaction log giving ACID, time travel and schema enforcement'],
+    ['ShuffleStage', 'the point where executors exchange data across the network to regroup it - where big jobs spend their time'],
+    ['CatalogObject', 'the governed schema/lineage/ACL entry - one source of truth for who may read what, everywhere'],
+  ],
+  apiIntro: 'The control plane accepts work and manages compute lifecycle; the data plane does the crunching. Keeping them separate is what lets compute be disposable and storage be permanent.',
+  api: [
+    { dir: '->', name: 'POST /jobs/run', body: '{ notebook, cluster_spec }\n-> the orchestrator provisions a cluster (or reuses a pool), runs it, and tears it down; you are billed for the seconds it ran' },
+    { dir: '->', name: 'MERGE INTO delta_table ...', body: 'an ACID transaction on object storage - concurrent writers do not corrupt the table, and the prior version is still queryable (time travel)' },
+    { dir: '->', name: 'GET /sql/warehouse (endpoint)', body: 'SQL over the same lake tables from BI tools, on a warehouse that autoscales and parks when idle' },
+  ],
+  dives: [
+    {
+      title: 'Compute and storage, torn apart', focus: ['orch', 'pool', 'drv', 'exec', 'lake'],
+      blocks: [
+        ['p', 'In an old-school warehouse, compute and storage are welded together: you buy a big box, and to store more you also buy compute you may not need, and vice versa. Databricks breaks the weld. Data lives in object storage - effectively infinite, cheap, durable - and compute is summoned when a job runs. The orchestrator provisions a cluster (often from a warm pool to skip startup lag), the Spark driver plans the work and coordinates, executors do the parallel crunching against the lake, and when the job ends the whole cluster is released. The result is that a petabyte at rest costs storage prices, and the thousand-node burst to process it costs only the minutes it ran.'],
+        ['bul', [
+          'Elasticity is the payoff: capacity matches the job, not the worst-case, so a nightly monster and a tiny query cost proportionally.',
+          'Warm pools hide cold-start: pre-provisioned nodes let a cluster form in seconds, because waiting minutes for VMs to boot kills the interactive experience.',
+          'The shuffle is the cost center: regrouping data across executors over the network is where large jobs spend their time - a good query plan minimizes it, a bad one drowns in it.',
+        ]],
+        ['warn', 'The failure that surprises newcomers: treating executors as reliable. On ephemeral, often-spot compute, executors vanish mid-job as a matter of routine. If the job is not built to recompute lost partitions from lineage on the survivors, every reclaimed node restarts the whole thing - and at a thousand nodes, something is always being reclaimed.'],
+      ],
+    },
+    {
+      title: 'A lake that behaves like a warehouse', focus: ['meta', 'lake', 'cat', 'sql2'],
+      blocks: [
+        ['p', 'A raw data lake is just files in a bucket, and files in a bucket have no transactions - two writers can corrupt each other, a half-finished write is visible, and there is no schema police. The lakehouse fixes this with a transaction log: an ordered record of every change to a table, sitting beside the data files. That log is what gives object storage ACID transactions (readers see a consistent snapshot), time travel (query the table as of last Tuesday), and schema enforcement (a bad write is rejected, not silently absorbed). Over it, the catalog governs schema, lineage and access across every workspace, so at petabyte scale the answer to who-can-read-what lives in one place.'],
+        ['bul', [
+          'The transaction log is the trick: metadata, not a new storage system, turns a lake into something transactional.',
+          'Time travel falls out for free: because the log records versions, querying or rolling back to a past state is a metadata operation.',
+          'Governance is centralized deliberately: lineage and ACLs in one catalog make access a compliance-grade answer, not a per-bucket guess.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A managed Spark cluster you SSH into.',
+    senior: 'Full compute-storage separation with on-demand ephemeral clusters from warm pools, Spark driver/executor jobs that recompute from lineage through constant executor loss, a transaction log giving the lake ACID/time-travel/schema-enforcement, shuffle-aware query planning, and a central catalog for governance.',
+    staff: 'Design the platform economics and guarantees: the pooling strategy that hides cold-start without paying for idle, the multi-tenant isolation across thousands of customers sharing the control plane, the transaction-log design that keeps concurrent writers correct at scale, and the lineage-based recovery that makes a thousand-node job on spot instances actually finish.',
+  },
+},
+
+'Snowflake (Cloud Warehouse)': {
+  meta: 'Data platform - hard - the multi-cluster shared-data warehouse',
+  overview: 'Snowflake\'s insight was to take the two things a data warehouse couples - the storage of data and the compute that queries it - and separate them into three independent layers: a brain (cloud services: auth, metadata, query planning), muscle (virtual warehouses: isolated compute clusters), and a single shared body of data (one storage layer every warehouse reads). The consequence is the thing analysts feel: marketing\'s dashboards and finance\'s month-end run on entirely separate compute over the exact same tables, so they never fight for resources, and each scales and is billed on its own. Add columnar micro-partitions that let the optimizer skip most of the data, per-second auto-suspending compute, and zero-copy cloning, and the pricing model and the architecture become the same thing.',
+  scope: 'The three layers - cloud services, virtual warehouses, shared storage - plus the features that fall out of the separation: result caching, zero-copy cloning, time travel, and secure data sharing. The cloud object store underneath and the BI tools on top are consumed.',
+  fr: {
+    core: ['Run each workload on its own virtual warehouse over shared data', 'Store data as columnar micro-partitions with metadata for pruning', 'Plan and optimize queries centrally (cloud services layer)', 'Auto-suspend and auto-resume compute so idle costs nothing', 'Clone tables with zero copy and query historical versions (time travel)', 'Share live data across accounts without copying it'],
+    out: ['The underlying cloud object storage (consumed)', 'BI and visualization tools (integrated)', 'The transactional systems that feed it (upstream)'],
+  },
+  nfr: {
+    core: ['Workload isolation: one warehouse\'s load never affects another\'s, because they are separate compute over shared storage', 'Independent elasticity: storage and each compute cluster scale and bill separately', 'Pruning efficiency: a selective query scans only the micro-partitions it needs', 'Elastic economics: per-second billing with auto-suspend so cost tracks queries, not uptime', 'Consistency of the single shared copy across all warehouses reading it'],
+    out: ['Sub-millisecond OLTP writes - this is an analytical warehouse, not a transactional store'],
+  },
+  nums: [['3 layers', 'services, compute, storage - separated so each scales alone'], ['N warehouses', 'independent compute clusters over 1 shared copy of the data'], ['per-second', 'billing with auto-suspend - idle compute is free'], ['prune', 'scan the micro-partitions the query needs, skip the rest']],
+  entities: [
+    ['VirtualWarehouse', 'an isolated compute cluster; sized and billed per workload, auto-suspends when idle'],
+    ['Micropartition', 'a columnar storage unit with metadata (min/max, counts) the optimizer uses to skip data'],
+    ['Query', 'planned by the cloud services layer, executed on a warehouse, possibly answered from the result cache'],
+    ['Clone', 'a zero-copy pointer-level duplicate of a table that diverges only as written'],
+    ['Share', 'live read access to data granted to another account with no copy made'],
+  ],
+  apiIntro: 'A query names which warehouse runs it, but all warehouses see the same data - the separation of who-computes from what-is-stored is the entire API surface.',
+  api: [
+    { dir: '->', name: 'USE WAREHOUSE finance_wh; SELECT ...', body: 'runs on the finance cluster over shared tables; marketing_wh could run the same query simultaneously without either slowing down' },
+    { dir: '->', name: 'CREATE TABLE t_clone CLONE t', body: 'a zero-copy clone - metadata pointers, not bytes; a full-scale sandbox created instantly and for free' },
+    { dir: '->', name: 'SELECT ... AT (OFFSET => -3600)', body: 'time travel: query the table as it was an hour ago, because storage keeps versioned micro-partitions' },
+  ],
+  dives: [
+    {
+      title: 'Three layers, and why teams stop fighting', focus: ['gw', 'opt', 'wh1', 'wh2', 'wh3', 'store'],
+      blocks: [
+        ['p', 'The classic warehouse pain is contention: one team\'s giant query starves everyone else\'s, because they all share one pool of compute welded to the storage. Snowflake separates compute into independent virtual warehouses that all read one shared storage layer, coordinated by a central cloud services brain. Marketing runs on its warehouse, finance on theirs, data science on a third - same tables, isolated muscle - so the month-end crunch and the live dashboard simply cannot touch each other. Each warehouse resizes on its own, and because storage is shared, none of this duplicates a single byte of data.'],
+        ['bul', [
+          'Isolation by construction: separate compute clusters mean cross-team contention is architecturally impossible, not merely managed.',
+          'Independent scaling: storage grows on its own; each warehouse scales up for a heavy job and back down after, alone.',
+          'One copy of truth: every warehouse reads the same shared storage, so there is no sync, no drift, no per-team extract.',
+        ]],
+        ['warn', 'The bill surprise is the flip side of the freedom: because spinning up another warehouse is trivial, costs scale with how many you run and how long they stay awake. The discipline is auto-suspend and right-sizing - a warehouse left running idle is the cloud-warehouse version of leaving the lights on, and it is the single most common Snowflake cost mistake.'],
+      ],
+    },
+    {
+      title: 'Pruning, caching, and cloning for free', focus: ['store', 'rescache', 'clone', 'meta'],
+      blocks: [
+        ['p', 'Speed and cost in an analytical warehouse come from not doing work. Data is stored as columnar micro-partitions, each carrying metadata like the min and max values it holds, so the optimizer can skip entire partitions a query cannot possibly need - a scan over one day of a ten-year table reads that day\'s partitions and ignores the rest. Repeated queries are served from a result cache without touching compute at all. And zero-copy cloning exploits the same metadata layer: duplicating a huge table copies pointers, not data, so every engineer gets a full-size sandbox instantly and for nothing, diverging from the original only as they write to it.'],
+        ['bul', [
+          'Pruning is the performance story: metadata-driven partition-skipping means you pay to scan what the question needs, not the table\'s size.',
+          'The result cache is free reuse: an identical query returns from cache with zero compute cost.',
+          'Zero-copy clone is a metadata trick: instant, free, full-scale copies for testing, because bytes are shared until written.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A hosted SQL database that scales up.',
+    senior: 'Three separated layers (services, compute, storage) with isolated virtual warehouses over one shared copy, columnar micro-partitions with metadata pruning, per-second auto-suspending compute, result caching, and zero-copy cloning - with the pricing model treated as part of the architecture.',
+    staff: 'Design the separations and their economics at scale: how the cloud services layer stays highly available as the coordination point for everything, how metadata pruning is kept effective as data grows, how multi-cluster warehouses handle concurrency bursts, and how the shared-storage consistency model holds while dozens of independent compute clusters read and write it.',
+  },
+},
+
+'Nvidia (GPU Cloud Scheduler)': {
+  meta: 'Infrastructure - very hard - scheduling the scarcest resource in computing',
+  overview: 'When the most expensive thing in your datacenter is the accelerator, the product is not the GPU - it is the scheduler that keeps GPUs from sitting idle. A GPU cloud takes a fleet of scarce, costly cards and rents them as training and inference capacity, and every design decision serves one goal: maximum useful utilization of the fleet. That turns out to be a genuinely hard scheduling problem, because GPU jobs are not like web requests. A big training run needs hundreds of cards simultaneously or none of them; where the cards sit relative to each other changes how fast the job runs; a whole card is wasteful for a small inference model; and jobs run for days on hardware that fails constantly. The scheduler that solves all of that well is the entire business.',
+  scope: 'The scheduling and lifecycle of GPU jobs: gang scheduling and bin-packing, quota and fair-share, topology-aware placement, MIG partitioning for sharing, checkpoint-enabled preemption, GPU health, and usage metering. The physical accelerators, the interconnect fabric, and the models being trained are the substrate and the payload, not this system.',
+  fr: {
+    core: ['Schedule jobs onto GPUs to maximize fleet utilization', 'Gang-schedule distributed training: all N GPUs at once or none', 'Place jobs topology-aware (NVLink within a node, fabric across nodes)', 'Partition GPUs (MIG) so small jobs share a card without interference', 'Preempt and resume long jobs via checkpoints for higher-priority work', 'Enforce quota/fair-share and meter usage for billing'],
+    out: ['Manufacturing the accelerators (the substrate)', 'The interconnect fabric hardware (consumed as topology)', 'The ML work inside the jobs (the tenant\'s)'],
+  },
+  nfr: {
+    core: ['Utilization is the primary metric: an idle GPU is the dominant, unacceptable waste', 'Gang-scheduling correctness: partial placement of a distributed job wastes held GPUs while it waits', 'Topology-awareness: placement quality can matter more to job speed than raw GPU count', 'Preemptibility: long jobs must checkpoint so the scheduler can reclaim and resume them', 'Fault tolerance: at thousands of cards, hardware failure is constant and must not fail whole jobs'],
+    out: ['Low-latency interactive scheduling decisions - throughput and packing quality beat scheduler latency here'],
+  },
+  nums: [['idle = waste', 'the one metric that matters: keep every card busy'], ['all-or-none', 'gang scheduling - a 512-GPU job needs all 512 at once'], ['NVLink vs fabric', 'topology decides speed - close placement can beat more cards'], ['1 card, N tenants', 'MIG slices a GPU so small jobs share it']],
+  entities: [
+    ['Job', 'a training or inference workload with a GPU count, priority, and a checkpoint cadence'],
+    ['GangRequest', 'an all-or-nothing claim on N GPUs that must be placed together or not at all'],
+    ['Placement', 'the chosen set of GPUs for a job, scored by topology (co-located beats scattered)'],
+    ['MIGSlice', 'a fraction of a physical GPU handed to a small job so a card serves several tenants'],
+    ['Checkpoint', 'a saved job state that lets the scheduler preempt and later resume rather than restart'],
+  ],
+  apiIntro: 'The API is a request for capacity with a shape - how many GPUs, together or not, at what priority - and the scheduler\'s job is to satisfy that shape while wasting nothing.',
+  api: [
+    { dir: '->', name: 'POST /jobs (gpus: 512, gang: true, priority: high)', body: 'placed all-at-once and topology-close, preempting lower-priority checkpointed jobs if needed to assemble the 512' },
+    { dir: '->', name: 'POST /jobs (gpus: 0.25, mig: true)', body: 'a small inference job gets a MIG slice of a shared card, isolated from the co-tenants on the same GPU' },
+    { dir: '<->', name: 'scheduler.tick()', body: 'continuously re-packs the fleet: place queued gangs, preempt low-value runs to checkpoints, keep every card busy with the best available work' },
+  ],
+  dives: [
+    {
+      title: 'Gang scheduling and the topology map', focus: ['sched', 'queue', 'train', 'fabric'],
+      blocks: [
+        ['p', 'A distributed training job is atomic in a way web work never is: 512 GPUs computing one model must all start together, because they synchronize every step - 511 cards waiting on a 512th that never got placed is 511 cards of pure waste. So the scheduler gang-schedules: it places the whole job or none of it, and it bin-packs the fleet so these all-or-nothing blocks fit without stranding capacity. Then topology enters: GPUs inside one node share ultra-fast NVLink, while cards across nodes talk over slower fabric, and a synchronizing job is only as fast as its slowest link. Placing a job\'s workers physically close can matter more to its wall-clock time than which specific cards they are, so the scheduler is topology-aware or it silently makes every big job slow.'],
+        ['bul', [
+          'All-or-nothing placement: a partially-placed gang wastes the GPUs it holds while blocked, so the scheduler never half-commits.',
+          'Bin-packing for the next job: leave contiguous room so the next 512-GPU request can be assembled, rather than fragmenting the fleet.',
+          'Topology-aware or slow: co-locate a job\'s workers to keep them on fast interconnect, because the network between GPUs is often the real bottleneck.',
+        ]],
+        ['warn', 'Scheduling GPUs like CPU pods - one card to whoever asks, first-come-first-served - fragments the fleet and starves big jobs: enough scattered single-GPU jobs can make it impossible to ever assemble 512 contiguous cards, so the most valuable work can never run even though utilization looks fine.'],
+      ],
+    },
+    {
+      title: 'Sharing cards and surviving failure', focus: ['infer', 'health', 'ckpt', 'meter'],
+      blocks: [
+        ['p', 'Two more realities shape the scheduler. First, granularity: a small inference model that needs a tenth of a GPU should not be handed a whole one, so MIG partitioning slices a physical card into isolated instances that several tenants share without interfering - the same anti-waste principle as not leaving a card idle. Second, failure: training runs for days across thousands of cards, and at that scale something is always failing, so jobs checkpoint frequently. Checkpoints do double duty - they make the fleet resilient to hardware death, and they make jobs preemptible, so the scheduler can pause a lower-priority run, hand its GPUs to something urgent, and resume it later from its last checkpoint. That is what turns a rigid queue into a living market for compute.'],
+        ['bul', [
+          'MIG for small jobs: slicing a card to share it safely is the inference-side version of keeping GPUs busy.',
+          'Checkpoints enable preemption: a job that can resume from a checkpoint can be paused for higher-value work instead of blocking it.',
+          'Failure is the steady state: at thousands of cards, recovery-from-checkpoint is a routine event, not an incident.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A queue that hands out GPUs in order.',
+    senior: 'Gang scheduling with bin-packing so distributed jobs are placed all-or-nothing, topology-aware placement across NVLink and fabric, MIG partitioning to share cards among small jobs, checkpoint-enabled preemption that turns the queue into a priority market, and utilization as the metric everything serves.',
+    staff: 'Design the scheduling economics at fleet scale: the packing algorithm that maximizes utilization while keeping room for large gangs, the fair-share and preemption policy across competing tenants and priorities, the topology model that reflects real interconnect performance, and the checkpoint/recovery system that makes multi-day training on constantly-failing hardware both resilient and preemptible.',
+  },
+},
+
 }

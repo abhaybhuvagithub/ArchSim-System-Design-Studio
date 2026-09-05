@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.26.0 — 2026-09-03
+- 🏢 Coverage pass from the levels.fyi benchmark list — four new flagship templates, each a genuinely distinct architecture the studio lacked (near-duplicate companies deliberately skipped): **Coinbase (Crypto Exchange)** — single-threaded deterministic matching engine, hot/cold + MPC custody over irreversible on-chain settlement; **Databricks (Lakehouse Compute)** — compute/storage separation, ephemeral Spark clusters recovering from lineage, a transaction log giving the lake ACID; **Snowflake (Cloud Warehouse)** — three separated layers, isolated virtual warehouses over one shared copy, micro-partition pruning and zero-copy clones; **Nvidia (GPU Cloud Scheduler)** — gang scheduling, topology-aware placement, MIG sharing, checkpoint-enabled preemption. +5 acronyms: MPC, DEX, AMM, MPP, MIG
+
 ## 1.25.2 — 2026-09-03
 - 🎯 SLO tab button kept compact ("SLO"); the spelled-out "SLO (Service Level Objectives) & Error Budget" remains on the in-tab headings only
 
