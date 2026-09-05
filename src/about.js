@@ -28,11 +28,11 @@ export const ABOUT = [
     title: 'Six pillars',
     lines: [
       '**Strong Foundation** — the physics are real formulas (queueing knees, availability composition, fan-out multiplication), the numbers carry provenance, and over a thousand automated checks run on every build. Nothing here is a promise; it is a check that passes.',
-      '**Modular Design** — 116 components with one contract each, a catalog every template is composed from, and pure modules (simulation, anatomy, integrity, diagrams-as-code, sharing) that the interface merely renders. Add a component and the whole studio learns it.',
+      `**Modular Design** \u2014 ${components} components with one contract each, a catalog every template is composed from, and pure modules (simulation, anatomy, integrity, diagrams-as-code, sharing) that the interface merely renders. Add a component and the whole studio learns it.`,
       '**Data Integrity** — every design that enters from outside (a share link, a Mermaid paste, a JSON document) passes through validation: dangling edges dropped, unknown types coerced, duplicates renamed — and every repair is reported, never silent. Money-grade thinking, applied to your diagram.',
-      '**Flexible and Scalable** — 99 designs from a URL shortener to a national payments switch, entry deep-links that open exactly where a conversation begins, Mermaid in and out, and a picker that starts in Bharat and reaches the world.',
+      `**Flexible and Scalable** \u2014 ${templates} pre-wired designs from a URL shortener to a national payments switch, a crypto exchange and an autonomous-research loop, entry deep-links that open exactly where a conversation begins, Mermaid in and out, and a picker that starts in Bharat and reaches the world.`,
       '**Built to Endure** — a share link minted on day one decodes forever; the codec version is a superset contract the suite pins, the changelog is public, and the check count only goes up.',
-      '**AI Ready** — the design itself is a small, documented JSON document any agent can read and write; LLM systems are first-class components with honest capacities; and the Mastery drills teach operating them in production, not just naming them.',
+      '**AI Ready** \u2014 the design itself is a small, documented JSON document any agent can read and write; LLM systems are first-class components with honest capacities; and a production-LLM curriculum runs from RAG and multi-tenant isolation to autonomous research loops \u2014 teaching how to operate these systems, not just name them.',
     ],
   },
   {
