@@ -2277,12 +2277,30 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all eighteen areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 18 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 18);
+      check('the mastery hub renders all nineteen areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 19 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 19);
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the data-mesh scenario is graded — the true mesh wins, the relocated-bottleneck options are named', await (async () => {
+      check('IAM teaches the OAuth-is-not-login distinction and the local-vs-introspection trade', await (async () => {
+        const MM2 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const iam = MM2.MASTERY.find(a => a.id === 'iam');
+        if (!iam || iam.items.length !== 6) return false;
+        const oauth = MM2.MASTERY_CMP['oauth-oidc'];
+        const tok = MM2.MASTERY_CMP['token-validation'];
+        return !!oauth && /ID token/.test(oauth.rows.map(r => r.join(' ')).join(' '))
+          && !!tok && /revocation-critical/i.test(tok.rows.map(r => r.join(' ')).join(' '));
+      })());
+      check('the Enterprise SSO template exists, is healthy, and speaks both protocols', await (async () => {
+        const T9 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const S9 = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const t = T9.TEMPLATES.find(x => x.name === 'Enterprise SSO (Entra/Okta)');
+        if (!t) return false;
+        const sim = S9.simulate(t.nodes, t.edges, t.rps, new Set());
+        const speaksBoth = t.checklist.join(' ').match(/OIDC/) && t.checklist.join(' ').match(/SAML/);
+        return sim.successRate > 0.98 && !!speaksBoth && t.nodes.some(n => n.type === 'iam');
+      })());
+            check('the data-mesh scenario is graded — the true mesh wins, the relocated-bottleneck options are named', await (async () => {
         const MM = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const c = MM.MASTERY_CMP['data-mesh'];
         const flat = c.rows.map(r => r.join(' ')).join(' ');
@@ -4085,7 +4103,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about', 'hld', 'lld', 'brief']);
-      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE', M.MASTERY.length === 18);
+      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE, IAM', M.MASTERY.length === 19);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
@@ -4144,7 +4162,7 @@ try {
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
-        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles) && /Analytics & Data Platform/.test(titles) && /FDE & Customer Engineering/.test(titles);
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles) && /Analytics & Data Platform/.test(titles) && /FDE & Customer Engineering/.test(titles) && /Identity & Access \(IAM\)/.test(titles);
       })());
     }
 

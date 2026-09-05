@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.23.0 — 2026-09-03
+- 🔐 Mastery gains its 19th area: **Identity & Access (IAM)** — AuthN vs AuthZ (two questions, two owners), OAuth-is-authorization-OIDC-is-login (the classic interview trap), SAML vs OIDC for bridging two eras, local JWT validation vs introspection, conditional access as zero-trust login-as-a-decision, and enterprise SSO for a million employees. New template **Enterprise SSO (Entra/Okta)** — OIDC + SAML behind one broker, MFA, conditional access, JWKS rotation, SCIM deprovisioning. +8 acronyms: OIDC, SAML, MFA, ABAC, PKCE, IdP, SCIM, mTLS. Added to the Backend and DevOps tracks
+
 ## 1.22.0 — 2026-09-03
 - 🕸️ Analytics area gains a 6th concept: **Data Mesh** — domains own their data as a versioned, contract-first product on async streams; the platform becomes the paved road (schema registry, catalog, lineage, QA, SLAs) not the ETL team; federated governance. The central-warehouse / sync-API / batch-lake alternatives are graded four ways, each failing a specific mesh principle. Scenario also lands in the Learn quiz
 

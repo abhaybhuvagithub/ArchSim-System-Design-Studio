@@ -195,6 +195,18 @@ export const MASTERY = [
       { id: 'deployment-runbook', t: 'The customer deployment runbook', asks: "Walk me through your customer deployment runbook - the artifact, not the vibes.", d: 'A runbook is a sequence of exit criteria, not a to-do list. Discovery exits with signed requirements and SLOs; security review exits with an approved data-flow diagram; network validation exits with the debug ladder green from THEIR environment; integration exits with contract tests passing both directions; load and SLO validation exits with the simulator numbers reproduced in staging; cutover exits with rollback rehearsed, not described; handover exits when their on-call closes an injected incident without you. Each stage owns its evidence.', go: { tpl: 'Card Payments (Auth + Settlement)', tab: 'slo', do: 'The SLO tab is stage five of the runbook - decide what number would let you sign the exit criterion.' } },
     ],
   },
+  {
+    id: 'iam', icon: '🔐', title: 'Identity & Access (IAM)',
+    flag: "'The token is valid, so the user is allowed' - authentication is not authorization, and the day you conflate them is the day a logged-in intern reaches payroll. And the leaver nobody deprovisioned is a breach with a start date.",
+    items: [
+      { id: 'authn-authz', t: 'AuthN vs AuthZ: two questions, two owners', asks: "A logged-in user hits an endpoint they should not reach. Whose bug is it - the login system's or the app's?", d: 'The app\'s. Authentication answers "who are you" and belongs to the identity provider; authorization answers "what can you do" and belongs to the application reading the claims. The token is the contract between them: the IdP signs identity in, the app decides access out. Conflating them - trusting that a valid token implies permission - is the root of a whole family of access bugs, because a perfectly authenticated user can still be authorized for nothing.', go: { tpl: 'Enterprise SSO (Entra/Okta)', tab: 'breakdown', do: 'Read the AuthN/AuthZ dive - note which side owns the token and which side owns the decision.' } },
+      { id: 'oauth-oidc', t: 'OAuth is authorization; OIDC is login', asks: "Can I just use OAuth 2.0 to log users in?", d: 'Not on its own. OAuth 2.0 is a delegated-authorization framework - it answers "can this app access that resource" and hands back an access token, with no standard notion of who the user is. OIDC is the identity layer built on top: it adds an ID token (a JWT with iss, sub, aud, exp) that answers "who logged in". Using a raw OAuth access token as proof of identity is the classic mistake - the token was minted to open an API, not to attest a person, and treating it as login is how confused-deputy bugs slip in.', go: { tpl: 'Enterprise SSO (Entra/Okta)', tab: 'breakdown', do: 'Find the ID-token-vs-access-token split and say which one an API should trust for identity, and which for access.' } },
+      { id: 'saml-oidc', t: 'SAML vs OIDC: bridging two eras', asks: "Half our apps are modern and half are 15-year-old enterprise SaaS. One identity for both - how?", d: 'A broker that speaks both. OIDC is JSON/JWT, modern, simple, great for web/mobile/API; SAML is XML assertions, older, and still everywhere in enterprise SaaS. You do not force the business to wait for a vendor to modernize - the IdP federates to new apps by OIDC and to legacy apps by SAML from the same identity, and the employee never knows which protocol carried their login. Both are excellent at browser SSO; the difference is format and era, not capability.', go: { tpl: 'Enterprise SSO (Entra/Okta)', tab: 'breakdown', do: 'Locate the federation broker in the design - one identity, two protocols out.' } },
+      { id: 'token-validation', t: 'Validating tokens: local JWT vs introspection', asks: "Does your API call the identity provider on every request to check the token? Defend your answer.", d: 'No - it validates the signature locally against the IdP\'s public keys (JWKS), cached, on the hot path. Calling the IdP to introspect every token makes identity a latency tax and an availability dependency on every single request. The trade is revocation immediacy: a locally-validated JWT stays valid until it expires, so you keep lifetimes short and lean on refresh tokens as the real revocation lever. Introspection is the deliberate exception, reserved for the narrow flows where a token must die the instant it is revoked.', go: { tpl: 'Enterprise SSO (Entra/Okta)', tab: 'capacity', do: 'Select the signing-keys and gateway tiers and argue why local validation, not a call home, is what lets this survive its own request volume.' } },
+      { id: 'zero-trust', t: 'Conditional access: login as a decision', asks: "Design login so a password from an unmanaged device in a new country does not just sail through.", d: 'Make authentication a decision, not a gate. Conditional access weighs identity plus context - who, what device, what location, what risk score, which app - and returns allow, step-up MFA, or block. This is the mechanics of zero trust: never a trusted network perimeter, always identity-plus-context-plus-policy evaluated every time. MFA lives at the IdP so every federated app inherits it, and step-up asks for the second factor only when the signal warrants, so the safe common case stays fast and the risky case gets friction.', go: { tpl: 'Enterprise SSO (Entra/Okta)', tab: 'breakdown', do: 'Read the conditional-access dive and trace one risky sign-in to its step-up-MFA outcome.' } },
+      { id: 'sso-at-scale', t: 'Enterprise SSO for a million employees', asks: "Build SSO for 1M employees across 500 apps: OIDC, SAML, MFA, RBAC, zero-trust - and it can never be the reason work stops.", d: 'This is the load-bearing wall: one identity per human, 500 relying parties, and an availability target worthy of the company\'s most concentrated dependency. The moving parts: a broker fronting OIDC and SAML; MFA and conditional access at the IdP; tokens validated locally against rotating JWKS; PKCE on public clients; SCIM provisioning AND deprovisioning; immutable sign-in audit. And the questions that separate senior from staff: where tokens live, how logout and revocation actually work across 500 apps, how keys rotate without dropping a login, what happens the instant a user is disabled, and how the front door itself stays up - because when SSO is the single point of failure, its resilience is the enterprise\'s resilience.', go: { tpl: 'Enterprise SSO (Entra/Okta)', tab: 'scale', do: 'Walk the ladder to 1M and name the wall - why the single front door is also the single point of failure, and what that demands.' } },
+    ],
+  },
 ]
 
 export const MASTERY_TOTAL = MASTERY.reduce((n, a) => n + a.items.length, 0)
@@ -465,6 +477,48 @@ export const MASTERY_CMP = {
     ['Load + SLO validation', 'Simulator numbers reproduced in staging at signed rps', 'p99 and error budget within SLO on the dashboard'],
     ['Cutover', 'Rollback REHEARSED, not described', 'The rollback ran in staging this week, timed'],
     ['Handover', 'Their on-call closes an injected incident without you', 'The incident report they wrote, not you'],
+  ]},
+  'authn-authz': { cols: ['AuthN - "who are you"', 'AuthZ - "what can you do"'], rows: [
+    ['Owner', 'The identity provider', 'The application'],
+    ['Artifact', 'A signed token proving identity', 'A policy check on the token\'s claims'],
+    ['When it runs', 'Once at login (then SSO session)', 'On every protected action'],
+    ['Failure looks like', 'Cannot log in', 'Logged in but reaches too much - the quiet one'],
+    ['Prove it', 'A valid token is issued', 'That token, at the wrong endpoint, is refused'],
+  ]},
+  'oauth-oidc': { cols: ['OAuth 2.0', 'OIDC'], rows: [
+    ['Purpose', 'Delegated authorization', 'Authentication (identity)'],
+    ['Main artifact', 'Access token', 'ID token (a JWT)'],
+    ['Answers', 'What can this app access?', 'Who logged in?'],
+    ['Use it for', 'Reaching an API on the user\'s behalf', 'Logging the user in'],
+    ['The trap', 'Treating an access token as proof of identity', 'Skipping it and hand-rolling login on OAuth'],
+  ]},
+  'saml-oidc': { cols: ['SAML', 'OIDC'], rows: [
+    ['Format', 'XML assertions', 'JSON / JWT'],
+    ['Era', 'Older enterprise standard', 'Modern'],
+    ['Best at', 'Legacy enterprise SaaS SSO', 'Web, mobile, API'],
+    ['Complexity', 'Higher', 'Generally simpler'],
+    ['Prove it', 'A signed assertion logs into legacy SaaS', 'An ID token logs into the new app - same identity'],
+  ]},
+  'token-validation': { cols: ['Local JWT validation', 'Introspection (call the IdP)'], rows: [
+    ['Latency', 'Microseconds, on the box', 'A network round trip per check'],
+    ['Availability', 'App survives an IdP blip', 'Every request depends on the IdP'],
+    ['Revocation', 'Only at token expiry', 'Immediate'],
+    ['Use it as', 'The default hot path', 'The exception for revocation-critical flows'],
+    ['Bound the risk', 'Short lifetimes + refresh tokens', 'Cache introspection results carefully'],
+  ]},
+  'zero-trust': { cols: ['Signal', 'What the policy does with it'], rows: [
+    ['Identity', 'Establishes who is asking', 'The baseline for every decision'],
+    ['Device', 'Managed and compliant, or unknown?', 'Unknown device -> step-up or block'],
+    ['Location / network', 'Expected, or a new country?', 'Impossible travel -> block'],
+    ['Risk score', 'Behavioral and threat signals', 'High risk -> require MFA'],
+    ['Outcome', 'allow | step-up MFA | block', 'Evaluated every time, not once at the perimeter'],
+  ]},
+  'sso-at-scale': { cols: ['Concern', 'The design answer'], rows: [
+    ['Token storage', 'Short-lived access + revocable refresh; never in localStorage for sensitive apps', 'httpOnly, scoped, expiring'],
+    ['Logout across 500 apps', 'IdP session ended + best-effort single logout; local sessions expire fast', 'Single logout has hard edges - short sessions cover them'],
+    ['Key rotation', 'Overlap: publish next key, then sign, then retire old', 'No login ever drops'],
+    ['A user is disabled', 'SCIM deprovisions + refresh tokens revoked within a bounded window', 'The leaver is provably locked out'],
+    ['The front door fails', 'Regional redundancy, cached-session grace, a break-glass path', 'SPOF resilience = enterprise resilience'],
   ]},
   'oltp-olap': { cols: ['OLTP (row store)', 'OLAP (column store)'], rows: [
     ['Unit of work', 'One entity, all its fields', 'Few columns, a billion rows'],

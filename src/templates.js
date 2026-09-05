@@ -1945,4 +1945,19 @@ T('SaaS AI Copilot (Multi-tenant RAG)', 'AI inside a SaaS product: every tenant 
     'The embedding model is a schema: change it and every vector must be recomputed - reindex is a planned migration, not a hotfix',
     'The orchestrator is a graph with a budget, the LLM sits behind a gateway with fallbacks, and the semantic cache makes the tenth identical question free',
   ], 'GenAI'),
+T('Enterprise SSO (Entra/Okta)', 'One login for a million employees across 500 apps: OIDC for new, SAML for legacy, MFA and zero-trust throughout', 6000, [
+    ['u', 'client', 'Employees', 40, 240], ['edge', 'cdn', 'CDN / WAF', 170, 240, 2],
+    ['idp', 'iam', 'Identity Provider (Entra)', 320, 240, 6], ['dir', 'nosql', 'User Directory', 320, 120, 3],
+    ['mfa', 'micro', 'MFA / Factor Service', 470, 120, 4], ['ca', 'micro', 'Conditional Access Engine', 470, 240, 4],
+    ['risk', 'micro', 'Risk & Device Signals', 470, 360, 3], ['sess', 'cache', 'Session & Token Store', 620, 120, 3],
+    ['keys', 'micro', 'Signing Keys (JWKS)', 620, 240, 2], ['fed', 'micro', 'Federation (SAML/OIDC broker)', 620, 360, 3],
+    ['gw', 'gateway', 'API Gateway', 780, 300, 4], ['apps', 'app', 'Service Providers (500 apps)', 940, 300, 8],
+    ['scim', 'worker', 'Provisioning (SCIM)', 320, 360, 2], ['audit', 'kafka', 'Audit & Sign-in Log', 780, 160, 3],
+  ], [['u','edge'],['edge','idp'],['idp','dir'],['idp','mfa'],['idp','ca'],['ca','risk'],['idp','sess'],['idp','keys'],['idp','fed'],['idp','scim'],['fed','apps'],['idp','gw'],['gw','apps'],['gw','keys'],['idp','audit']], [
+    'Authentication answers "who are you" and authorization answers "what can you do" - the IdP owns the first, the app owns the second, and conflating them is how every access bug is born',
+    'The token is the trust boundary: the app validates a signed JWT against cached JWKS locally on the hot path, and reserves introspection for the rare case where instant revocation matters more than latency',
+    'Conditional Access makes login a decision, not a gate: identity plus context (device, location, risk) yields allow, step-up MFA, or block - a password alone is never the whole answer',
+    'New apps federate by OIDC, legacy enterprise SaaS by SAML - the broker speaks both so the business never waits on a vendor to modernize',
+    'Signing-key rotation is routine and overlap-based: publish the new key in JWKS, sign with it, retire the old one only after every cached copy has expired - a key rotation that breaks logins was done wrong',
+  ], 'Unicorns · USA'),
 ]

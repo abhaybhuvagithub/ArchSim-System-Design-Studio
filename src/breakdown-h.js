@@ -1253,4 +1253,63 @@ export default {
   },
 },
 
+
+'Enterprise SSO (Entra/Okta)': {
+  meta: 'Identity - enterprise - hard - one login, a million people, five hundred apps, zero trust',
+  overview: 'Enterprise SSO is the load-bearing wall of a company: when it is down, nobody works, and when it is wrong, everybody is exposed. The job is to let a million employees authenticate once and reach five hundred applications - some modern and speaking OIDC, many legacy and speaking SAML - while every login is a risk decision, not a gate. The identity provider (Microsoft Entra ID or Okta) owns authentication; each application owns its own authorization; a broker bridges the protocol generations; and the whole thing must stay up when it is the single most concentrated dependency in the org chart.',
+  scope: 'Federated authentication (OIDC + SAML), MFA and step-up, conditional access, token issuance and validation, signing-key rotation, session and logout, user lifecycle (SCIM provisioning/deprovisioning), and the audit trail. Fine-grained in-app authorization logic and the applications themselves are consumed here, not built.',
+  fr: {
+    core: ['Authenticate a user once and issue tokens the apps trust (SSO)', 'Federate to modern apps by OIDC and legacy apps by SAML from one identity', 'Enforce MFA and conditional access per policy and risk', 'Provision and DEPROVISION accounts across apps (SCIM) - joiners and, critically, leavers', 'Validate tokens, rotate signing keys, and support logout and revocation'],
+    out: ['Each application\'s internal RBAC/ABAC rules (it receives claims and decides)', 'The business applications themselves', 'HR as the source of truth for who exists (SCIM consumes it)'],
+  },
+  nfr: {
+    core: ['Availability is existential: SSO down means the whole company is down - this is the four-nines-or-better tier', 'Token validation must be fast: apps verify signatures locally against cached keys, not by calling home on every request', 'Deprovisioning must be prompt and provable: a disabled user loses access within a bounded, audited window', 'Every sign-in is logged immutably for security and compliance', 'Key rotation and policy change never cause a login outage'],
+    out: ['Sub-second provisioning - lifecycle sync in minutes is the honest SLA'],
+  },
+  nums: [['1 identity', 'per human, across 500 apps - that is the entire point'], ['4-9s+', 'availability floor - SSO is the company\'s power grid'], ['~1 hour', 'access-token life; refresh tokens longer, revocable'], ['minutes', 'the honest deprovisioning and provisioning window']],
+  entities: [
+    ['User', 'the identity in the directory: credentials, factors, group memberships, lifecycle state (active/disabled)'],
+    ['Application', 'a registered relying party: its protocol (OIDC or SAML), redirect URIs, and the claims it is trusted to receive'],
+    ['Token', 'ID token (who logged in) and access token (what an API will honor) - signed, short-lived, audience-scoped'],
+    ['Session', 'the SSO session at the IdP that makes the second app login invisible - separate from each app\'s local session'],
+    ['Policy', 'a conditional-access rule: identity + context (device, location, risk) -> allow | step-up | block'],
+  ],
+  apiIntro: 'The protocols are the API: OIDC and SAML are how apps ask "who is this?" and the IdP answers with a signed assertion. Identity is asserted, never taken on the app\'s word.',
+  api: [
+    { dir: '->', name: 'GET /authorize (OIDC, Authorization Code + PKCE)', body: 'redirect to the IdP; user authenticates + consents; a one-time code comes back - PKCE stops a stolen code from being redeemed' },
+    { dir: '->', name: 'POST /token', body: 'code + verifier -> { id_token, access_token, refresh_token } - the ID token proves the login, the access token opens APIs' },
+    { dir: '->', name: 'GET /.well-known/jwks.json', body: 'the public signing keys apps cache to validate tokens locally; rotation publishes the next key here before it is used' },
+  ],
+  dives: [
+    {
+      title: 'AuthN, AuthZ, and the token between them', focus: ['idp', 'keys', 'gw', 'apps'],
+      blocks: [
+        ['p', 'Authentication and authorization are different questions with different owners, and the token is the contract between them. The IdP authenticates - password, passkey, MFA - and mints a signed, short-lived, audience-scoped token carrying identity claims. The application authorizes - it reads the claims and decides what this user may do - and it verifies the token by checking the signature against the IdP\'s published keys, cached locally, on every request. Calling the IdP to introspect each token would make identity a latency tax and a availability risk on every API hop; local validation is the default, and introspection is reserved for the narrow case where a token must be killable the instant it is revoked.'],
+        ['bul', [
+          'OAuth 2.0 is authorization, OIDC is authentication built on top of it - "can I use OAuth to log in?" earns the answer: OAuth authorizes access, OIDC is the identity layer, use OIDC for login.',
+          'Local JWT validation trades instant revocation for speed and independence; short token lifetimes bound the risk, and refresh tokens are the revocation lever that actually matters.',
+          'Signing keys rotate on an overlap schedule: the new key appears in JWKS and is trusted before anything is signed with it, and the old key retires only after every cached copy has aged out.',
+        ]],
+        ['warn', 'The most dangerous gap is the leaver: authentication is easy to demo and deprovisioning is easy to forget. A disabled employee whose refresh token still works, or whose SAML session lingers, is an open door - lifecycle deprovisioning (SCIM) and bounded token lifetimes are the difference between a policy and a breach.'],
+      ],
+    },
+    {
+      title: 'Federation, MFA, and login as a decision', focus: ['idp', 'fed', 'mfa', 'ca', 'risk'],
+      blocks: [
+        ['p', 'One identity has to serve two protocol generations, so a broker fronts both: modern apps get OIDC, legacy enterprise SaaS gets SAML, and the employee never knows which. On top of authentication sits conditional access, which turns login from a gate into a decision: the engine weighs who, on what device, from where, at what risk, for which app, and returns allow, step-up MFA, or block. This is the mechanics of zero trust - identity plus context plus policy, evaluated every time, rather than a trusted network perimeter.'],
+        ['bul', [
+          'PKCE protects the authorization-code flow for public clients (mobile, SPA): the code is useless without the verifier only the real client holds - a stolen code cannot be redeemed.',
+          'MFA lives at the IdP so every federated app inherits it at once; step-up asks for a second factor only when the risk signal warrants, keeping the common path fast.',
+          'Okta-to-Entra federation is the same pattern one level up: one IdP trusts another as an identity source, which is how acquisitions and multi-cloud estates present a single front door.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A login page and a shared user table.',
+    senior: 'OIDC for new and SAML for legacy behind one broker, MFA and conditional access at the IdP, tokens validated locally against rotating JWKS with introspection reserved for revocation-critical paths, PKCE on public clients, SCIM provisioning AND deprovisioning, immutable sign-in audit, and an availability design worthy of the company\'s single most concentrated dependency.',
+    staff: 'Design the org-wide trust fabric: session and logout semantics across 500 apps (including single logout\'s hard edges), the key-rotation program that never drops a login, the risk model behind conditional access, the deprovisioning guarantee a security auditor will accept, and the failure design for when the IdP itself degrades - because when SSO is the single point of failure, its resilience is the whole enterprise\'s resilience.',
+  },
+},
+
 }

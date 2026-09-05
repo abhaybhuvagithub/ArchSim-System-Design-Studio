@@ -383,4 +383,22 @@ export default {
   wall: { t: 'The model is shared; the promises are not', d: 'Past every namespace and bucket, one LLM gateway serves every tenant, and a provider incident, a model deprecation, or a price change lands on all of them at once. Isolation can be engineered at the data plane; it cannot be engineered at the model provider. The honest design multiplies providers behind the gateway, versions prompts per model, and tells enterprise tenants the truth in the SLA: their data is theirs alone, their model is everyone\'s.' },
 },
 
+
+'Enterprise SSO (Entra/Okta)': {
+  constraint: 'The identity provider is the most concentrated dependency a company has: every employee, every app, every request touches it, and it must never be the reason work stops. Scaling is about staying available and fast as employees, apps and login rate all climb.',
+  ladder: [
+    ['1K employees, 10 apps', '~5 rps', 'One IdP tenant, OIDC for what supports it, SAML for what does not. Local token validation and SCIM deprovisioning matter from day one - a forgotten leaver is a risk at any size.'],
+    ['50K employees, 100 apps', '~250 rps', 'Conditional access with real risk signals; MFA universal; JWKS cached at every app; the audit log becomes a stream, not a table.'],
+    ['500K employees, 500 apps', '~2.5K rps', 'The broker fronts both protocols at scale; key rotation is a rehearsed program; session and single-logout semantics are designed across app families; regional token issuance cuts latency.'],
+    ['1M+ employees, multi-cloud', '~15K rps', 'IdP-to-IdP federation (Okta trusting Entra or vice versa) presents one front door across acquisitions and clouds; availability engineering dominates - this is now critical national-scale infrastructure for the business.'],
+  ],
+  levers: [
+    { t: 'Validate tokens at the edge, not at home', d: 'Apps verify signatures against cached JWKS locally; the IdP is not on the hot path of every API call. Introspection is reserved for revocation-critical flows only.', n: ['apps', 'keys', 'gw'] },
+    { t: 'Make login a cached decision', d: 'The SSO session means the second, third and hundredth app login are invisible; conditional access re-evaluates on risk, not on every hop.', n: ['idp', 'sess', 'ca'] },
+    { t: 'Rotate keys with overlap', d: 'Publish the next signing key in JWKS and trust it before signing with it; retire the old only after caches expire - rotation that drops a login was done wrong.', n: ['keys', 'idp'] },
+    { t: 'Deprovision as fast as you provision', d: 'SCIM must remove access on exit within a bounded, audited window; short token lifetimes cap the exposure of anything the sync has not yet caught.', n: ['scim', 'dir'] },
+  ],
+  wall: { t: 'The single front door is the single point of failure', d: 'Every efficiency here - one identity, one login, one policy engine - concentrates risk into one system whose outage stops the entire company and whose compromise exposes all of it. Past a point the binding constraint is not throughput but blast radius: the IdP must be engineered like a power grid, with regional redundancy, graceful degradation (cached sessions surviving a brief control-plane blip), rehearsed key rotation, and a break-glass path for when identity itself is down. You cannot federate your way out of needing the front door to be the most reliable thing you run.' },
+},
+
 }
