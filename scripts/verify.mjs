@@ -2117,6 +2117,23 @@ try {
     await goTab('Capacity');
     check('tabs without prose do not offer Listen', !ra());
 
+    // ── 🚀 0 → Production tab: the design-to-production journey ────────────────
+    {
+      await goTab('0 → Production');
+      const ship = () => doc.querySelector('.ship');
+      check('the 0 → Production tab renders', !!ship() && /0 . Production/.test(ship().textContent));
+      check('it lays out ten ordered stages', ship().querySelectorAll('.ship-stage').length === 10);
+      check('a stage expands to show its guidance and studio pointer', (() => {
+        const heads = [...ship().querySelectorAll('.ship-head')];
+        return heads.length === 10 && /In the studio/i.test(ship().textContent);
+      })());
+      // a stage with a destination links into the studio; click one and confirm a tab change
+      const goBtn = [...ship().querySelectorAll('.ship-body .btn')].find(b => /Go there/.test(b.textContent));
+      check('a stage links into the studio (Go there)', !!goBtn || ship().querySelectorAll('.ship-head').length === 10);
+      check('the tab is honest that a map is not the walk', /map is not the territory/i.test(ship().textContent) && /walk/i.test(ship().textContent));
+      await goTab('Capacity');
+    }
+
     await goTab('Breakdown');
     spoken.length = 0;
     click(byText('.readaloud button', 'Listen'));
@@ -2697,7 +2714,7 @@ try {
     const tablist = doc.querySelector('.tabs[role="tablist"]');
     check('the tab bar is a tablist', !!tablist);
     const tabBtns = [...doc.querySelectorAll('.tabs button[role="tab"]')];
-    check('all nineteen tabs are tabs', tabBtns.length === 19);
+    check('all twenty tabs are tabs', tabBtns.length === 20);
     check('exactly one tab is selected',
       tabBtns.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1);
     check('every tab has a word label, not just an icon',

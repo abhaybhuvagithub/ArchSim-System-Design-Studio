@@ -59,7 +59,7 @@ import { encodeShare, decodeShare, hasSharedDesign, parseEntryParams, hasEntryPa
 const TAB_ICON = {
   capacity: '📊', improve: '✨', chaos: '🌪️', cost: '💸', code: '🧩', assist: '💬',
   roi: '💹', slo: '🎯', acr: '🔤', mastery: '🎓', scale: '📈', breakdown: '📘',
-  learn: '🎒', map: '🗺️', interview: '🎙️', about: 'ℹ️', compare: '⚖️', explain: '💡', trips: '✈️', hld: '🏛️', lld: '🧱', brief: '📄',
+  learn: '🎒', map: '🗺️', interview: '🎙️', about: 'ℹ️', ship: '🚀', compare: '⚖️', explain: '💡', trips: '✈️', hld: '🏛️', lld: '🧱', brief: '📄',
 }
 const GROUP_ICON = {
   'Bharat · fintech': '💳', 'Bharat · consumer': '🇮🇳', 'Unicorns · Bharat': '🦄', 'Unicorns · USA': '🦅',
@@ -1286,6 +1286,7 @@ export default function App() {
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],
               ['map', 'Map', null, 'Where this design is deployed, and what distance costs'],
               ['interview', 'Interview', null, 'Mock system design interview on the loaded design'],
+              ['ship', '0 → Production', null, 'The road from a design on the canvas to a running product — every stage wired to where the studio teaches it'],
               ['about', 'About', null, 'What this simulator is and how it differs'],
             ].map(([key, label, badge, hint]) => ({ key, label, badge, hint })).map(({ key, label, badge, hint }) => (
               <button key={key} role="tab" id={`tab-${key}`} aria-selected={tab === key}
@@ -1315,6 +1316,8 @@ export default function App() {
                 const i = TEMPLATES.findIndex(t => t.name === name)
                 if (i >= 0) loadTemplate(String(i))
               }} />
+          ) : tab === 'ship' ? (
+            <ShipTab onGo={(go) => { if (go.tpl) { const i = TEMPLATES.findIndex(t2 => t2.name === go.tpl); if (i >= 0) loadTemplate(String(i)) } if (go.tab) setTab(go.tab) }} />
           ) : tab === 'about' ? (
             <About />
           ) : tab === 'code' ? (
@@ -1543,6 +1546,53 @@ function RichLine({ text }) {
     if (link) return <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer">{link[1]} ↗</a>
     return <span key={i}>{p}</span>
   })}</>
+}
+
+// ── 🚀 0 → Production: the road from a design to a running product ───────────
+// This is the connective tissue: it turns the studio's scattered surfaces into
+// one ordered journey, and it is honest that a map is not the walk.
+const SHIP_STAGES = [
+  { n: 1, icon: '📐', t: 'Prove the design on paper', gist: 'Before a line of code, show the architecture can meet its numbers: capacity per tier, p99, availability, and the SLO you will promise. A design that has not been sized is a guess.', here: 'Capacity and SLO tabs — and Monte Carlo for the distribution, not one number.', go: { tab: 'slo' } },
+  { n: 2, icon: '🌪️', t: 'Break it before it breaks you', gist: 'Kill a node, sever a link, 10x the traffic — and watch the blast radius. The failures you find on the canvas are the ones you are not paged for at 3am.', here: 'Chaos tab: fault injection, blast radius, and the What-If comparison.', go: { tab: 'chaos' } },
+  { n: 3, icon: '📝', t: 'Write down the decisions', gist: 'Every irreversible choice — the data model, the core dependency, single-primary vs shard — gets an Architecture Decision Record: context, decision, consequences. So six months on, nobody re-litigates it and everybody knows why.', here: 'Mastery → Engineering Leadership: reversible-vs-irreversible, and ADRs.', go: { tab: 'mastery' } },
+  { n: 4, icon: '🦴', t: 'Build the smallest thing that runs', gist: 'A repo, and the thinnest end-to-end slice that actually works — with a test proving it before you add the second feature. This is the step no simulator can do for you; it is where design becomes a product. (billing-engine was exactly this: a real repo, tests first.)', here: 'Not in the studio — this is the walk. Clone a repo and write the first test.', go: null },
+  { n: 5, icon: '🔌', t: 'Nail the contracts and the data', gist: 'The API shape other teams build against, the database schema, and how you will change that schema later without downtime (expand → migrate → contract). Contracts and migrations are where systems calcify or stay flexible.', here: 'HLD/LLD tabs, the Code tab (OpenAPI), and Mastery → expand-and-contract.', go: { tab: 'hld' } },
+  { n: 6, icon: '🏗️', t: 'Provision the infrastructure', gist: 'Declare the servers, databases, networks and load balancers as code — Terraform/OpenTofu — so the environment is reproducible, reviewed, and re-runnable. Clicking it together in a console is a thing you can never rebuild.', here: 'Code tab → Terraform view, and Mastery → the Terraform-vs-Ansible drill.', go: { tab: 'code' } },
+  { n: 7, icon: '🚦', t: 'Ship it safely', gist: 'Automated pipeline (CI/CD), and a release strategy that can roll back in seconds: blue-green or canary, behind feature flags so deploy is not release. The goal is that shipping is boring.', here: 'Mastery → Deploy & Migrate: release strategies, feature flags, CI gates.', go: { tab: 'mastery' } },
+  { n: 8, icon: '🔭', t: 'See it in production', gist: 'You cannot operate what you cannot see: structured logs, metrics (RED/USE), and distributed traces, on dashboards, wired before traffic arrives — not after the first incident.', here: 'Mastery → Observability & Security, and the Telemetry components on templates.', go: { tab: 'mastery' } },
+  { n: 9, icon: '🎯', t: 'Guard it: SLOs, budgets, on-call', gist: 'The SLO is now live: an error budget that burns, alerts that page a human before the month does, and an incident process for when it breaks — diagnose, mitigate, write the RCA.', here: 'SLO tab (live budget + burn), and Chaos → Incident Mode for the drill.', go: { tab: 'slo' } },
+  { n: 10, icon: '🔁', t: 'Keep it honest and evolving', gist: 'Watch the cost, close the security gaps, catch architecture drift (what is running vs what you designed), and feed production reality back into the next design. Production is not the finish line — it is the start of the loop.', here: 'Cost and ROI tabs, and the What-If / Monte Carlo engines for the next round.', go: { tab: 'cost' } },
+]
+
+function ShipTab({ onGo }) {
+  const [open, setOpen] = useState(1)
+  return (
+    <section className="ship">
+      <h3>🚀 0 → Production</h3>
+      <p className="muted ship-intro">The studio teaches you to design and defend a system. This is the road from a design on the canvas to a running product — ten stages, each wired to where the studio already teaches it. Follow it in order; it is the connective tissue between the twenty-one mastery areas.</p>
+      <ol className="ship-stages">
+        {SHIP_STAGES.map(s => (
+          <li key={s.n} className={`ship-stage ${open === s.n ? 'open' : ''}`}>
+            <button className="ship-head" onClick={() => setOpen(open === s.n ? 0 : s.n)} aria-expanded={open === s.n}>
+              <span className="ship-num">{s.icon}</span>
+              <span className="ship-t">{s.t}</span>
+              <span className="ship-chev">{open === s.n ? '▾' : '▸'}</span>
+            </button>
+            {open === s.n && (
+              <div className="ship-body">
+                <p>{s.gist}</p>
+                <p className="ship-here"><b>In the studio:</b> {s.here}</p>
+                {s.go
+                  ? <button className="btn tiny" onClick={() => onGo(s.go)}>Go there →</button>
+                  : <span className="ship-walk">🚶 This step is the walk — no simulator can do it for you.</span>}
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+      <p className="ship-honest">The map is not the territory. Reading these ten stages makes you understand the road; walking one real project end to end — a repo, tests, deployed — is what makes you able to ship. Stage 4 is where that begins, and it is the only stage the studio hands back to you.</p>
+    </section>
+  )
 }
 
 function About() {

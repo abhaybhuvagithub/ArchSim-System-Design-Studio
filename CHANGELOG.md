@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.36.0 — 2026-09-03
+- 🚀 New **0 → Production** tab: the road from a design on the canvas to a running product, as ten ordered stages (prove → break → decide → build → contracts → provision → ship → observe → guard → evolve), each wired to where the studio already teaches it. Honest by design — stage 4 (build the smallest thing that runs) is handed back to you, and the tab states plainly that reading the map is not the same as walking it
+
 ## 1.35.0 — 2026-09-03
 - 🏗️ Deploy & Migrate gains a concept: **Infrastructure as code — Terraform provisions, Ansible configures** — the provision-vs-configure distinction (Terraform builds the house, Ansible furnishes it) with idempotency as the shared point (running either twice is a no-op), graded in a ⇄ table. The existing Terraform code view is reframed to name itself as the provisioning half
 
