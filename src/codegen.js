@@ -172,7 +172,7 @@ export function generateOpenAPI(nodes, edges) {
 
 export const CODE_VIEWS = [
   { id: 'compose', label: 'docker-compose', file: 'docker-compose.yml', hint: 'Run the whole design locally — replicas and dependencies come from the canvas.' },
-  { id: 'terraform', label: 'Terraform', file: 'main.tf', hint: 'The deployment shape on the selected cloud, one module per component.' },
+  { id: 'terraform', label: 'Terraform', file: 'main.tf', hint: 'Provisioning as code: the infrastructure this design implies as declarative Terraform/OpenTofu — servers, stores, load balancers. This is the provision half (build the house); config tools like Ansible furnish what runs inside. See the IaC mastery drill.' },
   { id: 'openapi', label: 'OpenAPI', file: 'openapi.yaml', hint: 'API contract for the service tiers, resources inferred from their stores.' },
   { id: 'mermaid', label: 'Mermaid', file: 'architecture.mmd', hint: 'Diagram-as-code for READMEs — GitHub, Notion and Obsidian render it natively. Async edges are dashed; paste it back to simulate.' },
   { id: 'excalidraw', label: 'Excalidraw', file: 'architecture.excalidraw', hint: 'The interview whiteboard, pre-drawn: open the file at excalidraw.com and keep sketching.' },

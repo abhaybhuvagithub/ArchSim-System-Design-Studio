@@ -2353,7 +2353,21 @@ try {
       }
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('Engineering Leadership teaches technical judgment (one-way doors, build-vs-buy) not people-management', await (async () => {
+      check('the deploy area teaches IaC — Terraform provisions vs Ansible configures, idempotency the point', await (async () => {
+        const MI = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const it = MI.MASTERY.find(a => a.id === 'deploy')?.items.find(x => x.id === 'iac-provision-configure');
+        if (!it) return false;
+        const c = MI.MASTERY_CMP['iac-provision-configure'];
+        const flat = c.rows.map(r => r.join(' ')).join(' ');
+        return /Terraform/.test(it.d) && /Ansible/.test(it.d) && /idempoten/i.test(it.d)
+          && !!c && /Builds the house/.test(flat) && /Furnishes the house/.test(flat) && /no-op/i.test(flat);
+      })());
+      check('the Terraform code view frames itself as provisioning', await (async () => {
+        const CG = await import(pathToFileURL(path.join(root, 'src/codegen.js')).href);
+        const t = CG.CODE_VIEWS.find(v => v.id === 'terraform');
+        return !!t && /provision/i.test(t.hint);
+      })());
+            check('Engineering Leadership teaches technical judgment (one-way doors, build-vs-buy) not people-management', await (async () => {
         const MEL = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const el = MEL.MASTERY.find(a => a.id === 'eng-lead');
         if (!el || el.items.length !== 6) return false;

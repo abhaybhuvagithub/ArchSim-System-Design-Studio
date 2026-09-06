@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.35.0 — 2026-09-03
+- 🏗️ Deploy & Migrate gains a concept: **Infrastructure as code — Terraform provisions, Ansible configures** — the provision-vs-configure distinction (Terraform builds the house, Ansible furnishes it) with idempotency as the shared point (running either twice is a no-op), graded in a ⇄ table. The existing Terraform code view is reframed to name itself as the provisioning half
+
 ## 1.34.0 — 2026-09-03
 - 🧾 New template **Billing & Revenue Platform** — money over time, not money in the moment: an append-only usage ledger (corrections are compensating events, never edits), idempotent billing runs keyed by (customer, period) so nobody is ever double-billed, an invoice state machine with immutable finalization and credit/debit-note adjustments, tax as a pluggable per-jurisdiction rules engine (GST/VAT as data, not code), dunning as a state machine, and revenue recognition that keeps cash and earned revenue distinct into the general ledger. Wall: the bottleneck is reconciliation, not throughput. +3 acronyms: DSO, GST, AR
 
