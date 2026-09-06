@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.33.0 — 2026-09-03
+- 🔮 **What-If comparison** (Chaos tab): pick a scenario — 2×/10× traffic, busiest tier lost, every dependency +100% latency, caches cold, retry storm — and see your design run baseline vs scenario side by side, with each metric flagged better/worse. Read-only: reuses the simulator and chaos fx without injecting anything permanently
+
 ## 1.32.0 — 2026-09-03
 - 📊 **Monte-Carlo reliability engine** (SLO tab): runs the simulator many times with traffic, latency and capacity drawn from distributions, and reports reliability as a spread — p99 on a typical/bad/worst run, availability and success ranges, the busiest tier across runs, and how often your availability SLO is missed. Seeded (same seed reproduces exactly) and labelled a model estimate, never a measured benchmark. Calm/Normal/Spiky variability presets
 

@@ -1930,3 +1930,18 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .mc-out .roi-grid { margin-top: 8px; }
 .mc-hot { font-size: 12.5px; margin: 8px 0 4px; }
 .mc-prov { font-size: 12px; opacity: .7; font-style: italic; margin-top: 6px; }
+
+/* ── What-If comparison ── */
+.wi-panel { margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; }
+.wi-panel summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
+.wi-intro { font-size: 12.5px; margin: 8px 0; }
+.wi-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.wi-note { font-size: 12.5px; margin: 6px 0; }
+.wi-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+.wi-table th, .wi-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+.wi-table th { font-size: 12px; opacity: .7; font-weight: 600; }
+.wi-table td:nth-child(4) { font-size: 12px; }
+.wi-worse td:nth-child(4) { color: #e05661; font-weight: 600; }
+.wi-better td:nth-child(4) { color: #3cb478; font-weight: 600; }
+.wi-prov { font-size: 12px; opacity: .7; font-style: italic; margin-top: 8px; }
+.btn.tiny.active { border-color: var(--accent); color: var(--accent); }

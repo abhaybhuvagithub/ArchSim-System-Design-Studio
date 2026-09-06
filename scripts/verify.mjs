@@ -2200,6 +2200,20 @@ try {
       check('the revenue model is honestly labeled with its basis',
         (/Authored model|Archetype model/.test(roi().textContent)) && !!roi().querySelector('.roi-basis'));
       check('the not-a-forecast note is present', /not a forecast/i.test(roi().textContent));
+      // ── What-If scenarios move metrics in the right direction ─────────────────
+      {
+        const SM = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const TW = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const w = TW.TEMPLATES.find(x => x.name === 'Chat (WhatsApp)');
+        const base = SM.simulate(w.nodes, w.edges, w.rps, new Set());
+        const x10 = SM.simulate(w.nodes, w.edges, w.rps, new Set(), { rpsMul: 10 });
+        check('What-If: 10x traffic degrades the design vs baseline', x10.p99 >= base.p99 || x10.successRate <= base.successRate);
+        let busiest = null, bu = -1;
+        for (const [id, st] of Object.entries(base.stats)) if ((st.util || 0) > bu) { bu = st.util; busiest = id; }
+        const down = SM.simulate(w.nodes, w.edges, w.rps, new Set(), { node: { [busiest]: { capMul: 0.001 } } });
+        check('What-If: losing the busiest tier lowers success rate', down.successRate <= base.successRate);
+      }
+
       // ── Monte-Carlo reliability engine: seeded, distributional, honest ────────
       {
         const MC = await import(pathToFileURL(path.join(root, 'src/montecarlo.js')).href);
@@ -3274,6 +3288,17 @@ try {
         const goTab5 = async (name) => { click(byText('.tabs button', name)); await wait(200) };
         await goTab5('Chaos');
         check('Incident Mode is offered in the Chaos tab', /Incident Mode/.test(doc.body.textContent) && doc.querySelectorAll('.inc-card').length >= 6);
+        // What-If comparison: baseline vs a scenario, side by side (read-only)
+        {
+          const wi = () => doc.querySelector('.wi-panel');
+          check('the Chaos tab offers a What-If comparison', !!wi() && /compare this design against a scenario/i.test(wi().textContent));
+          check('What-If shows a baseline-vs-scenario table', !!wi().querySelector('.wi-table') && /Baseline/.test(wi().textContent) && /p99 latency/i.test(wi().textContent));
+          // switch to 10x traffic and confirm the scenario column diverges from baseline
+          const tenx = [...wi().querySelectorAll('.wi-controls button')].find(b => /10× traffic/.test(b.textContent));
+          click(tenx); await wait(200);
+          check('a heavier scenario shows a worse column than baseline', wi().querySelectorAll('.wi-worse').length >= 1);
+          check('What-If states it is a read-only comparison, not a permanent change', /read-only comparison/i.test(wi().textContent));
+        }
         const takeBtn = [...doc.querySelectorAll('.inc-card button')][0];
         click(takeBtn); await wait(350);
         check('taking the call loads the design, injects the fault, and shows the customer symptom',

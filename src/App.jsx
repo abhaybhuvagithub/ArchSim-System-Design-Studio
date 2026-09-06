@@ -1343,7 +1343,7 @@ export default function App() {
           ) : tab === 'chaos' ? (
             <>
               <IncidentMode activeId={incidentId} onStart={startIncident} onEnd={endIncident} />
-              <Chaos faults={faults} nodes={nodes} sel={sel} onInject={injectFault}
+              <Chaos faults={faults} nodes={nodes} edges={edges} rps={rps} sel={sel} onInject={injectFault}
                 onClear={clearFault} onRecoverAll={recoverAll} sim={sim} fx={fx} />
             </>
           ) : tab === 'cost' ? (
@@ -2391,7 +2391,69 @@ function Brief({ brief }) {
   )
 }
 
-function Chaos({ faults, nodes, sel, onInject, onClear, onRecoverAll, sim, fx }) {
+// ── What-If comparison: baseline vs a scenario, side by side ─────────────────
+const WHATIF_SCENARIOS = [
+  { id: 'traffic2', label: '2× traffic', fx: () => ({ rpsMul: 2 }) },
+  { id: 'traffic10', label: '10× traffic', fx: () => ({ rpsMul: 10 }) },
+  { id: 'busiest-down', label: 'Busiest tier lost', needsBusiest: true, fx: (busiest) => busiest ? ({ node: { [busiest]: { capMul: 0.001 } } }) : ({}) },
+  { id: 'dep-slow', label: 'Every dependency +100% latency', fx: (b, nodes) => ({ node: Object.fromEntries(nodes.filter(n => !['client'].includes(n.type)).map(n => [n.id, { latMul: 2 }])) }) },
+  { id: 'cache-cold', label: 'Caches cold (no cache)', fx: (b, nodes) => ({ node: Object.fromEntries(nodes.filter(n => n.type === 'cache').map(n => [n.id, { noCache: true, capMul: 0.3 }])) }) },
+  { id: 'retry-storm', label: 'Retry storm (+40% dup load)', fx: (b, nodes) => ({ node: Object.fromEntries(nodes.map(n => [n.id, { dup: 0.4 }])) }) },
+]
+
+function WhatIfPanel({ nodes, edges, rps }) {
+  const [scenarioId, setScenarioId] = useState('traffic10')
+  const cmp = useMemo(() => {
+    if (!nodes.length) return null
+    const base = simulate(nodes, edges, rps, new Set())
+    // busiest tier from baseline, for the "busiest tier lost" scenario
+    let busiest = null, bu = -1
+    for (const [id, st] of Object.entries(base.stats)) if ((st.util || 0) > bu) { bu = st.util; busiest = id }
+    const sc = WHATIF_SCENARIOS.find(s => s.id === scenarioId)
+    const fx = sc.fx(busiest, nodes)
+    const after = simulate(nodes, edges, rps, new Set(), fx)
+    const busyLabel = busiest ? (nodes.find(n => n.id === busiest)?.label || busiest) : null
+    return { base, after, sc, busyLabel }
+  }, [nodes, edges, rps, scenarioId])
+  if (!cmp) return null
+  const { base, after, sc, busyLabel } = cmp
+  const row = (label, b, a, fmt, goodIsUp) => {
+    const bv = fmt(b), av = fmt(a)
+    const changed = bv !== av
+    const worse = goodIsUp ? a < b : a > b
+    return (
+      <tr className={changed ? (worse ? 'wi-worse' : 'wi-better') : ''}>
+        <td>{label}</td><td>{bv}</td><td>{av}</td>
+        <td>{changed ? (worse ? '▼ worse' : '▲ better') : '—'}</td>
+      </tr>
+    )
+  }
+  return (
+    <details className="wi-panel">
+      <summary>🔮 What-If — compare this design against a scenario, side by side</summary>
+      <p className="muted wi-intro">Pick a scenario. The model runs your design as it is now (baseline) and under the scenario, and shows what moves. Nothing is injected permanently — this is a read-only comparison.</p>
+      <div className="wi-controls">
+        {WHATIF_SCENARIOS.map(s => (
+          <button key={s.id} type="button" className={`btn tiny ${s.id === scenarioId ? 'active' : ''}`} onClick={() => setScenarioId(s.id)}>{s.label}</button>
+        ))}
+      </div>
+      {sc.needsBusiest && busyLabel && <p className="muted wi-note">Busiest tier right now: <b>{busyLabel}</b> — this scenario takes it out.</p>}
+      <table className="wi-table">
+        <thead><tr><th>Metric</th><th>Baseline</th><th>{sc.label}</th><th>Change</th></tr></thead>
+        <tbody>
+          {row('Success rate', base.successRate, after.successRate, v => (v * 100).toFixed(1) + '%', true)}
+          {row('p99 latency', base.p99, after.p99, v => Math.round(v) + 'ms', false)}
+          {row('p50 latency', base.p50, after.p50, v => Math.round(v) + 'ms', false)}
+          {row('Availability', base.sysAvail, after.sysAvail, v => (v * 100).toFixed(2) + '%', true)}
+          {row('Dropped req/s', base.totalDropped, after.totalDropped, v => Math.round(v).toLocaleString(), false)}
+        </tbody>
+      </table>
+      <p className="wi-prov muted">Both columns are the same model at {rps.toLocaleString()} rps base — a read-only comparison, not a permanent change to your design.</p>
+    </details>
+  )
+}
+
+function Chaos({ faults, nodes, edges, rps, sel, onInject, onClear, onRecoverAll, sim, fx }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     if (!faults.length) return
@@ -2483,6 +2545,7 @@ function Chaos({ faults, nodes, sel, onInject, onClear, onRecoverAll, sim, fx })
           </div>
         </>
       )}
+      <WhatIfPanel nodes={nodes} edges={edges} rps={rps} />
     </section>
   )
 }
