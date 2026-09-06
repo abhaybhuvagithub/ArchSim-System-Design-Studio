@@ -40,3 +40,5 @@ node scripts/verify.mjs   # the full 971-check suite against the built bundle
 
 **[archsim-gate](https://github.com/abhaybhuvagithub/archsim-gate)** — the CI half of this thesis: fail the PR when the architecture can not keep its promises. Same physics, pointed at your Terraform plan, with the cheapest priced repair in the comment.
 
+**[billing-engine](https://github.com/abhaybhuvagithub/billing-engine)** — the runnable companion to the *Billing & Revenue Platform* template: append-only metering, idempotent invoicing, an invoice state machine, pluggable GST/VAT and revenue recognition, with every invariant enforced in code and proven by tests.
+
