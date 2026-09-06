@@ -49,6 +49,7 @@ import { Onboarding } from './onboarding.jsx'
 import { PRO_ENABLED, PRICES, UPI_ID, CONTACT_URL, isTemplateFree, getLicense, setLicense, clearLicense, validateKey, upiLink, attemptState, recordMiss, clearMisses } from './license.js'
 import { roiFor } from './roi.js'
 import { sloReport, SLO_TARGETS, sloQuickFix } from './slo.js'
+import { monteCarlo, MC_PROFILES } from './montecarlo.js'
 import { ACRONYMS, ACRONYM_CATS } from './acronyms.js'
 import { futureSuggestions } from './future.js'
 import { MASTERY, MASTERY_TOTAL, MASTERY_CMP, readMastery, writeMastery, shuffleMastery, readMasteryUI, writeMasteryUI } from './mastery.js'
@@ -1324,7 +1325,7 @@ export default function App() {
           ) : tab === 'roi' ? (
             <ROITab template={template} cost={cost} rps={rps} simOn={simOn} sim={sim} nodes={nodes} />
           ) : tab === 'slo' ? (
-            <SLOTab nodes={nodes} edges={edges} sim={sim} simOn={simOn} resim={(ns) => simulate(ns, edges, rps, downSet, fx)}
+            <SLOTab nodes={nodes} edges={edges} rps={rps} sim={sim} simOn={simOn} resim={(ns) => simulate(ns, edges, rps, downSet, fx)}
               onFix={(fix) => { setNodes(fix.nodes); if (fix.edges) setEdges(fix.edges); notify(fix.note, 'info') }} />
           ) : tab === 'acr' ? (
             <AcronymsTab />
@@ -1908,7 +1909,73 @@ function AcronymsTab() {
 // The SLO tab: pick a target, see the error budget it buys, watch the live
 // burn rate, and run the Production Readiness Review a Staff+ engineer would
 // run before green-lighting a launch.
-function SLOTab({ nodes, edges, sim, simOn, onFix, resim }) {
+// ── Monte-Carlo reliability panel (in the SLO tab) ──────────────────────────
+function MonteCarloPanel({ nodes, edges, rps, availTarget }) {
+  const [iterations, setIterations] = useState(1000)
+  const [seed, setSeed] = useState(42)
+  const [profile, setProfile] = useState('normal')
+  const [result, setResult] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const run = () => {
+    setBusy(true)
+    // defer so the button can paint its busy state before the synchronous run
+    setTimeout(() => {
+      try {
+        // score against the chosen availability SLO, plus a p99 gate at 1.5x the deterministic p99
+        const base = simulate(nodes, edges, rps, new Set())
+        const r = monteCarlo(nodes, edges, rps, {
+          iterations, seed, profile,
+          slo: { availability: availTarget, p99: Math.round(base.p99 * 1.5) },
+        })
+        setResult(r)
+      } finally { setBusy(false) }
+    }, 20)
+  }
+  return (
+    <details className="mc-panel">
+      <summary>📊 Monte Carlo — reliability as a distribution, not a single number</summary>
+      <p className="muted mc-intro">One simulation is one outcome; reality varies. This runs the model many times with traffic, latency and capacity drawn from distributions, and reports the spread — including how often your availability SLO is missed. Seeded, so the same seed reproduces the same result exactly.</p>
+      <div className="mc-controls">
+        <label>Runs
+          <select value={iterations} onChange={e => { setIterations(+e.target.value); setResult(null) }}>
+            <option value={200}>200</option><option value={1000}>1,000</option><option value={5000}>5,000</option>
+          </select>
+        </label>
+        <label>Variability
+          <select value={profile} onChange={e => { setProfile(e.target.value); setResult(null) }}>
+            <option value="calm">Calm</option><option value="normal">Normal</option><option value="spiky">Spiky</option>
+          </select>
+        </label>
+        <label>Seed
+          <input type="number" value={seed} onChange={e => { setSeed(+e.target.value || 0); setResult(null) }} style={{ width: 72 }} />
+        </label>
+        <button className="btn" onClick={run} disabled={busy || !nodes.length}>{busy ? 'Running…' : 'Run Monte Carlo'}</button>
+      </div>
+      {result && (
+        <div className="mc-out">
+          <div className="roi-grid">
+            <div className="roi-card"><div className="roi-k">p99 latency — typical</div><div className="roi-v">{Math.round(result.latencyP99.p50)}ms</div><div className="roi-s muted">median run</div></div>
+            <div className="roi-card"><div className="roi-k">p99 latency — bad day</div><div className="roi-v">{Math.round(result.latencyP99.p95)}ms</div><div className="roi-s muted">95th-percentile run</div></div>
+            <div className="roi-card"><div className="roi-k">p99 latency — worst</div><div className="roi-v">{Math.round(result.latencyP99.p99)}ms</div><div className="roi-s muted">99th-percentile run</div></div>
+            <div className={`roi-card ${result.slo && result.slo.violationRate > 0.05 ? 'warn' : 'good'}`}><div className="roi-k">SLO violation rate</div><div className="roi-v">{result.slo ? (result.slo.violationRate * 100).toFixed(1) : '—'}%</div><div className="roi-s muted">runs missing the gate</div></div>
+          </div>
+          <div className="roi-grid">
+            <div className="roi-card"><div className="roi-k">Availability — typical</div><div className="roi-v">{(result.availability.p50 * 100).toFixed(3)}%</div><div className="roi-s muted">median run</div></div>
+            <div className="roi-card"><div className="roi-k">Availability — worst</div><div className="roi-v">{(result.availability.min * 100).toFixed(3)}%</div><div className="roi-s muted">worst run of {result.iterations}</div></div>
+            <div className="roi-card"><div className="roi-k">Success — typical</div><div className="roi-v">{(result.successRate.p50 * 100).toFixed(2)}%</div><div className="roi-s muted">median run</div></div>
+            <div className="roi-card"><div className="roi-k">Success — worst</div><div className="roi-v">{(result.successRate.min * 100).toFixed(2)}%</div><div className="roi-s muted">worst run</div></div>
+          </div>
+          {result.hotspots.length > 0 && (
+            <p className="mc-hot muted">Busiest tier across runs: {result.hotspots.slice(0, 3).map(h => `${h.id} (${Math.round(h.share * 100)}%)`).join(', ')} — where the model spends its pressure most often.</p>
+          )}
+          <p className="mc-prov">{result.provenance}. Varied: {result.varied.join('; ')}.</p>
+        </div>
+      )}
+    </details>
+  )
+}
+
+function SLOTab({ nodes, edges, rps, sim, simOn, onFix, resim }) {
   const [target, setTarget] = useState(0.999)
   const fixes = useMemo(() => {
     if (!simOn || !nodes.length) return {}
@@ -1958,6 +2025,7 @@ function SLOTab({ nodes, edges, sim, simOn, onFix, resim }) {
         ))}
       </div>
       <p className="muted slo-note">The grammar of this page is the SRE one: an SLO target buys a monthly error budget; the live failure rate burns it at a multiple; a burn much above 1× pages a human before the month does. Chaos ⚡ is the drill — inject a fault and watch the burn card answer.</p>
+      <MonteCarloPanel nodes={nodes} edges={edges} rps={rps} availTarget={target} />
     </section>
   )
 }

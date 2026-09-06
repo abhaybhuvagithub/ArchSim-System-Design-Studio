@@ -2200,6 +2200,32 @@ try {
       check('the revenue model is honestly labeled with its basis',
         (/Authored model|Archetype model/.test(roi().textContent)) && !!roi().querySelector('.roi-basis'));
       check('the not-a-forecast note is present', /not a forecast/i.test(roi().textContent));
+      // ── Monte-Carlo reliability engine: seeded, distributional, honest ────────
+      {
+        const MC = await import(pathToFileURL(path.join(root, 'src/montecarlo.js')).href);
+        const T = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const w = T.TEMPLATES.find(x => x.name === 'Chat (WhatsApp)');
+        const a1 = MC.monteCarlo(w.nodes, w.edges, w.rps, { iterations: 400, seed: 42, profile: 'normal', slo: { availability: 0.999, p99: 300 } });
+        const a2 = MC.monteCarlo(w.nodes, w.edges, w.rps, { iterations: 400, seed: 42, profile: 'normal', slo: { availability: 0.999, p99: 300 } });
+        check('Monte Carlo is deterministic under a fixed seed (reproducible)',
+          JSON.stringify(a1.latencyP99) === JSON.stringify(a2.latencyP99) && a1.slo.violationRate === a2.slo.violationRate);
+        const a3 = MC.monteCarlo(w.nodes, w.edges, w.rps, { iterations: 400, seed: 43, profile: 'normal' });
+        check('a different seed gives a different distribution', JSON.stringify(a1.latencyP99) !== JSON.stringify(a3.latencyP99));
+        check('the run-level percentiles are monotonic (p50 <= p95 <= p99)',
+          a1.latencyP99.p50 <= a1.latencyP99.p95 && a1.latencyP99.p95 <= a1.latencyP99.p99);
+        const calm = MC.monteCarlo(w.nodes, w.edges, w.rps, { iterations: 400, seed: 42, profile: 'calm' });
+        const spiky = MC.monteCarlo(w.nodes, w.edges, w.rps, { iterations: 400, seed: 42, profile: 'spiky' });
+        check('higher variability widens the tail', spiky.latencyP99.max >= calm.latencyP99.max);
+        check('the SLO violation rate is a probability in [0,1]', a1.slo.violationRate >= 0 && a1.slo.violationRate <= 1);
+        check('a tight SLO is violated more often than a loose one', (() => {
+          const tight = MC.monteCarlo(w.nodes, w.edges, w.rps, { iterations: 400, seed: 42, profile: 'spiky', slo: { p99: 150 } });
+          const loose = MC.monteCarlo(w.nodes, w.edges, w.rps, { iterations: 400, seed: 42, profile: 'spiky', slo: { p99: 5000 } });
+          return tight.slo.violationRate >= loose.slo.violationRate;
+        })());
+        check('the result never claims to be a measured benchmark (honest provenance)',
+          /model estimate, not a measured benchmark/.test(a1.provenance) && a1.seed === 42 && a1.iterations === 400);
+      }
+
       // ── the SLO tab, driven while the sim is still on ──────────────────────
       await goTab('SLO');
       const slo = () => doc.querySelector('.slo');
@@ -2211,6 +2237,18 @@ try {
       await wait(150);
       const after = slo().textContent.match(/([\d.]+) min/)?.[1];
       check('tightening the target shrinks the budget live', before === '43.2' && after === '4.3');
+      // Monte-Carlo panel in the SLO tab: run it and read a distributional result
+      {
+        const mc = () => slo().querySelector('.mc-panel');
+        check('the SLO tab offers a Monte-Carlo panel', !!mc() && /reliability as a distribution/i.test(mc().textContent));
+        const runBtn = [...mc().querySelectorAll('button')].find(b => /Run Monte Carlo/i.test(b.textContent));
+        check('the panel has a run control', !!runBtn);
+        click(runBtn); await wait(400);
+        check('running produces a distributional readout with an SLO violation rate',
+          /SLO violation rate/i.test(mc().textContent) && /typical/i.test(mc().textContent) && /%/.test(mc().textContent));
+        check('the panel states its provenance and never claims a measured benchmark',
+          /model estimate, not a measured benchmark/i.test(mc().textContent) && /seed/i.test(mc().textContent));
+      }
       // 🚀 future-ready drive: itemized rows in the Improve tab, exactly the
       // shape of the existing ✨ suggestions — title, explanation, one ⚡ Quick
       // fix each. Applying one must resolve that gate (its row disappears).

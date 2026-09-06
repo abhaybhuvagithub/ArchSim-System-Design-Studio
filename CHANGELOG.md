@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.32.0 — 2026-09-03
+- 📊 **Monte-Carlo reliability engine** (SLO tab): runs the simulator many times with traffic, latency and capacity drawn from distributions, and reports reliability as a spread — p99 on a typical/bad/worst run, availability and success ranges, the busiest tier across runs, and how often your availability SLO is missed. Seeded (same seed reproduces exactly) and labelled a model estimate, never a measured benchmark. Calm/Normal/Spiky variability presets
+
 ## 1.31.1 — 2026-09-03
 - 🎓 Mastery: the 🗺️ Tracks strip and 🎯 JD Planner moved to the top of the tab (right under the progress bar), above the concept list — the role paths and job-description planner are how most people navigate the curriculum, so they now lead. Their jump-to-concept links still scroll to the areas below
 
