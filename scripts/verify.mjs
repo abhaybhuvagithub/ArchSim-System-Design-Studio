@@ -1668,7 +1668,23 @@ try {
     check('an unknown partitioning strategy is not silently treated as salted',
       d.partitionEffects({ partitioning: 'salt', keySkew: 0.8, partitions: 8 }).strategy === 'none');
 
-    // Advisor findings must fire when they should — and stay quiet when they
+    // Improve findings carry the node they are about, so the tab can reveal it on hover.
+    {
+      const RV = await import(pathToFileURL(path.join(root, 'src/advisor.js')).href);
+      const TR = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+      const t = TR.TEMPLATES.find(x => x.name === 'Chat (WhatsApp)');
+      const sugs = RV.review(t.nodes, t.edges, 1000);
+      const ids = new Set(t.nodes.map(n => n.id));
+      const withNode = sugs.filter(s => s.nodeId);
+      check('most Improve findings resolve to a real node on the canvas',
+        withNode.length >= Math.floor(sugs.length * 0.6) && withNode.every(s => ids.has(s.nodeId)));
+      check('a per-node finding (backup/scale) points at that node', (() => {
+        const b = sugs.find(s => /^backup:/.test(s.id) || /^scale:/.test(s.id));
+        return !b || ids.has(b.nodeId);
+      })());
+    }
+
+        // Advisor findings must fire when they should — and stay quiet when they
     // should not. A finding that always fires teaches nothing.
     const store = extra => [{ id: 'db', type: 'sql', label: 'DB', replicas: 3, ...extra }];
     const titles = ns => review(ns, [], 1000).map(x => x.title + ' ' + (x.detail || ''));
@@ -2311,6 +2327,12 @@ try {
             !doc.querySelector('.future-card') && !!row.querySelector('.sug-d') && row.querySelector('.sug-d').textContent.length > 60 &&
             /Future-ready:/.test(row.querySelector('.sug-t').textContent));
           check('each item carries its own ⚡ Quick fix', !!row.querySelector('.btn.quick'));
+          check('Improve findings are hover-linked to the canvas (reveal on hover)', (() => {
+            const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+            // rows wire onMouseEnter → onHover(nodeId), and App passes a reveal-capable handler
+            return /onMouseEnter=\{\(\) => s\.nodeId && onHover\(s\.nodeId\)\}/.test(src)
+              && /onHover=\{\(id\) => \{ setHover\(id\); if \(id\) revealNode\(id\) \}\}/.test(src);
+          })());
           const before3 = frRows().length;
           click(row.querySelector('.btn.quick'));
           await wait(450);

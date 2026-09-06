@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.40.0 — 2026-09-03
+- 🔎 **Improve tab reveals the component on hover** too — every ✨ finding now carries the node it is about (derived in the advisor), so hovering a suggestion pans an off-screen component into view and glows it, exactly like the Capacity tab. Suggestions that are genuinely system-wide (e.g. add monitoring) have no target and stay put. The Cost tab was un-wired the same way and now reveals on hover as well
+
 ## 1.39.0 — 2026-09-03
 - 🔎 Capacity warnings now **reveal the component on the canvas** on hover — if the node a warning names is scrolled off-screen, hovering the warning pans the canvas to bring it into view (and glows it); if it is already visible, the view stays put. Wired on both the Needs-attention rows and the per-tier capacity rows
 - 💬 **Sharper capacity hints**: an over-capacity or bottleneck warning now states demand-vs-capacity in plain terms, keeps the p99-runaway physics, and adds what the fix buys — e.g. going to 4× would put it near 51%, back below the danger line

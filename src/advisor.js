@@ -729,6 +729,32 @@ export function review(nodes, edges, rps) {
     })
   }
 
+  // Attach the node(s) each finding is about, so the UI can reveal them on the
+  // canvas when the row is hovered. The id encodes the target: 'scale:<nodeId>',
+  // 'backup:<nodeId>', a 'cdn:<edgeId>' where the edge is '<from>-><to>', or
+  // 'ddia:<node label ...>'. We resolve to a real node id where we can.
+  const nodeIds = new Set(nodes.map(n => n.id))
+  const labelToId = Object.fromEntries(nodes.map(n => [(n.label || n.id).toLowerCase(), n.id]))
+  for (const s of out) {
+    let target = null
+    const id = s.id || ''
+    const colon = id.indexOf(':')
+    const kind = colon >= 0 ? id.slice(0, colon) : ''
+    const rest = colon >= 0 ? id.slice(colon + 1) : id
+    if (nodeIds.has(rest)) target = rest                     // scale:api, backup:inbox
+    else if (rest.includes('->')) {                          // cdn:a->lb, waf:a->lb — reveal the downstream node
+      const [, to] = rest.split('->'); if (nodeIds.has(to)) target = to
+      else { const [from] = rest.split('->'); if (nodeIds.has(from)) target = from }
+    } else if (kind === 'ddia') {                            // ddia:<label ...> — match the leading label
+      const hit = Object.keys(labelToId).find(lbl => rest.toLowerCase().startsWith(lbl))
+      if (hit) target = labelToId[hit]
+    }
+    if (!target) {                                           // last resort: any node label mentioned in the title
+      const hit = Object.keys(labelToId).find(lbl => lbl.length > 2 && (s.title || '').toLowerCase().includes(lbl))
+      if (hit) target = labelToId[hit]
+    }
+    if (target) s.nodeId = target
+  }
   return out.sort((a, b) => RANK[a.severity] - RANK[b.severity] || a.title.localeCompare(b.title))
 }
 

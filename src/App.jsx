@@ -1372,7 +1372,7 @@ export default function App() {
                 onClear={clearFault} onRecoverAll={recoverAll} sim={sim} fx={fx} />
             </>
           ) : tab === 'cost' ? (
-            <Cost cost={cost} onHover={setHover} empty={nodes.length === 0} cloud={cloudInfo}
+            <Cost cost={cost} onHover={(id) => { setHover(id); if (id) revealNode(id) }} empty={nodes.length === 0} cloud={cloudInfo}
               plan={rightSizePlan(nodes, sim, cloudInfo.mult)}
               onRightSize={rightSize} onScaleAll={scaleEverything} onSetReplicas={setReplicas} />
           ) : tab === 'map' ? (
@@ -1383,7 +1383,7 @@ export default function App() {
             <Learn done={doneSteps} nodes={nodes} />
           ) : tab === 'improve' ? (
             <Advisor sugs={sugs} applied={applied} onApply={applyOne} onApplyAll={applyEvery}
-              onHover={setHover} empty={nodes.length === 0} futureSugs={frSugs}
+              onHover={(id) => { setHover(id); if (id) revealNode(id) }} empty={nodes.length === 0} futureSugs={frSugs}
               onApplyFuture={(fix) => { setNodes(fix.nodes); if (fix.edges) setEdges(fix.edges); notify(fix.note, 'info') }} />
           ) : selNode ? <Inspector n={selNode} sim={sim} setNodes={setNodes} cloud={cloud} cloudMult={cloudInfo.mult} onShowDetails={setDetailsNode} />
             : selEdgeObj ? (
@@ -3096,7 +3096,9 @@ function Advisor({ sugs, applied, onApply, onApplyAll, onHover, empty, futureSug
             </div>
           ))}
           {sugs.map(s => (
-            <div key={s.id} className={`sug ${s.severity}`}>
+            <div key={s.id} className={`sug ${s.severity}`}
+              onMouseEnter={() => s.nodeId && onHover(s.nodeId)} onMouseLeave={() => onHover(null)}
+              title={s.nodeId ? 'Hover to find this component on the canvas' : undefined}>
               <div className="sug-t">
                 <span>{s.icon} {s.title}</span>
                 <span className={`pill ${s.severity === 'high' ? 'bad' : s.severity === 'med' ? 'warn' : 'ok'}`}>{s.severity}</span>
