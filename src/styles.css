@@ -1970,3 +1970,15 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .inc-ready { font-size: 12.5px; font-style: italic; margin: 2px 0; }
 .inc-opt.locked { opacity: .45; }
 .inc-locked-note { font-size: 12.5px; margin: 6px 0; }
+
+/* ── 🥊 Defend It mode ── */
+.ms-defend-toggle { margin-left: 4px; }
+.ms-defend-hint { flex-basis: 100%; font-size: 12px; margin-top: 4px; }
+.defend-gate { margin: 8px 0; padding: 10px 12px; border: 1px dashed var(--accent); border-radius: 8px; background: rgba(127,127,127,.04); }
+.defend-prompt { font-size: 12.5px; margin: 0 0 6px; }
+.defend-box { width: 100%; font-size: 13px; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: inherit; font-family: inherit; resize: vertical; }
+.defend-reveal { margin-top: 8px; }
+.defend-revealed .defend-real-h { font-size: 12px; font-weight: 600; opacity: .7; margin: 8px 0 4px; }
+.defend-mine { margin-bottom: 8px; font-size: 12.5px; }
+.defend-mine summary { cursor: pointer; opacity: .8; }
+.defend-mine blockquote { margin: 6px 0 0; padding: 6px 10px; border-left: 3px solid var(--border); font-style: italic; opacity: .85; }

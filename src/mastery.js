@@ -865,8 +865,8 @@ export function shuffleMastery() {
 }
 
 export function readMasteryUI() {
-  try { return { order: 'shuffle', quiz: false, hideMastered: false, ...JSON.parse(localStorage.getItem(MASTERY_UI_STORE) || '{}') } }
-  catch { return { order: 'shuffle', quiz: false, hideMastered: false } }
+  try { return { order: 'shuffle', quiz: false, hideMastered: false, defendIt: false, ...JSON.parse(localStorage.getItem(MASTERY_UI_STORE) || '{}') } }
+  catch { return { order: 'shuffle', quiz: false, hideMastered: false, defendIt: false } }
 }
 export function writeMasteryUI(ui) {
   try { localStorage.setItem(MASTERY_UI_STORE, JSON.stringify(ui)) } catch { /* private mode */ }

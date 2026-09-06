@@ -1887,6 +1887,37 @@ function CmdK({ onClose, onTemplate, onTab, onPractice }) {
 
 // Expanded by default — the table IS the mastery — but a collapse must stick:
 // a bare `open` prop would snap shut tables back open on every state change.
+function DefendIt({ id, answer, cmp }) {
+  const [mine, setMine] = useState('')
+  const [shown, setShown] = useState(false)
+  useEffect(() => { setMine(''); setShown(false) }, [id])
+  if (shown) {
+    return (
+      <div className="defend-revealed">
+        {mine.trim() && (
+          <details className="defend-mine" open>
+            <summary>Your answer</summary>
+            <blockquote>{mine.trim()}</blockquote>
+          </details>
+        )}
+        <div className="defend-real-h">The answer to compare against:</div>
+        <div className="ms-d">{answer}</div>
+        {cmp && <MsCompare cmp={cmp} />}
+      </div>
+    )
+  }
+  return (
+    <div className="defend-gate">
+      <p className="defend-prompt muted">Answer it in your own words first — even badly. That is what makes it stick.</p>
+      <textarea className="defend-box" rows={3} value={mine} onChange={e => setMine(e.target.value)}
+        placeholder="Type your answer, or think it through, then reveal…" />
+      <button className="btn defend-reveal" onClick={() => setShown(true)}>
+        {mine.trim() ? '✓ Reveal the answer' : 'Reveal the answer'}
+      </button>
+    </div>
+  )
+}
+
 function MsCompare({ cmp }) {
   const [open, setOpen] = useState(true)
   return (
@@ -1926,6 +1957,9 @@ function MasteryTab({ onGo }) {
       <div className="ms-controls">
         <label className="ms-opt"><input type="checkbox" checked={ui.hideMastered}
           onChange={e => setPref({ hideMastered: e.target.checked })} /> ✅ Hide mastered</label>
+        <label className="ms-opt ms-defend-toggle"><input type="checkbox" checked={ui.defendIt}
+          onChange={e => setPref({ defendIt: e.target.checked })} /> 🥊 Defend It mode</label>
+        {ui.defendIt && <span className="ms-defend-hint muted">Answers are hidden — read the 🎤 question, commit your answer, then reveal. Recall beats re-reading.</span>}
       </div>
       <TracksStrip done={done} onGo={onGo} onArea={(aid) => { const el = document.querySelector(`[data-ms-area="${aid}"]`); el?.scrollIntoView?.({ block: 'start' }) }} />
       <JDPlanner onTemplate={(name) => onGo({ tpl: name, tab: 'breakdown' })} onConcept={(id) => { const el = document.querySelector(`[data-ms-item="${id}"]`); el?.scrollIntoView?.({ block: 'center' }); el?.classList.add('ms-pulse'); setTimeout(() => el?.classList.remove('ms-pulse'), 1600) }} />
@@ -1944,8 +1978,12 @@ function MasteryTab({ onGo }) {
                 <div className="ms-body">
                   <div className="ms-t">{x.t}</div>
                   {x.asks && <div className="ms-ask">🎤 {x.asks}</div>}
-                  <div className="ms-d">{x.d}</div>
-                  {MASTERY_CMP[x.id] && <MsCompare cmp={MASTERY_CMP[x.id]} />}
+                  {ui.defendIt && x.asks
+                    ? <DefendIt id={x.id} answer={x.d} cmp={MASTERY_CMP[x.id]} />
+                    : <>
+                        <div className="ms-d">{x.d}</div>
+                        {MASTERY_CMP[x.id] && <MsCompare cmp={MASTERY_CMP[x.id]} />}
+                      </>}
                   <div className="ms-go">
                     <button className="btn" onClick={() => onGo(x.go)}>▶ Practice{x.go.tpl ? `: ${x.go.tpl}` : ''}</button>
                     <span className="ms-do muted">{x.go.do}</span>

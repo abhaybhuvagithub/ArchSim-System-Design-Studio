@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.41.0 — 2026-09-03
+- 🥊 **Defend It mode** in Mastery: a toggle that hides every concept's answer behind its 🎤 interviewer question, with a scratch box to commit your own answer before revealing the real one to compare against. Active recall — producing the answer before you see it — is what turns hours of reading into the ability to defend a design in a room. Off by default (browsing reads normally); the choice persists
+
 ## 1.40.0 — 2026-09-03
 - 🔎 **Improve tab reveals the component on hover** too — every ✨ finding now carries the node it is about (derived in the advisor), so hovering a suggestion pans an off-screen component into view and glows it, exactly like the Capacity tab. Suggestions that are genuinely system-wide (e.g. add monitoring) have no target and stay put. The Cost tab was un-wired the same way and now reveals on hover as well
 

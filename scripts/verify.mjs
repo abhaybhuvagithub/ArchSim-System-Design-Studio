@@ -2629,9 +2629,34 @@ try {
       check('every item shows its answer directly, no reveal step',
         ms().querySelectorAll('.ms-reveal').length === 0 &&
         [...ms().querySelectorAll('.ms-item')].every(it => !!it.querySelector('.ms-d')));
-      check('the study controls are just the one toggle — no shuffle ceremony, no quiz gate',
+      check('the study controls are two toggles — hide-mastered and Defend It — no shuffle ceremony, no quiz gate',
         ms().querySelectorAll('.ms-controls .btn').length === 0 &&
-        ms().querySelectorAll('.ms-controls .ms-opt').length === 1);
+        ms().querySelectorAll('.ms-controls .ms-opt').length === 2);
+
+      // ── 🥊 Defend It: active recall — the answer hides until you commit ────────
+      {
+        check('by default (Defend It off) answers show directly', [...ms().querySelectorAll('.ms-item')].every(it => !!it.querySelector('.ms-d')) && !doc.querySelector('.defend-gate'));
+        const defendCb = [...ms().querySelectorAll('.ms-opt')].find(l => /Defend It/.test(l.textContent)).querySelector('input');
+        defendCb.click(); await wait(200);
+        check('turning Defend It on hides the answers behind a produce-first gate',
+          doc.querySelectorAll('.defend-gate').length >= 5 && doc.querySelectorAll('.defend-gate .defend-box').length >= 5);
+        check('with Defend It on, the raw answer is not shown until revealed', (() => {
+          // a gated item shows its 🎤 question but no .ms-d yet
+          const gatedItem = [...ms().querySelectorAll('.ms-item')].find(it => it.querySelector('.defend-gate'));
+          return !!gatedItem && !!gatedItem.querySelector('.ms-ask') && !gatedItem.querySelector('.ms-d');
+        })());
+        // reveal one and confirm the answer appears
+        const oneGate = ms().querySelector('.defend-gate');
+        const revealBtn = [...oneGate.querySelectorAll('button')].find(b => /Reveal the answer/.test(b.textContent));
+        click(revealBtn); await wait(150);
+        check('revealing shows the real answer to compare against', (() => {
+          const revealed = ms().querySelector('.defend-revealed');
+          return !!revealed && !!revealed.querySelector('.ms-d') && /answer to compare against/i.test(revealed.textContent);
+        })());
+        // turn it back off — answers show directly again
+        defendCb.click(); await wait(200);
+        check('turning Defend It off restores direct answers', !doc.querySelector('.defend-gate') && [...ms().querySelectorAll('.ms-item')].every(it => !!it.querySelector('.ms-d')));
+      }
       const goBtn = [...ms().querySelectorAll('.ms-go .btn')].find(b => b.textContent.includes('Rate Limiter'));
       click(goBtn);
       await wait(300);
