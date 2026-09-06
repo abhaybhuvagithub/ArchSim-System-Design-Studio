@@ -2370,7 +2370,16 @@ try {
       }
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the deploy area teaches IaC — Terraform provisions vs Ansible configures, idempotency the point', await (async () => {
+      check('the obs area teaches the three pillars — metrics/logs/traces + one pane of glass', await (async () => {
+        const MO = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const it = MO.MASTERY.find(a => a.id === 'obs-sec')?.items.find(x => x.id === 'obs-stack');
+        if (!it) return false;
+        const c = MO.MASTERY_CMP['obs-stack'];
+        const flat = c.rows.map(r => r.join(' ')).join(' ');
+        return /Prometheus/.test(it.d) && /Grafana/.test(it.d) && /metrics/i.test(it.d) && /traces/i.test(it.d)
+          && !!c && c.cols.length === 3 && /THAT something is wrong/.test(flat) && /WHERE the time went/.test(flat) && /pane of glass/i.test(flat);
+      })());
+            check('the deploy area teaches IaC — Terraform provisions vs Ansible configures, idempotency the point', await (async () => {
         const MI = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const it = MI.MASTERY.find(a => a.id === 'deploy')?.items.find(x => x.id === 'iac-provision-configure');
         if (!it) return false;

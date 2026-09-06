@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.37.0 — 2026-09-03
+- 🔭 Observability & Security gains a concept: **The observability stack — metrics, logs, traces, and one pane of glass** — the three pillars (metrics say THAT something is wrong, traces say WHERE, logs say WHY), how Prometheus (metrics/TSDB/PromQL), log and trace backends fit, and where Grafana sits as the single dashboard over all three. Graded in a ⇄ table. +4 acronyms: RED, USE, TSDB, PromQL
+
 ## 1.36.1 — 2026-09-03
 - 🔤 Renamed the SLO-tab "Monte Carlo" feature to **Reliability Simulation** everywhere users see it — same engine (run the design many times with variation, report the spread and how often the SLO is missed), plainer name. Jargon out, meaning in
 
