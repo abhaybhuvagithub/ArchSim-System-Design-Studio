@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.38.0 — 2026-09-03
+- 🔍 **Incident Mode → guided investigation**: instead of jumping straight to a root-cause guess, you now walk the evidence the way a senior does — metric → trace → log — revealing one signal at a time, and the diagnosis lineup stays **locked until you have looked at the evidence**. Investigation before conclusion: it teaches the method, applying the three-pillars observability concept, not just the answer
+
 ## 1.37.0 — 2026-09-03
 - 🔭 Observability & Security gains a concept: **The observability stack — metrics, logs, traces, and one pane of glass** — the three pillars (metrics say THAT something is wrong, traces say WHERE, logs say WHY), how Prometheus (metrics/TSDB/PromQL), log and trace backends fit, and where Grafana sits as the single dashboard over all three. Graded in a ⇄ table. +4 acronyms: RED, USE, TSDB, PromQL
 

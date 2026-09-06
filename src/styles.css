@@ -1960,3 +1960,13 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .ship-here { opacity: .8; }
 .ship-walk { font-size: 12.5px; font-style: italic; opacity: .8; }
 .ship-honest { margin-top: 16px; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--panel, rgba(127,127,127,.06)); border-radius: 0 8px 8px 0; font-size: 12.5px; opacity: .9; }
+
+/* ── Incident Mode: guided investigation ladder ── */
+.inc-ladder { margin: 12px 0; display: grid; gap: 8px; }
+.inc-signal { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 11px; background: rgba(127,127,127,.05); }
+.inc-signal-h { font-size: 12.5px; font-weight: 600; margin-bottom: 3px; }
+.inc-signal-b { font-size: 13px; opacity: .9; }
+.inc-next { align-self: start; }
+.inc-ready { font-size: 12.5px; font-style: italic; margin: 2px 0; }
+.inc-opt.locked { opacity: .45; }
+.inc-locked-note { font-size: 12.5px; margin: 6px 0; }

@@ -1677,8 +1677,9 @@ function IncidentMode({ activeId, onStart, onEnd }) {
   const [picked, setPicked] = useState(null)
   const [revealed, setRevealed] = useState(false)
   const [voice, setVoice] = useState('engineer')
+  const [step, setStep] = useState(0)   // how many investigation signals the user has looked at
   const inc = INCIDENTS.find(i => i.id === activeId) || null
-  useEffect(() => { setPicked(null); setRevealed(false); setVoice('engineer') }, [activeId])
+  useEffect(() => { setPicked(null); setRevealed(false); setVoice('engineer'); setStep(0) }, [activeId])
   if (!inc) return (
     <details className="inc-mode" open>
       <summary>🚨 Incident Mode — a customer describes symptoms; the fault is live; find it, fix it, say it four ways</summary>
@@ -1699,17 +1700,35 @@ function IncidentMode({ activeId, onStart, onEnd }) {
       <div className="inc-head">🚨 <b>{inc.title}</b> <span className="muted">· {inc.customer}</span>
         <button className="btn tiny inc-end" onClick={onEnd}>End incident</button></div>
       <blockquote className="inc-symptom">{inc.symptom}</blockquote>
-      <p className="muted">The fault is live in this simulation right now. Investigate — Capacity, Latency, this Chaos tab — then name the root cause.</p>
-      <details className="inc-clues"><summary>Need a nudge? Three places a senior would look</summary>
-        <ul>{inc.clues.map((c, i) => <li key={i}>{c}</li>)}</ul></details>
-      <div className="inc-lineup" role="radiogroup" aria-label="Root cause lineup">
+      <p className="muted">The fault is live right now. Don&rsquo;t jump to a guess — investigate the way a senior does: <b>metric → trace → log</b>. Reveal one signal at a time, then name the root cause.</p>
+      <div className="inc-ladder">
+        {inc.clues.slice(0, step).map((c, i) => {
+          const labels = ['📈 The alert fired — what the metric shows', '🔍 Follow the signal — where it leads', '📋 The evidence — why it happened'];
+          return (
+            <div key={i} className="inc-signal">
+              <div className="inc-signal-h">{labels[i] || `🔎 Signal ${i + 1}`}</div>
+              <div className="inc-signal-b">{c}</div>
+            </div>
+          )
+        })}
+        {step < inc.clues.length && (
+          <button className="btn inc-next" onClick={() => setStep(step + 1)}>
+            {step === 0 ? '📈 Start investigating →' : `🔍 Look at the next signal (${step}/${inc.clues.length}) →`}
+          </button>
+        )}
+        {step >= inc.clues.length && step > 0 && !revealed && (
+          <p className="inc-ready muted">You&rsquo;ve walked the evidence. Now commit to what it points to.</p>
+        )}
+      </div>
+      <div className="inc-lineup" role="radiogroup" aria-label="Root cause lineup" aria-disabled={step < inc.clues.length}>
         {inc.lineup.map((opt, i) => (
-          <label key={i} className={`inc-opt ${revealed ? (i === inc.answer ? 'right' : i === picked ? 'wrong' : '') : ''}`}>
-            <input type="radio" name="inc-lineup" disabled={revealed} checked={picked === i} onChange={() => setPicked(i)} /> {opt}
+          <label key={i} className={`inc-opt ${step < inc.clues.length ? 'locked' : ''} ${revealed ? (i === inc.answer ? 'right' : i === picked ? 'wrong' : '') : ''}`}>
+            <input type="radio" name="inc-lineup" disabled={revealed || step < inc.clues.length} checked={picked === i} onChange={() => setPicked(i)} /> {opt}
           </label>
         ))}
       </div>
-      {!revealed && <button className="btn" disabled={picked === null} onClick={() => setRevealed(true)}>Commit to the diagnosis</button>}
+      {step < inc.clues.length && <p className="inc-locked-note muted">🔒 Diagnosis unlocks once you&rsquo;ve looked at the evidence — investigation before conclusion.</p>}
+      {!revealed && step >= inc.clues.length && <button className="btn" disabled={picked === null} onClick={() => setRevealed(true)}>Commit to the diagnosis</button>}
       {revealed && (
         <div className="inc-verdict">
           <p className={correct ? 'inc-good' : 'inc-bad'}>{correct ? '✅ Root cause confirmed.' : '❌ Not this one — the evidence points elsewhere. The confirmed root cause is highlighted.'}</p>

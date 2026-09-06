@@ -3359,6 +3359,19 @@ try {
         click(takeBtn); await wait(350);
         check('taking the call loads the design, injects the fault, and shows the customer symptom',
           /Meridian Bank/.test(doc.body.textContent) && /2\.8s/.test(doc.body.textContent) && doc.querySelectorAll('.inc-opt').length === 5);
+        // the diagnosis is GATED behind a guided investigation (metric → trace → log)
+        check('the root-cause lineup is locked until the investigation is walked',
+          doc.querySelectorAll('.inc-opt.locked').length === 5 && /Diagnosis unlocks/i.test(doc.body.textContent));
+        check('no Commit control is offered before investigating',
+          ![...doc.querySelectorAll('.inc-mode button')].some(b => /Commit to the diagnosis/.test(b.textContent)));
+        // walk the investigation one signal at a time
+        const stepBtn = () => [...doc.querySelectorAll('.inc-ladder button')].find(b => /investigating|next signal/i.test(b.textContent));
+        let guard = 0;
+        while (stepBtn() && guard++ < 6) { click(stepBtn()); await wait(60); }
+        check('walking the investigation reveals the evidence signals in order',
+          doc.querySelectorAll('.inc-signal').length >= 3 && /metric/i.test(doc.body.textContent));
+        check('once the evidence is walked, the lineup unlocks',
+          doc.querySelectorAll('.inc-opt.locked').length === 0);
         // With that incident's fault live, Recover all previews exactly what it would heal
         {
           const btn = [...doc.querySelectorAll('.chaos-live button')].find(b => /Recover all/.test(b.textContent));
