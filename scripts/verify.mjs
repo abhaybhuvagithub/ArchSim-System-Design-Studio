@@ -2423,6 +2423,22 @@ try {
         const t = TC2.TEMPLATES.find(x => x.name === 'Coinbase (Crypto Exchange)');
         return t.nodes.some(n => n.type === 'ledger') && t.nodes.some(n => /custody/i.test(n.label)) && t.nodes.some(n => /matching/i.test(n.label));
       })());
+            check('the Billing template exists, is healthy, and teaches idempotency + append-only usage + rev-rec', await (async () => {
+        const TB = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const SB = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const t = TB.TEMPLATES.find(x => x.name === 'Billing & Revenue Platform');
+        if (!t) return false;
+        const sim = SB.simulate(t.nodes, t.edges, t.rps, new Set());
+        const notes = t.checklist.join(' ');
+        return sim.successRate > 0.98 && /idempotent/i.test(notes) && /append-only/i.test(notes) && /revenue recognition|recognize revenue/i.test(notes)
+          && t.nodes.some(n => n.type === 'ledger') && t.nodes.some(n => /Tax Engine/i.test(n.label)) && t.nodes.some(n => /Invoice Engine/i.test(n.label));
+      })());
+      check('Billing teaches the two cardinal invariants — no double-bill, immutable finalized invoice', await (async () => {
+        const TB2 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const t = TB2.TEMPLATES.find(x => x.name === 'Billing & Revenue Platform');
+        const notes = t.checklist.join(' ');
+        return /\(customer, period\)/.test(notes) && /(immutable|point of no return)/i.test(notes) && /credit or debit note|credit\/debit note/i.test(notes);
+      })());
             check('the Discovery Loop template exists, is healthy, and models the converge/schedule/provenance core', await (async () => {
         const TD = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
         const SD = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);

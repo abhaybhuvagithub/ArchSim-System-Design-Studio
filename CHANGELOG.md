@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.34.0 — 2026-09-03
+- 🧾 New template **Billing & Revenue Platform** — money over time, not money in the moment: an append-only usage ledger (corrections are compensating events, never edits), idempotent billing runs keyed by (customer, period) so nobody is ever double-billed, an invoice state machine with immutable finalization and credit/debit-note adjustments, tax as a pluggable per-jurisdiction rules engine (GST/VAT as data, not code), dunning as a state machine, and revenue recognition that keeps cash and earned revenue distinct into the general ledger. Wall: the bottleneck is reconciliation, not throughput. +3 acronyms: DSO, GST, AR
+
 ## 1.33.0 — 2026-09-03
 - 🔮 **What-If comparison** (Chaos tab): pick a scenario — 2×/10× traffic, busiest tier lost, every dependency +100% latency, caches cold, retry storm — and see your design run baseline vs scenario side by side, with each metric flagged better/worse. Read-only: reuses the simulator and chaos fx without injecting anything permanently
 

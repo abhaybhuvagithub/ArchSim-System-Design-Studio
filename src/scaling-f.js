@@ -524,4 +524,22 @@ export default {
   wall: { t: 'You cannot add a second primary; you shard or you make writes cheaper', d: 'Reads scale almost arbitrarily by adding replicas, but writes have a hard ceiling: one primary, by design, because that single authority is what gives the whole system its simple, correct consistency model. When you truly hit that ceiling there are exactly two honest moves, and a tempting wrong one. The wrong one is a second primary (active-active), which buys write scale by taking on conflict resolution between two authorities - the hardest problem in databases, and rarely what you actually needed. The honest ones are: first, make writes cheaper (batch them, index better, move heavy reads to replicas and heavy analytics off the box entirely), and only then shard - partition the data across many primaries where each owns a disjoint slice - accepting that the application itself must change, because a query can no longer freely join or transact across shards. The ceiling is real; the only ways through it cost either consistency or application simplicity, and choosing which is the senior decision.' },
 },
 
+
+'Billing & Revenue Platform': {
+  constraint: 'Usage volume is a firehose that never stops; billing is a periodic ceremony that must be exactly right. Scaling means ingesting ever more usage without losing or double-counting a single event, while keeping invoicing idempotent and the books reconciled.',
+  ladder: [
+    ['a few customers', 'light usage', 'Append-only usage log and idempotent invoicing from day one - retrofitting auditability after the first billing dispute is misery. Tax as a rules engine even with one country in it.'],
+    ['SMB scale', 'steady usage streams', 'Aggregation and rating run as stream consumers off the usage log; billing runs are scheduled and idempotent; dunning automates the overdue.'],
+    ['enterprise SaaS', 'high-volume metering', 'Usage ingest partitioned and back-pressured; rating parallelized per customer; revenue recognition posts to the GL nightly; multi-currency and multiple legal entities appear.'],
+    ['global platform', 'billions of usage events', 'Metering is a partitioned firehose with exactly-once aggregation; tax spans many jurisdictions as pure configuration; the binding constraint is reconciliation integrity - usage to invoice to payment to GL - not raw throughput.'],
+  ],
+  levers: [
+    { t: 'Meter append-only, rate downstream', d: 'Writes to the usage log are cheap and never blocked by rating; aggregation and invoicing are derived views that can be rebuilt from the log at any time.', n: ['meter', 'agg'] },
+    { t: 'Idempotency at both ends', d: 'Idempotency keys on usage ingest stop duplicate events inflating bills; (customer, period) keys on billing runs stop duplicate invoices - the two guarantees the system lives by.', n: ['ingest', 'bill'] },
+    { t: 'Tax and pricing as data', d: 'Jurisdiction rules and contract prices are configuration the engines read, so new countries and new plans are data changes, not deploys of the money path.', n: ['tax', 'price'] },
+    { t: 'Recognize revenue as a pipeline', d: 'Deferred-to-earned schedules post to the GL on a cadence, keeping cash and revenue distinct so the financials stay true as volume grows.', n: ['revrec', 'gl'] },
+  ],
+  wall: { t: 'The bottleneck is reconciliation, not throughput', d: 'Ingesting more usage is a partitioning problem you can always throw hardware at; the real ceiling at scale is proving that four systems still agree - that every usage event became a line on an invoice, every invoice a payment or a write-off, and every recognized dollar a journal entry the GL balances. That reconciliation is exactly-once accounting across a firehose, and it is unforgiving: a dropped or double-counted event is not a latency blip, it is a wrong number in a customer\'s bill or a company\'s financial statement. The honest design treats the usage log as the immutable source of truth, makes every derived stage rebuildable from it, and measures success by whether the books reconcile to the penny - because in billing, correctness is the product and throughput is just table stakes.' },
+},
+
 }

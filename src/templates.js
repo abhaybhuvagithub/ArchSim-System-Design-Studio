@@ -2062,4 +2062,20 @@ T('PostgreSQL at Scale (Primary + Replicas)', 'One primary takes every write; a 
     'A connection is not free: every Postgres connection is a backend process with real memory, so thousands of app threads must funnel through a pooler (PgBouncer) - without it, connection count, not query load, is what takes the database down',
     'The WAL is the source of durability, replication AND recovery all at once: it is fsync\'d before a commit is acknowledged, streamed to replicas to keep them current, archived with base backups for point-in-time recovery, and decoded logically to feed CDC downstream',
   ], 'Unicorns · USA'),
+T('Billing & Revenue Platform', 'Meter usage nobody can dispute, rate it, invoice it once, chase what is owed, and recognize revenue the auditor accepts - money over time, not money in the moment', 3000, [
+    ['svc', 'client', 'Product & Consulting Sources', 40, 240], ['ingest', 'gateway', 'Usage Ingest API', 190, 240, 4],
+    ['meter', 'kafka', 'Usage Event Log (immutable)', 340, 140, 4], ['agg', 'worker', 'Aggregation & Rating', 340, 320, 4],
+    ['ledger', 'ledger', 'Billing Ledger', 500, 240, 3], ['price', 'sql', 'Catalog & Contracts', 500, 100, 3],
+    ['bill', 'scheduler', 'Billing-Run Scheduler', 660, 160, 3], ['inv', 'micro', 'Invoice Engine (state machine)', 660, 300, 4],
+    ['tax', 'app', 'Tax Engine (pluggable rules)', 820, 200, 3], ['pay', 'app', 'Payment Gateways', 820, 340, 4],
+    ['dun', 'worker', 'Dunning / Collections', 980, 340, 3], ['revrec', 'micro', 'Revenue Recognition', 980, 200, 3],
+    ['gl', 'warehouse', 'General Ledger / Finance', 1140, 200, 2], ['portal', 'app', 'Customer Billing Portal', 660, 440, 3],
+    ['obs', 'otel', 'Billing Telemetry & Audit', 340, 440, 2],
+  ], [['svc','ingest'],['ingest','meter'],['meter','agg'],['agg','ledger'],['agg','price'],['bill','ledger'],['bill','inv'],['inv','tax'],['inv','pay'],['pay','dun'],['inv','revrec'],['revrec','gl'],['inv','portal'],['ingest','obs'],['inv','gl']],[
+    'Usage is written to an append-only event log the moment it happens, and it is never edited - a correction is a new compensating event, because a customer who disputes a bill must be shown an audit trail, not asked to trust a mutable counter',
+    'Invoicing is idempotent by construction: a billing run is keyed by (customer, period) so re-running it - after a crash, a retry, a manual re-trigger - produces the same invoice, never a second one, because double-billing a customer is the cardinal sin of this system',
+    'Tax is a pluggable rules engine, not code in the invoice service: GST for India (CGST/SGST/IGST, place of supply, e-invoicing) and VAT/sales-tax for other jurisdictions are data-driven rules, so entering a new country is configuration, not a rewrite',
+    'The invoice is a state machine - draft to finalized to sent to paid, or the collections branch sent to overdue to dunning to write-off - and finalized is the point of no return: a finalized invoice is immutable, and any change after it is a credit or debit note, never an edit',
+    'Money billed is not money earned: revenue recognition spreads an annual contract across the months it is delivered (deferred revenue draining to earned), so the general ledger tells the auditor the truth even when cash arrived all at once up front',
+  ], 'Unicorns · USA'),
 ]

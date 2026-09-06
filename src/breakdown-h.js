@@ -1734,4 +1734,74 @@ export default {
   },
 },
 
+
+'Billing & Revenue Platform': {
+  meta: 'Fintech - billing & revenue - hard - money over time, not money in the moment',
+  overview: 'Every payment template in this studio moves money in the moment - authorize a card in 150ms, clear a UPI transfer. A billing platform is the opposite discipline: money over time. It meters what customers used, rates it against contracts, invoices it exactly once, chases what is owed, and recognizes the revenue in a way an auditor will sign. The hard parts are not latency; they are correctness and trust across weeks and quarters: a usage ledger a customer cannot dispute, an invoice that can never be accidentally issued twice, tax that changes per jurisdiction without a rewrite, and the accounting distinction between cash received and revenue earned. Get any of those wrong and you have either an angry customer, a double charge, a tax violation, or a financial statement that lies.',
+  scope: 'The pipeline from raw usage to recognized revenue: immutable metering, aggregation and rating, contract-driven billing runs, an invoice state machine, pluggable tax, payment collection, dunning, revenue recognition, and the general-ledger handoff. The products being sold, the payment networks themselves, and statutory audit are consumed or downstream.',
+  fr: {
+    core: ['Meter usage into an append-only, auditable event log', 'Rate aggregated usage against catalog prices and contract terms', 'Run billing per customer per period, idempotently', 'Generate invoices through a strict state machine with immutable finalization', 'Calculate tax per jurisdiction via a rules engine', 'Collect payment, retry failures, and run dunning on the overdue', 'Recognize revenue over the delivery period and post to the general ledger'],
+    out: ['The products/services generating the usage (upstream)', 'The payment networks and banks (integrated, not operated)', 'Statutory audit and tax filing (fed by this system, not performed here)'],
+  },
+  nfr: {
+    core: ['Usage is immutable and auditable: corrections are compensating events, never edits, because a disputed bill is settled with a trail', 'Invoicing is idempotent: a billing run for (customer, period) yields one invoice no matter how many times it runs', 'Finalized invoices are immutable: post-finalization changes are credit/debit notes only', 'Tax correctness per jurisdiction, changeable as configuration not code', 'Accounting integrity: cash and recognized revenue are distinct, and the GL reconciles'],
+    out: ['Real-time invoicing - billing is a periodic, deliberate batch, not a per-request hot path'],
+  },
+  nums: [['append-only', 'the usage ledger - a correction is a new event, never an overwrite'], ['1 invoice', 'per (customer, period) - idempotency is the cardinal guarantee'], ['finalized', 'the point of no return - after it, only credit/debit notes'], ['cash != revenue', 'billed up front, earned over the delivery period']],
+  entities: [
+    ['UsageEvent', 'an append-only record: customer, metric, quantity, timestamp, idempotency key - the raw, disputable-proof truth'],
+    ['Contract', 'the customer\'s prices, commitments, discounts, billing frequency and currency - what rating applies'],
+    ['Invoice', 'a state-machine document (draft -> finalized -> sent -> paid | overdue -> dunning -> written-off); immutable once finalized'],
+    ['CreditNote', 'the only legal way to change a finalized invoice - a reversal or adjustment, itself an auditable document'],
+    ['RevenueSchedule', 'how a booked amount is recognized over time - deferred revenue draining to earned, month by month'],
+  ],
+  apiIntro: 'The API separates the fast, high-volume path (usage ingest, idempotent) from the slow, deliberate path (billing runs and invoices), because one is a firehose and the other is a monthly ceremony that must be exactly right.',
+  api: [
+    { dir: '->', name: 'POST /usage (idempotency-key)', body: '{ customer, metric, quantity, ts }\n-> appended to the usage log; the same key twice is a no-op, so an at-least-once producer cannot inflate a bill' },
+    { dir: '->', name: 'POST /billing-runs { customer, period }', body: '-> idempotent: finds or creates the one invoice for that customer and period; re-running never issues a second' },
+    { dir: '->', name: 'POST /invoices/{id}/finalize', body: '-> the point of no return: totals and tax freeze, the invoice becomes immutable, and any later change must be a credit or debit note' },
+  ],
+  dives: [
+    {
+      title: 'The usage ledger, and why it is append-only', focus: ['ingest', 'meter', 'agg', 'ledger'],
+      blocks: [
+        ['p', 'Billing starts with a claim about what a customer used, and that claim will eventually be disputed - so it must be evidence, not a number in a mutable column. Usage is written to an append-only event log the instant it happens, each event carrying an idempotency key, and it is never edited. A correction is a new compensating event that references the original, so the history reads like a bank statement: you can see the mistake AND the fix, and reconstruct the balance at any point in time. Aggregation and rating read this log to compute what is owed, but they never mutate it. This is the same discipline the studio\'s ledger uses for payments and its provenance uses for experiments, applied to the thing customers argue about most: their bill.'],
+        ['bul', [
+          'Idempotency at ingest is load-bearing: metering producers are at-least-once, so the same event arriving twice must count once, or every retry inflates a customer\'s bill.',
+          'Corrections are compensating events, never edits: the audit trail must show what happened and what was fixed - a silently corrected counter is indistinguishable from fraud.',
+          'Rating reads, never writes: the log is the immutable source; aggregates and invoices are derived views that can always be rebuilt from it.',
+        ]],
+        ['warn', 'The tempting shortcut is a running total per customer - a counter you increment on each usage event. It is faster and it is a trap: you cannot audit it, a duplicated event corrupts it invisibly, and a disputed charge has no trail to defend it. The append-only log costs more storage and buys the one thing billing cannot live without - the ability to prove the number.'],
+      ],
+    },
+    {
+      title: 'Invoicing once, and taxing everywhere', focus: ['bill', 'inv', 'tax', 'price'],
+      blocks: [
+        ['p', 'The cardinal sin of a billing system is charging a customer twice, so invoicing is idempotent by construction: a billing run is keyed by (customer, period), and re-running it - after a crash, a retry, a nervous manual re-trigger - finds the existing invoice instead of creating a second. The invoice itself is a state machine, and finalized is the point of no return: before it, totals can be recomputed; after it, the invoice is immutable and the only legal change is a credit or debit note, because a finalized invoice is a legal-financial document, not a mutable row. Tax sits beside the invoice engine as a pluggable rules engine rather than code inside it - India\'s GST (CGST/SGST/IGST, place of supply, e-invoicing thresholds) and other jurisdictions\' VAT or sales tax are data-driven rules - so onboarding a new country is configuration, not a rewrite of the thing that computes money.'],
+        ['bul', [
+          'Idempotent billing runs: (customer, period) is the key, so the system is safe to re-run - which means it is safe to operate under failure, the whole point.',
+          'Finalization is immutability: draft invoices flex, finalized invoices freeze, and credit/debit notes are the audited way to adjust - never an UPDATE.',
+          'Tax as data, not code: a rules engine keyed by jurisdiction means the invoice service never learns a country\'s tax law - it asks the engine, and new markets are new rules.',
+        ]],
+      ],
+    },
+    {
+      title: 'Cash is not revenue', focus: ['pay', 'dun', 'revrec', 'gl'],
+      blocks: [
+        ['p', 'A customer paying $120,000 up front for an annual contract has given you cash, not revenue - and conflating the two is how startups misread their own health and auditors reject their statements. Revenue recognition spreads that booking across the twelve months it is actually delivered: the cash lands as deferred revenue (a liability - you owe a year of service), and each month a slice drains from deferred into earned, posting to the general ledger. Meanwhile the collection side runs its own machine: failed payments retry on a schedule, and unpaid invoices walk a dunning ladder - reminder, escalation, account restriction, and finally write-off - because chasing what is owed is as much a system as billing it. Together these give finance the two truths it needs: what was collected, and what was earned.'],
+        ['bul', [
+          'Deferred revenue is a liability that drains to earned: recognize over the delivery period, so the P&L reflects service delivered, not cash timing.',
+          'Dunning is a state machine too: retries with backoff for soft failures, an escalating ladder for the genuinely overdue, ending in a deliberate write-off - not silence.',
+          'The GL is the destination: recognized revenue, credits, refunds and write-offs all post as journal entries, so the financial statements reconcile to the penny.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A table of invoices with a total column.',
+    senior: 'An append-only usage ledger with idempotent ingest, rating that reads-never-writes, idempotent billing runs keyed by (customer, period), an invoice state machine with immutable finalization and credit/debit-note adjustments, tax as a per-jurisdiction rules engine, dunning as a state machine, and revenue recognition that keeps cash and earned revenue distinct into the general ledger.',
+    staff: 'Design the correctness and audit guarantees at scale: the exactly-once story from at-least-once metering producers, the reconciliation between usage log, invoices, payments and the GL, the revenue-recognition engine that satisfies a specific accounting standard, the tax-rules architecture that onboards a country without touching the invoice service, and the dunning economics that recover revenue without churning customers - because in billing, a bug is not a latency spike, it is a wrong number in someone\'s financial statements.',
+  },
+},
+
 }
