@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.29.0 — 2026-09-03
+- 🎖️ Mastery gains its 21st area: **Engineering Leadership (Technical)** — the technical-judgment slice of an EM/Staff role, drawn from an engineering-management rubric but kept to what a system-design studio can actually teach: reversible vs irreversible decisions (two-way vs one-way doors), build vs buy vs adopt, pre-mortems and blocker removal, disagree-and-commit, decision records (ADRs), and technical depth vs breadth as you grow. Each an interview question with a ⇄ table. The people-leadership criteria (morale, attrition, hiring, D&I, promotion advocacy) were deliberately left out — a simulator can't grade them, and several technical ones (communication-at-levels, experimentation) are already covered elsewhere
+
 ## 1.28.0 — 2026-09-03
 - 🔧 Mastery gains its 20th area: **Data Engineering Toolkit** — the 20 tool combinations every data engineer knows, taught as the six patterns beneath them: sizing the processing engine (Pandas→Spark→streaming), batch vs streaming, orchestration (DAGs vs cron), CDC vs ELT ingestion, lakehouse table formats (Delta/Iceberg), and analytics engineering (dbt + Git). Each an interview question with a ⇄ table naming the concrete tools. Added to the Data Analyst track
 

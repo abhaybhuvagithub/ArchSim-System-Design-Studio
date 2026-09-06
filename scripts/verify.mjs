@@ -2277,12 +2277,24 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all twenty areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 20 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 20);
+      check('the mastery hub renders all twenty-one areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 21 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 21);
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the Data Engineering Toolkit teaches patterns (engine-sizing, CDC-vs-ELT) not just tool names', await (async () => {
+      check('Engineering Leadership teaches technical judgment (one-way doors, build-vs-buy) not people-management', await (async () => {
+        const MEL = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const el = MEL.MASTERY.find(a => a.id === 'eng-lead');
+        if (!el || el.items.length !== 6) return false;
+        const doors = MEL.MASTERY_CMP['one-way-doors'];
+        const bba = MEL.MASTERY_CMP['build-buy-adopt'];
+        // it must be the technical slice: reversibility + build/buy, not morale/attrition/D&I
+        const allText = el.items.map(i => i.d).join(' ');
+        return !!doors && /irreversible/i.test((doors.cols.join(' ') + ' ' + doors.rows.map(r => r.join(' ')).join(' ')))
+          && !!bba && bba.cols.length === 3 && /differentiator/i.test(bba.rows.map(r => r.join(' ')).join(' '))
+          && !/attrition|morale|promotion advocacy/i.test(allText);
+      })());
+            check('the Data Engineering Toolkit teaches patterns (engine-sizing, CDC-vs-ELT) not just tool names', await (async () => {
         const MDE = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const de = MDE.MASTERY.find(a => a.id === 'data-eng');
         if (!de || de.items.length !== 6) return false;
@@ -4176,7 +4188,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about', 'hld', 'lld', 'brief']);
-      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE, IAM, data-eng', M.MASTERY.length === 20);
+      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE, IAM, data-eng, eng-lead', M.MASTERY.length === 21);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
@@ -4235,7 +4247,7 @@ try {
       })());
       check('all eleven canonical topics are present by name', (() => {
         const titles = M.MASTERY.map(a => a.title).join(' | ');
-        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles) && /Analytics & Data Platform/.test(titles) && /FDE & Customer Engineering/.test(titles) && /Identity & Access \(IAM\)/.test(titles) && /Data Engineering Toolkit/.test(titles);
+        return /Storage/.test(titles) && /Caching/.test(titles) && /Load Balancing/.test(titles) && /Asynchronous/.test(titles) && /Read & Write/.test(titles) && /Distributed Systems/.test(titles) && /Reliability/.test(titles) && /CDN/.test(titles) && /API Design/.test(titles) && /Search/.test(titles) && /Observability/.test(titles) && /Envelope/.test(titles) && /LLM Systems in Production/.test(titles) && /Deploy & Migrate/.test(titles) && /Networking/.test(titles) && /Analytics & Data Platform/.test(titles) && /FDE & Customer Engineering/.test(titles) && /Identity & Access \(IAM\)/.test(titles) && /Data Engineering Toolkit/.test(titles) && /Engineering Leadership \(Technical\)/.test(titles);
       })());
     }
 

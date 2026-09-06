@@ -220,6 +220,18 @@ export const MASTERY = [
       { id: 'analytics-engineering', t: 'Analytics engineering: dbt, SQL, and version control', asks: "Your warehouse transformations are a pile of hand-run SQL nobody can reproduce or review. How do you make analytics behave like software?", d: 'Analytics engineering brings software discipline to warehouse SQL. dbt turns transformations into version-controlled, tested, documented SQL models with dependency graphs - SQL + dbt for the transformations, Git + dbt so every change is reviewed and reproducible, Airflow + dbt so they run on schedule. The result: a transformation you can diff, test, roll back and trace, instead of a query someone ran once in a console and cannot recreate. It is the metrics-layer discipline applied to the whole transformation pipeline - defined once, in code, reviewed like code.', go: { tpl: 'Snowflake (Cloud Warehouse)', tab: 'breakdown', do: 'The warehouse runs these models - picture dbt as versioned SQL transforming the shared tables, reviewed in Git before it ever runs.' } },
     ],
   },
+  {
+    id: 'eng-lead', icon: '🎖️', title: 'Engineering Leadership (Technical)',
+    flag: "'I made a hundred decisions this quarter' - decision velocity is not judgment. The score is whether the IRREVERSIBLE calls were right, and whether anyone but you knows why any of them were made.",
+    items: [
+      { id: 'one-way-doors', t: 'Reversible vs irreversible decisions (two-way vs one-way doors)', asks: "How do you decide how much rigor and how many people a technical decision deserves before you make it?", d: 'The most important judgment skill is sorting decisions by reversibility. A two-way door is cheap to undo - a feature flag, a cache policy, a retryable job - so decide fast, delegate freely, and correct later if wrong; agonizing over it is its own waste. A one-way door is expensive or impossible to reverse - a data model, a public API contract, a core dependency, a security posture, an on-chain transfer - so slow down, pull in the right people, and get it right, because there is no cheap undo. Senior engineers and EMs are not judged on how many decisions they made but on whether they applied the right rigor to the right ones: fast where it is safe, careful where it is forever.', go: { tpl: 'Coinbase (Crypto Exchange)', tab: 'breakdown', do: 'Read the custody dive - an on-chain transfer is the ultimate one-way door, and the whole design bends to its irreversibility.' } },
+      { id: 'build-buy-adopt', t: 'Build vs buy vs adopt', asks: "A vendor sells what you were about to build, and an open-source project does most of it too. How do you choose?", d: 'The rule is: build only your differentiator, buy or adopt everything else. Build when the thing IS your competitive moat and you need full control - and accept you own the code and the operations forever. Buy a vendor for undifferentiated heavy lifting you do not want to run, accepting a bill that scales and some lock-in. Adopt open source for a common need you can actually operate, accepting that you own the operational burden even though the code is free. The two classic mistakes: pouring engineering into undifferentiated infrastructure someone would have sold you, and adopting a framework or system you cannot evaluate or run at 3am - a dependency you cannot debug is not a decision, it is a liability.', go: { tpl: 'Enterprise SSO (Entra/Okta)', tab: 'breakdown', do: 'This template builds identity in-house; ask what it would take to buy it instead, and when consuming an IdP is the right call over rolling your own auth.' } },
+      { id: 'technical-risk', t: 'Pre-mortems and blocker removal', asks: "How do you manage technical risk on a project so it surfaces as an assumption to test, not an incident in production?", d: 'Amateurs manage risk reactively - they find out what was fragile when it breaks in production. The senior move is the pre-mortem: assume the project already failed, and work backwards to why, so the riskiest assumption is named and tested FIRST instead of discovered last. The corollary is unblocking: a leader\'s job is to see the blockers coming and clear them ahead of the team, not to watch the team stall and then react. Identify the one thing most likely to sink the project, prove or disprove it early, and remove obstacles before they cost a sprint - risk you tested is cheap, risk you discovered is an incident.', go: { tpl: 'Card Payments (Auth + Settlement)', tab: 'chaos', do: 'Open Incident Mode here - a pre-mortem is exactly this: running the failure that would hurt most, before a customer does.' } },
+      { id: 'disagree-commit', t: 'Disagree and commit; deciding with incomplete information', asks: "Your team is split on an architecture, you cannot get consensus, and a call has to be made now. What do you do?", d: 'Consensus is wonderful when the decision is reversible and there is time to align - and a trap when it becomes analysis paralysis on a call that must be made. When the team is genuinely split and waiting costs more than deciding, the leader makes the call, owns it, and asks even those who disagreed to commit fully to executing it - because a team that half-executes the decision it lost guarantees the decision fails. The discipline that makes this safe: document why (so it can be revisited with evidence, not re-litigated by memory), and where you can, shape the decision to be a two-way door so being wrong is cheap. Deciding with incomplete information is the job; refusing to decide is the failure.', go: { tpl: 'PostgreSQL at Scale (Primary + Replicas)', tab: 'scale', do: 'The "second primary vs shard" call has no clean consensus - it is exactly a disagree-and-commit moment: pick, document why, and move.' } },
+      { id: 'adrs', t: 'Decision records: making the "why" outlive you', asks: "Six months from now, how does the team remember WHY it chose this architecture - after the people who chose it have moved on?", d: 'Every architecture carries decisions whose reasons evaporate the moment the person who made them leaves, and a team that cannot remember why it did something re-litigates settled questions forever and fears changing anything it does not understand. An Architecture Decision Record fixes this cheaply: a short, versioned document capturing the context, the decision, its status, and its consequences - so a new hire reads the trail instead of re-opening the debate, and a future change is made with eyes open. It is the same append-only-trust-chain shape this studio uses for money and for experiment provenance, pointed now at decisions: the reasoning is an artifact, not folklore.', go: { tpl: 'Discovery Loop (Autonomous Research)', tab: 'breakdown', do: 'Read the provenance dive - it pins why each experiment ran; an ADR does exactly that for an architecture decision.' } },
+      { id: 'depth-breadth', t: 'Technical depth vs breadth as you grow', asks: "Moving from senior IC to Staff or EM, how technical should you stay, and what changes about how you use it?", d: 'The IC-to-leader transition trades hands-on depth for architectural judgment and leverage: a senior IC is valued for solving the hard problem personally, a Staff engineer or EM for asking the question that unlocks the team and making the calls no one else can. But the trap on each side is real - an IC who never scales beyond their own hands caps their impact, while a leader who loses the depth to actually evaluate a hard technical decision becomes a non-technical technical leader, rubber-stamping choices they cannot judge. The target is enough depth to make and evaluate the irreversible calls, spent on breadth and leverage rather than on being the one whose hands are on every keyboard.', go: { tpl: 'Amazon (marketplace)', tab: 'breakdown', do: 'Skim the entire breakdown - a technical leader must be able to judge all of this soundly without having personally built each piece.' } },
+    ],
+  },
 ]
 
 export const MASTERY_TOTAL = MASTERY.reduce((n, a) => n + a.items.length, 0)
@@ -581,6 +593,48 @@ export const MASTERY_CMP = {
     ['Tested', 'You find out in the dashboard', 'Data tests run before it ships'],
     ['Dependencies', 'Implicit and fragile', 'A model DAG dbt resolves and runs in order'],
     ['The combo', 'A query someone wrote once', 'SQL + dbt, Git + dbt, Airflow + dbt'],
+  ]},
+  'one-way-doors': { cols: ['Two-way door (reversible)', 'One-way door (irreversible)'], rows: [
+    ['Decision speed', 'Decide fast, low process', 'Slow down, get it right'],
+    ['Examples', 'A feature flag, a config, a retryable job', 'Data model, public API, core dependency, security posture'],
+    ['Cost of being wrong', 'Cheap - flip it back', 'Expensive or impossible to undo'],
+    ['Who decides', 'Delegate freely', 'The senior call, with the right people'],
+    ['In this studio', 'Cache write policy, LB algorithm', 'The ledger\'s no-UPDATE, an on-chain transfer, a schema split'],
+  ]},
+  'build-buy-adopt': { cols: ['Build', 'Buy (vendor)', 'Adopt (open source)'], rows: [
+    ['Right when', 'It is your core differentiator', 'Undifferentiated heavy lifting', 'A common need you can run'],
+    ['You own', 'The code and the operations, forever', 'Little - the vendor runs it', 'The operational burden, not the code'],
+    ['Cost shape', 'Engineering time, indefinitely', 'A bill that scales with use', 'Free license, real ops cost'],
+    ['The trap', 'Building undifferentiated infra', 'Lock-in and the bill at scale', 'Adopting what you cannot evaluate or run'],
+    ['Prove the choice', 'It is a moat, not plumbing', 'Total cost vs build over three years', 'A team that can operate it at 3am'],
+  ]},
+  'technical-risk': { cols: ['Reactive (firefighting)', 'Proactive (pre-mortem)'], rows: [
+    ['When risk surfaces', 'As an incident, in production', 'As an assumption, before you build'],
+    ['The question', 'What broke?', 'Assume it failed - why?'],
+    ['The riskiest part', 'Discovered last', 'Named and tested first'],
+    ['The team', 'Stalled, then reacting', 'Unblocked - obstacles cleared ahead'],
+    ['In this studio', 'Read it off the chaos blast radius', 'Inject the fault before a customer does'],
+  ]},
+  'disagree-commit': { cols: ['Consensus-seeking', 'Disagree and commit'], rows: [
+    ['Fits when', 'Reversible, low-stakes, time to align', 'Team split, a call must be made now'],
+    ['The decision', 'Wait for everyone to agree', 'Make it, own it, document why'],
+    ['Those who disagreed', 'Blocked until convinced', 'Commit fully - execution over ego'],
+    ['The risk', 'Analysis paralysis', 'A wrong call - so make it a two-way door if you can'],
+    ['The record', 'In people\'s heads', 'An ADR: context, decision, consequences'],
+  ]},
+  'adrs': { cols: ['Tribal knowledge', 'Architecture Decision Record'], rows: [
+    ['Where the "why" lives', 'In the head of whoever left', 'In a short, versioned document'],
+    ['Six months later', '"Why did we do this?" - nobody knows', 'Read the ADR: context and consequences'],
+    ['A new hire', 'Re-litigates settled decisions', 'Reads the trail and moves on'],
+    ['Format', 'A Slack thread, maybe', 'Context, decision, status, consequences'],
+    ['Same shape as', 'Undocumented folklore', 'The provenance a payment or an experiment carries'],
+  ]},
+  'depth-breadth': { cols: ['Senior IC', 'Staff / EM'], rows: [
+    ['Primary value', 'Deep hands-on execution', 'Architectural judgment and leverage'],
+    ['Technical depth', 'The point', 'Enough to make and evaluate the hard calls'],
+    ['A hard problem', 'Solve it yourself', 'Ask the question that unlocks the team'],
+    ['The trap', 'Never scaling beyond your own hands', 'Losing the depth to judge - a non-technical technical leader'],
+    ['Measured by', 'What you build', 'What the team builds, and the calls you got right'],
   ]},
   'oltp-olap': { cols: ['OLTP (row store)', 'OLAP (column store)'], rows: [
     ['Unit of work', 'One entity, all its fields', 'Few columns, a billion rows'],
