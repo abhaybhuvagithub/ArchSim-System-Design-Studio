@@ -1833,6 +1833,8 @@ function MasteryTab({ onGo }) {
         <label className="ms-opt"><input type="checkbox" checked={ui.hideMastered}
           onChange={e => setPref({ hideMastered: e.target.checked })} /> ✅ Hide mastered</label>
       </div>
+      <TracksStrip done={done} onGo={onGo} onArea={(aid) => { const el = document.querySelector(`[data-ms-area="${aid}"]`); el?.scrollIntoView?.({ block: 'start' }) }} />
+      <JDPlanner onTemplate={(name) => onGo({ tpl: name, tab: 'breakdown' })} onConcept={(id) => { const el = document.querySelector(`[data-ms-item="${id}"]`); el?.scrollIntoView?.({ block: 'center' }); el?.classList.add('ms-pulse'); setTimeout(() => el?.classList.remove('ms-pulse'), 1600) }} />
       {deck.map(area => {
         const items = ui.hideMastered ? area.items.filter(x => !done.has(x.id)) : area.items
         if (!items.length) return null
@@ -1861,8 +1863,6 @@ function MasteryTab({ onGo }) {
         )
       })}
       <p className="muted ms-note">Checked means you could teach it, not that you clicked it — the boxes are yours to earn. Interview mode grades the same material under pressure.</p>
-      <TracksStrip done={done} onGo={onGo} onArea={(aid) => { const el = document.querySelector(`[data-ms-area="${aid}"]`); el?.scrollIntoView?.({ block: 'start' }) }} />
-      <JDPlanner onTemplate={(name) => onGo({ tpl: name, tab: 'breakdown' })} onConcept={(id) => { const el = document.querySelector(`[data-ms-item="${id}"]`); el?.scrollIntoView?.({ block: 'center' }); el?.classList.add('ms-pulse'); setTimeout(() => el?.classList.remove('ms-pulse'), 1600) }} />
     </section>
   )
 }

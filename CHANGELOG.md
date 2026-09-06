@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.31.1 — 2026-09-03
+- 🎓 Mastery: the 🗺️ Tracks strip and 🎯 JD Planner moved to the top of the tab (right under the progress bar), above the concept list — the role paths and job-description planner are how most people navigate the curriculum, so they now lead. Their jump-to-concept links still scroll to the areas below
+
 ## 1.31.0 — 2026-09-03
 - 🖥️ **Full-page view for every analysis tab**: the Mastery-only focus mode is now a panel-level control in the panel bar (beside Max/Float), so Brief, HLD, LLD, Capacity, Chaos, Cost, Code, SLO, ROI, Mastery and the rest can each fill the screen. The panel bar stays visible in full-page so the exit is always one click (or Esc) away, and full-page persists as you switch tabs; it drops automatically if the panel is floated or on compact screens
 
