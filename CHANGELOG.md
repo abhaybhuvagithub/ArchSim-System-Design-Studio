@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.31.0 — 2026-09-03
+- 🖥️ **Full-page view for every analysis tab**: the Mastery-only focus mode is now a panel-level control in the panel bar (beside Max/Float), so Brief, HLD, LLD, Capacity, Chaos, Cost, Code, SLO, ROI, Mastery and the rest can each fill the screen. The panel bar stays visible in full-page so the exit is always one click (or Esc) away, and full-page persists as you switch tabs; it drops automatically if the panel is floated or on compact screens
+
 ## 1.30.0 — 2026-09-03
 - 🎓 Mastery gains a **Full page** view: a toggle in the tab controls expands the curriculum to fill the viewport (hiding the canvas, palette and panel chrome) for distraction-free study across the 21 areas. Exit with the button or Escape; switching tabs drops it so you are never stranded
 

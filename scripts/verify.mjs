@@ -2280,24 +2280,23 @@ try {
       check('the mastery hub renders all twenty-one areas with a progress bar',
         ms().querySelectorAll('.ms-area').length === 21 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
       check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 21);
-      // full-page (focus) view: a toggle that fills the viewport with the curriculum
+      // full-page (focus) view is a PANEL-level control now: one toggle in the panel
+      // bar that works for every analysis tab, not just Mastery.
       {
         const appRoot = doc.querySelector('.app');
-        const fullBtn = [...ms().querySelectorAll('.ms-controls button')].find(b => /Full page/i.test(b.textContent));
-        check('the Mastery tab offers a full-page view toggle', !!fullBtn && fullBtn.getAttribute('aria-pressed') === 'false');
-        click(fullBtn); await wait(120);
-        check('turning it on puts the app in full-page mode and expands the analysis panel', appRoot.classList.contains('ms-full') && !!doc.querySelector('.ms-fullbtn[aria-pressed="true"]'));
-        // exit via the button (its title names Esc as the shortcut); avoid dispatching a
-        // synthetic global key event, which would linger in this shared harness window.
-        const exitBtn = doc.querySelector('.ms-fullbtn[aria-pressed="true"]');
-        check('the exit control names Escape as the shortcut', /Esc/i.test(exitBtn.getAttribute('title') || ''));
-        click(exitBtn); await wait(120);
-        check('exiting full-page restores the normal layout', !appRoot.classList.contains('ms-full'));
-        // re-enter, then leaving the Mastery tab must drop it (no stranding)
-        click([...ms().querySelectorAll('.ms-controls button')].find(b => /Full page/i.test(b.textContent))); await wait(100);
-        check('re-entering full-page works', appRoot.classList.contains('ms-full'));
+        const barBtn = () => [...doc.querySelectorAll('#analysis .panel-bar .panel-full-btn')][0];
+        check('the panel bar offers a full-page toggle (available on every tab)', !!barBtn() && barBtn().getAttribute('aria-pressed') === 'false');
+        click(barBtn()); await wait(120);
+        check('turning it on puts the app in full-page mode and fills the viewport with the panel', appRoot.classList.contains('panel-full') && barBtn().getAttribute('aria-pressed') === 'true');
+        check('the panel bar (and its exit control) stays reachable in full-page', !!barBtn() && /Exit full page/i.test(barBtn().textContent) && /Esc/i.test(barBtn().getAttribute('title') || ''));
+        // it is genuinely per-tab: switch tabs while full-page and it persists
         click(byText('.tabs button', 'Capacity')); await wait(150);
-        check('leaving the Mastery tab drops full-page so you are never stranded', !appRoot.classList.contains('ms-full'));
+        check('full-page persists across a tab switch — it is not Mastery-only', appRoot.classList.contains('panel-full') && !!doc.querySelector('.mastery') === false && !!barBtn());
+        click(byText('.tabs button', 'Cost')); await wait(150);
+        check('another tab renders full-page too', appRoot.classList.contains('panel-full'));
+        // exit via the always-present bar control
+        click(barBtn()); await wait(120);
+        check('exiting full-page restores the normal layout', !appRoot.classList.contains('panel-full'));
         await goTab('Mastery'); await wait(120);
       }
       check('the 🎤 as-asked lines render on the concepts',
