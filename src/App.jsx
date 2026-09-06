@@ -296,6 +296,15 @@ export default function App() {
     window.addEventListener('pointerup', up)
   }
   const toggleMax = side => setMaxed(m => (m === side ? null : side))
+  const [msFull, setMsFull] = useState(false)
+  useEffect(() => {
+    if (!msFull) return
+    const onEsc = e => { if (e.key === 'Escape') { e.preventDefault(); setMsFull(false) } }
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [msFull])
+  // leaving the Mastery tab drops full-page so you never get stranded in it
+  useEffect(() => { if (tab !== 'mastery' && msFull) setMsFull(false) }, [tab, msFull])
   const resetPanel = side => {
     setMaxed(m => (m === side ? null : m))
     setPanelW(w => ({ ...w, [side]: PANEL_DEFAULT[side] }))
@@ -856,7 +865,7 @@ export default function App() {
   }, [hover, edges, spotlight])
 
   return (
-    <div className={`app ${compact ? 'compact' : ''} ${mobile ? 'mobile' : ''}`}>
+    <div className={`app ${compact ? 'compact' : ''} ${mobile ? 'mobile' : ''} ${msFull ? 'ms-full' : ''}`}>
       <a className="skip-link" href="#analysis">Skip to the written analysis</a>
       {pricing && (
         <PricingModal want={pricing.want} license={license}
@@ -1312,7 +1321,7 @@ export default function App() {
           ) : tab === 'acr' ? (
             <AcronymsTab />
           ) : tab === 'mastery' ? (
-            <MasteryTab onGo={(go) => {
+            <MasteryTab full={msFull} onToggleFull={() => setMsFull(v => !v)} onGo={(go) => {
               if (go.tpl) { const i = TEMPLATES.findIndex(t2 => t2.name === go.tpl); if (i >= 0) loadTemplate(String(i)) }
               if (go.tab) setTab(go.tab)
             }} />
@@ -1793,7 +1802,7 @@ function MsCompare({ cmp }) {
   )
 }
 
-function MasteryTab({ onGo }) {
+function MasteryTab({ onGo, full, onToggleFull }) {
   const [done, setDone] = useState(readMastery)
   const [ui, setUi] = useState(readMasteryUI)
   // a fresh deal every visit — shuffled review, no ceremony
@@ -1815,6 +1824,13 @@ function MasteryTab({ onGo }) {
       <div className="ms-controls">
         <label className="ms-opt"><input type="checkbox" checked={ui.hideMastered}
           onChange={e => setPref({ hideMastered: e.target.checked })} /> ✅ Hide mastered</label>
+        {onToggleFull && (
+          <button type="button" className="ms-fullbtn" onClick={onToggleFull}
+            aria-pressed={full ? 'true' : 'false'}
+            title={full ? 'Exit full-page view (Esc)' : 'Read the whole curriculum full-page'}>
+            {full ? '⤡ Exit full page' : '⤢ Full page'}
+          </button>
+        )}
       </div>
       {deck.map(area => {
         const items = ui.hideMastered ? area.items.filter(x => !done.has(x.id)) : area.items

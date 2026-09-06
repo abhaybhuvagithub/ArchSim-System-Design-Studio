@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.30.0 — 2026-09-03
+- 🎓 Mastery gains a **Full page** view: a toggle in the tab controls expands the curriculum to fill the viewport (hiding the canvas, palette and panel chrome) for distraction-free study across the 21 areas. Exit with the button or Escape; switching tabs drops it so you are never stranded
+
 ## 1.29.0 — 2026-09-03
 - 🎖️ Mastery gains its 21st area: **Engineering Leadership (Technical)** — the technical-judgment slice of an EM/Staff role, drawn from an engineering-management rubric but kept to what a system-design studio can actually teach: reversible vs irreversible decisions (two-way vs one-way doors), build vs buy vs adopt, pre-mortems and blocker removal, disagree-and-commit, decision records (ADRs), and technical depth vs breadth as you grow. Each an interview question with a ⇄ table. The people-leadership criteria (morale, attrition, hiring, D&I, promotion advocacy) were deliberately left out — a simulator can't grade them, and several technical ones (communication-at-levels, experimentation) are already covered elsewhere
 

@@ -2280,6 +2280,26 @@ try {
       check('the mastery hub renders all twenty-one areas with a progress bar',
         ms().querySelectorAll('.ms-area').length === 21 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
       check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 21);
+      // full-page (focus) view: a toggle that fills the viewport with the curriculum
+      {
+        const appRoot = doc.querySelector('.app');
+        const fullBtn = [...ms().querySelectorAll('.ms-controls button')].find(b => /Full page/i.test(b.textContent));
+        check('the Mastery tab offers a full-page view toggle', !!fullBtn && fullBtn.getAttribute('aria-pressed') === 'false');
+        click(fullBtn); await wait(120);
+        check('turning it on puts the app in full-page mode and expands the analysis panel', appRoot.classList.contains('ms-full') && !!doc.querySelector('.ms-fullbtn[aria-pressed="true"]'));
+        // exit via the button (its title names Esc as the shortcut); avoid dispatching a
+        // synthetic global key event, which would linger in this shared harness window.
+        const exitBtn = doc.querySelector('.ms-fullbtn[aria-pressed="true"]');
+        check('the exit control names Escape as the shortcut', /Esc/i.test(exitBtn.getAttribute('title') || ''));
+        click(exitBtn); await wait(120);
+        check('exiting full-page restores the normal layout', !appRoot.classList.contains('ms-full'));
+        // re-enter, then leaving the Mastery tab must drop it (no stranding)
+        click([...ms().querySelectorAll('.ms-controls button')].find(b => /Full page/i.test(b.textContent))); await wait(100);
+        check('re-entering full-page works', appRoot.classList.contains('ms-full'));
+        click(byText('.tabs button', 'Capacity')); await wait(150);
+        check('leaving the Mastery tab drops full-page so you are never stranded', !appRoot.classList.contains('ms-full'));
+        await goTab('Mastery'); await wait(120);
+      }
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
       check('Engineering Leadership teaches technical judgment (one-way doors, build-vs-buy) not people-management', await (async () => {
