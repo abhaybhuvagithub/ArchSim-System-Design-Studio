@@ -1920,7 +1920,7 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .panel-full-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .ms-controls { display: flex; align-items: center; gap: 12px; }
 
-/* ── Monte-Carlo panel ── */
+/* ── Reliability Simulation panel ── */
 .mc-panel { margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; }
 .mc-panel summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
 .mc-intro { font-size: 12.5px; margin: 8px 0; }

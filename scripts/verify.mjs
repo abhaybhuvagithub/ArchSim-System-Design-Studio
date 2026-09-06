@@ -2268,11 +2268,11 @@ try {
       await wait(150);
       const after = slo().textContent.match(/([\d.]+) min/)?.[1];
       check('tightening the target shrinks the budget live', before === '43.2' && after === '4.3');
-      // Monte-Carlo panel in the SLO tab: run it and read a distributional result
+      // Reliability Simulation panel in the SLO tab: run it and read a distributional result
       {
         const mc = () => slo().querySelector('.mc-panel');
-        check('the SLO tab offers a Monte-Carlo panel', !!mc() && /reliability as a distribution/i.test(mc().textContent));
-        const runBtn = [...mc().querySelectorAll('button')].find(b => /Run Monte Carlo/i.test(b.textContent));
+        check('the SLO tab offers a Reliability Simulation panel', !!mc() && /run it many times, see the spread/i.test(mc().textContent));
+        const runBtn = [...mc().querySelectorAll('button')].find(b => /Run reliability simulation/i.test(b.textContent));
         check('the panel has a run control', !!runBtn);
         click(runBtn); await wait(400);
         check('running produces a distributional readout with an SLO violation rate',

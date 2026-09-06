@@ -1552,7 +1552,7 @@ function RichLine({ text }) {
 // This is the connective tissue: it turns the studio's scattered surfaces into
 // one ordered journey, and it is honest that a map is not the walk.
 const SHIP_STAGES = [
-  { n: 1, icon: '📐', t: 'Prove the design on paper', gist: 'Before a line of code, show the architecture can meet its numbers: capacity per tier, p99, availability, and the SLO you will promise. A design that has not been sized is a guess.', here: 'Capacity and SLO tabs — and Monte Carlo for the distribution, not one number.', go: { tab: 'slo' } },
+  { n: 1, icon: '📐', t: 'Prove the design on paper', gist: 'Before a line of code, show the architecture can meet its numbers: capacity per tier, p99, availability, and the SLO you will promise. A design that has not been sized is a guess.', here: 'Capacity and SLO tabs — and the Reliability Simulation for the spread, not one number.', go: { tab: 'slo' } },
   { n: 2, icon: '🌪️', t: 'Break it before it breaks you', gist: 'Kill a node, sever a link, 10x the traffic — and watch the blast radius. The failures you find on the canvas are the ones you are not paged for at 3am.', here: 'Chaos tab: fault injection, blast radius, and the What-If comparison.', go: { tab: 'chaos' } },
   { n: 3, icon: '📝', t: 'Write down the decisions', gist: 'Every irreversible choice — the data model, the core dependency, single-primary vs shard — gets an Architecture Decision Record: context, decision, consequences. So six months on, nobody re-litigates it and everybody knows why.', here: 'Mastery → Engineering Leadership: reversible-vs-irreversible, and ADRs.', go: { tab: 'mastery' } },
   { n: 4, icon: '🦴', t: 'Build the smallest thing that runs', gist: 'A repo, and the thinnest end-to-end slice that actually works — with a test proving it before you add the second feature. This is the step no simulator can do for you; it is where design becomes a product. (billing-engine was exactly this: a real repo, tests first.)', here: 'Not in the studio — this is the walk. Clone a repo and write the first test.', go: null },
@@ -1561,7 +1561,7 @@ const SHIP_STAGES = [
   { n: 7, icon: '🚦', t: 'Ship it safely', gist: 'Automated pipeline (CI/CD), and a release strategy that can roll back in seconds: blue-green or canary, behind feature flags so deploy is not release. The goal is that shipping is boring.', here: 'Mastery → Deploy & Migrate: release strategies, feature flags, CI gates.', go: { tab: 'mastery' } },
   { n: 8, icon: '🔭', t: 'See it in production', gist: 'You cannot operate what you cannot see: structured logs, metrics (RED/USE), and distributed traces, on dashboards, wired before traffic arrives — not after the first incident.', here: 'Mastery → Observability & Security, and the Telemetry components on templates.', go: { tab: 'mastery' } },
   { n: 9, icon: '🎯', t: 'Guard it: SLOs, budgets, on-call', gist: 'The SLO is now live: an error budget that burns, alerts that page a human before the month does, and an incident process for when it breaks — diagnose, mitigate, write the RCA.', here: 'SLO tab (live budget + burn), and Chaos → Incident Mode for the drill.', go: { tab: 'slo' } },
-  { n: 10, icon: '🔁', t: 'Keep it honest and evolving', gist: 'Watch the cost, close the security gaps, catch architecture drift (what is running vs what you designed), and feed production reality back into the next design. Production is not the finish line — it is the start of the loop.', here: 'Cost and ROI tabs, and the What-If / Monte Carlo engines for the next round.', go: { tab: 'cost' } },
+  { n: 10, icon: '🔁', t: 'Keep it honest and evolving', gist: 'Watch the cost, close the security gaps, catch architecture drift (what is running vs what you designed), and feed production reality back into the next design. Production is not the finish line — it is the start of the loop.', here: 'Cost and ROI tabs, and the What-If / Reliability Simulation engines for the next round.', go: { tab: 'cost' } },
 ]
 
 function ShipTab({ onGo }) {
@@ -1959,7 +1959,7 @@ function AcronymsTab() {
 // The SLO tab: pick a target, see the error budget it buys, watch the live
 // burn rate, and run the Production Readiness Review a Staff+ engineer would
 // run before green-lighting a launch.
-// ── Monte-Carlo reliability panel (in the SLO tab) ──────────────────────────
+// ── Reliability Simulation panel (in the SLO tab) ───────────────────────────
 function MonteCarloPanel({ nodes, edges, rps, availTarget }) {
   const [iterations, setIterations] = useState(1000)
   const [seed, setSeed] = useState(42)
@@ -1983,7 +1983,7 @@ function MonteCarloPanel({ nodes, edges, rps, availTarget }) {
   }
   return (
     <details className="mc-panel">
-      <summary>📊 Monte Carlo — reliability as a distribution, not a single number</summary>
+      <summary>📊 Reliability Simulation — run it many times, see the spread (not one number)</summary>
       <p className="muted mc-intro">One simulation is one outcome; reality varies. This runs the model many times with traffic, latency and capacity drawn from distributions, and reports the spread — including how often your availability SLO is missed. Seeded, so the same seed reproduces the same result exactly.</p>
       <div className="mc-controls">
         <label>Runs
@@ -1999,7 +1999,7 @@ function MonteCarloPanel({ nodes, edges, rps, availTarget }) {
         <label>Seed
           <input type="number" value={seed} onChange={e => { setSeed(+e.target.value || 0); setResult(null) }} style={{ width: 72 }} />
         </label>
-        <button className="btn" onClick={run} disabled={busy || !nodes.length}>{busy ? 'Running…' : 'Run Monte Carlo'}</button>
+        <button className="btn" onClick={run} disabled={busy || !nodes.length}>{busy ? 'Running…' : 'Run reliability simulation'}</button>
       </div>
       {result && (
         <div className="mc-out">

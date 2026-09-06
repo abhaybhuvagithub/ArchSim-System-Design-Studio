@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.36.1 — 2026-09-03
+- 🔤 Renamed the SLO-tab "Monte Carlo" feature to **Reliability Simulation** everywhere users see it — same engine (run the design many times with variation, report the spread and how often the SLO is missed), plainer name. Jargon out, meaning in
+
 ## 1.36.0 — 2026-09-03
 - 🚀 New **0 → Production** tab: the road from a design on the canvas to a running product, as ten ordered stages (prove → break → decide → build → contracts → provision → ship → observe → guard → evolve), each wired to where the studio already teaches it. Honest by design — stage 4 (build the smallest thing that runs) is handed back to you, and the tab states plainly that reading the map is not the same as walking it
 
