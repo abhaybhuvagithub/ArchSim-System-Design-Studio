@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.28.0 — 2026-09-03
+- 🔧 Mastery gains its 20th area: **Data Engineering Toolkit** — the 20 tool combinations every data engineer knows, taught as the six patterns beneath them: sizing the processing engine (Pandas→Spark→streaming), batch vs streaming, orchestration (DAGs vs cron), CDC vs ELT ingestion, lakehouse table formats (Delta/Iceberg), and analytics engineering (dbt + Git). Each an interview question with a ⇄ table naming the concrete tools. Added to the Data Analyst track
+
 ## 1.27.0 — 2026-09-03
 - 🐘 **PostgreSQL, first-class**: the SQL component is now explicitly PostgreSQL — richer description (MVCC readers never block writers, WAL-based replication + PITR, pgvector) and a deepened internals view (VACUUM as the price of lock-free reads, the cost-based planner, WAL as durability+replication+recovery+CDC). +2 acronyms: OLTP, ACID
 - 🗄️ New template **PostgreSQL at Scale (Primary + Replicas)** — the shape every serious Postgres deployment reaches: one write primary, read replicas replaying the WAL, connection pooling (PgBouncer), freshness-aware read/write routing (the read-your-writes trap), PITR, and logical-decoding CDC. Wall: you cannot add a second primary — you make writes cheaper, then shard

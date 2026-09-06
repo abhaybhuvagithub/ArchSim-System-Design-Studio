@@ -1262,7 +1262,7 @@ export default function App() {
               ['roi', 'ROI', null, 'The business view: what this design earns vs what it costs to run'],
               ['slo', 'SLO', null, 'Error budgets and a production-readiness review of this design'],
               ['acr', 'Acronyms', null, 'Every acronym in the studio, expanded - searchable'],
-              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: nineteen areas from networking to LLM production, roadmap.sh tracks, a JD planner — all wired to practice'],
+              ['mastery', 'Mastery', null, 'The 80/20 interview curriculum: twenty areas from networking to LLM production, roadmap.sh tracks, a JD planner — all wired to practice'],
               ['scale', 'Scale', null, 'How this design scales to a billion users'],
               ['breakdown', 'Breakdown', null, 'Full written breakdown of the loaded design'],
               ['learn', 'Learn', `${doneSteps.filter(Boolean).length}/${LESSON.length}`, 'Guided lesson, comparisons and quiz'],

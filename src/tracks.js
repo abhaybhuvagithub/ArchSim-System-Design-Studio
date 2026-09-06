@@ -77,7 +77,7 @@ export const TRACKS = [
     blurb: 'The systems half of the analyst craft: where the data lives, how it moves, and why the dashboard is fast and the metric is trustworthy.',
     stages: [
       { t: 'Rows vs columns', areas: ['storage', 'analytics'], tpl: 'Data Platform (Lakehouse)' },
-      { t: 'Pipelines that rerun', areas: ['async', 'analytics'] },
+      { t: 'Pipelines that rerun', areas: ['async', 'analytics', 'data-eng'] },
       { t: 'Metrics & serving', areas: ['analytics', 'caching'], tpl: 'Flipkart (Big Billion Days)' },
       { t: 'Experimentation', areas: ['analytics'], tpl: 'News Feed (Instagram)' },
     ],

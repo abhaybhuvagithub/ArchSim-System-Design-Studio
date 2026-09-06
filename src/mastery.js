@@ -208,6 +208,18 @@ export const MASTERY = [
       { id: 'sso-at-scale', t: 'Enterprise SSO for a million employees', asks: "Build SSO for 1M employees across 500 apps: OIDC, SAML, MFA, RBAC, zero-trust - and it can never be the reason work stops.", d: 'This is the load-bearing wall: one identity per human, 500 relying parties, and an availability target worthy of the company\'s most concentrated dependency. The moving parts: a broker fronting OIDC and SAML; MFA and conditional access at the IdP; tokens validated locally against rotating JWKS; PKCE on public clients; SCIM provisioning AND deprovisioning; immutable sign-in audit. And the questions that separate senior from staff: where tokens live, how logout and revocation actually work across 500 apps, how keys rotate without dropping a login, what happens the instant a user is disabled, and how the front door itself stays up - because when SSO is the single point of failure, its resilience is the enterprise\'s resilience.', go: { tpl: 'Enterprise SSO (Entra/Okta)', tab: 'scale', do: 'Walk the ladder to 1M and name the wall - why the single front door is also the single point of failure, and what that demands.' } },
     ],
   },
+  {
+    id: 'data-eng', icon: '🔧', title: 'Data Engineering Toolkit',
+    flag: "'We use Spark for everything' - reaching for a distributed cluster to process a gigabyte is as wrong as reaching for Pandas to process a petabyte. The skill is not knowing tools, it is knowing which combination fits the data's size, shape and freshness.",
+    items: [
+      { id: 'processing-engine', t: 'Pandas, Spark, or streaming: sizing the engine to the data', asks: "A job processes a few GB today and will hit multiple TB next year. What do you run it on now, and what changes when it grows?", d: 'The engine is chosen by data size and latency need, not by fashion. A few gigabytes fit in memory on one machine - Pandas is faster and simpler, and a Spark cluster would spend more time coordinating than computing. At tens of gigabytes to petabytes, no single machine holds the data, so PySpark distributes it across a cluster. When the data never stops arriving, batch gives way to streaming (Spark Structured Streaming, Flink). The senior move is matching the tool to the workload and knowing the thresholds where you graduate from one to the next - Pandas to Spark to streaming.', go: { tpl: 'Databricks (Lakehouse Compute)', tab: 'breakdown', do: 'Read the driver/executor dive - that is what PySpark buys you over Pandas, and the shuffle is what it costs.' } },
+      { id: 'batch-vs-stream', t: 'Batch vs streaming, and the pipelines that rerun', asks: "The business wants 'real-time' dashboards. When is that worth a streaming pipeline, and when is a scheduled batch job the right call?", d: 'Batch processes bounded chunks on a schedule (Airflow triggering Spark or SQL): simple, cheap, easy to reprocess, minutes-to-hours fresh. Streaming processes unbounded data as it arrives (Kafka + Spark Streaming or Flink): complex and always-on, but seconds fresh. Most "real-time" requirements are actually "fresher than nightly" and a frequent batch is the honest, cheaper answer; true streaming is for when seconds genuinely matter. Either way the pipeline must be idempotent and rerunnable - a job that cannot be safely re-run is a job that lies under failure.', go: { tpl: 'Data Platform (Lakehouse)', tab: 'scale', do: 'Find on the ladder where batch transforms move into the warehouse - then decide which of your loads truly need streaming, not just frequent batch.' } },
+      { id: 'orchestration', t: 'Orchestration: turning scripts into pipelines', asks: "You have ten scripts that must run in order, some in parallel, with retries and alerting. What turns that from cron chaos into a pipeline?", d: 'An orchestrator (Apache Airflow the canonical one) models work as a DAG - a directed graph of tasks with dependencies - so it runs steps in the right order, parallelizes what it can, retries failures, backfills history, and alerts when something breaks. Python defines the DAG; Airflow schedules and monitors it. Cron runs a command at a time; an orchestrator runs a dependency graph with observability, which is the difference between a pipeline and a pile of scripts that mysteriously stopped last Tuesday.', go: { tpl: 'Data Platform (Lakehouse)', tab: 'breakdown', do: 'Trace the pipeline stages and read each dependency edge as a DAG edge an orchestrator would enforce and retry.' } },
+      { id: 'cdc-ingestion', t: 'Getting data in: CDC and ELT ingestion', asks: "You need a source database's changes in the warehouse continuously, without hammering the source or writing brittle dual-writes. How?", d: 'Two patterns move data in. Change Data Capture (Kafka + Debezium) taps the source database\'s write-ahead log and streams every insert/update/delete downstream - the source barely notices, and it is the disciplined alternative to dual-writes. ELT ingestion (Airbyte into Snowflake) extracts from many sources and loads raw first, transforming inside the warehouse afterward. CDC is for low-latency change streams off transactional stores; ELT connectors are for bulk syncing many sources - and both beat the reflex of application code writing to two places and reconciling forever.', go: { tpl: 'Snowflake (Cloud Warehouse)', tab: 'breakdown', do: 'The warehouse is the load target - picture Airbyte landing raw tables here and dbt transforming them in place (ELT), versus CDC streaming changes in continuously.' } },
+      { id: 'lakehouse-formats', t: 'Table formats: making a data lake behave', asks: "Your data is cheap files in object storage, but analysts need transactions and time travel. What turns a lake into a lakehouse?", d: 'Raw files in a bucket (S3) have no transactions - concurrent writes corrupt each other and there is no schema police. An open table format (Delta Lake, Apache Iceberg) adds a transaction log over those files, giving the cheap lake ACID transactions, time travel, schema evolution and safe concurrent writes - warehouse guarantees at lake prices. Spark or a warehouse engine reads and writes the format; the format is what makes S3 + Iceberg a real table rather than a folder of parquet you hope nobody writes to twice at once.', go: { tpl: 'Databricks (Lakehouse Compute)', tab: 'breakdown', do: 'Read the transaction-log dive - Delta and Iceberg are that same idea, and it is the whole difference between a lake and a lakehouse.' } },
+      { id: 'analytics-engineering', t: 'Analytics engineering: dbt, SQL, and version control', asks: "Your warehouse transformations are a pile of hand-run SQL nobody can reproduce or review. How do you make analytics behave like software?", d: 'Analytics engineering brings software discipline to warehouse SQL. dbt turns transformations into version-controlled, tested, documented SQL models with dependency graphs - SQL + dbt for the transformations, Git + dbt so every change is reviewed and reproducible, Airflow + dbt so they run on schedule. The result: a transformation you can diff, test, roll back and trace, instead of a query someone ran once in a console and cannot recreate. It is the metrics-layer discipline applied to the whole transformation pipeline - defined once, in code, reviewed like code.', go: { tpl: 'Snowflake (Cloud Warehouse)', tab: 'breakdown', do: 'The warehouse runs these models - picture dbt as versioned SQL transforming the shared tables, reviewed in Git before it ever runs.' } },
+    ],
+  },
 ]
 
 export const MASTERY_TOTAL = MASTERY.reduce((n, a) => n + a.items.length, 0)
@@ -527,6 +539,48 @@ export const MASTERY_CMP = {
     ['Key rotation', 'Overlap: publish next key, then sign, then retire old', 'No login ever drops'],
     ['A user is disabled', 'SCIM deprovisions + refresh tokens revoked within a bounded window', 'The leaver is provably locked out'],
     ['The front door fails', 'Regional redundancy, cached-session grace, a break-glass path', 'SPOF resilience = enterprise resilience'],
+  ]},
+  'processing-engine': { cols: ['Best when', 'Why', 'The combo'], rows: [
+    ['Pandas', 'Data fits in one machine\'s memory (up to a few GB)', 'In-memory, single-node - faster and simpler than a cluster at this size', 'Python + Pandas'],
+    ['PySpark', 'Data exceeds one machine (tens of GB to PB)', 'Distributes work across a cluster; the driver plans, executors crunch', 'Python + PySpark'],
+    ['Spark + Delta/Iceberg', 'Big data that must persist as reliable tables', 'Distributed compute over a transactional lake format', 'Spark + Delta Lake'],
+    ['Spark Streaming / Flink', 'Data never stops arriving; seconds matter', 'Processes unbounded streams continuously, not bounded batches', 'Kafka + Spark Streaming'],
+    ['The trap', 'Spark for a gigabyte', 'A cluster spends more time coordinating than computing on small data', 'Right-size or waste'],
+  ]},
+  'batch-vs-stream': { cols: ['Batch', 'Streaming'], rows: [
+    ['Data shape', 'Bounded chunks on a schedule', 'Unbounded, processed as it arrives'],
+    ['Freshness', 'Minutes to hours', 'Seconds'],
+    ['Complexity & cost', 'Simple, cheap, easy to reprocess', 'Complex, always-on, harder to reason about'],
+    ['Typical stack', 'Airflow + Spark/SQL', 'Kafka + Spark Streaming or Flink'],
+    ['Choose it when', '"Fresher than nightly" - most real requirements', 'Seconds genuinely matter - fraud, live ops'],
+  ]},
+  'orchestration': { cols: ['Cron', 'An orchestrator (Airflow)'], rows: [
+    ['Unit', 'A command at a time', 'A DAG of tasks with dependencies'],
+    ['Ordering', 'You hope the timing lines up', 'Runs in dependency order, parallelizes what it can'],
+    ['Failure', 'Silent - it just did not run', 'Retries, alerts, and a visible failed task'],
+    ['History', 'Gone', 'Backfill re-runs any past window'],
+    ['The combo', 'crontab', 'Python + Airflow; Airflow + dbt for analytics pipelines'],
+  ]},
+  'cdc-ingestion': { cols: ['CDC (Kafka + Debezium)', 'ELT ingestion (Airbyte + Snowflake)'], rows: [
+    ['What it moves', 'Every change off a source DB\'s WAL', 'Bulk data from many sources, loaded raw'],
+    ['Latency', 'Low - a continuous change stream', 'Scheduled or frequent syncs'],
+    ['Source impact', 'Minimal - reads the log, not the tables', 'Periodic extract load on the source'],
+    ['Best for', 'Low-latency change capture off transactional stores', 'Syncing many sources into the warehouse'],
+    ['Both beat', 'Dual-writes from application code', 'The reflex that reconciles forever'],
+  ]},
+  'lakehouse-formats': { cols: ['Raw files in a bucket', 'Open table format (Delta / Iceberg)'], rows: [
+    ['Transactions', 'None - concurrent writes corrupt', 'ACID over the same files via a transaction log'],
+    ['Time travel', 'No history', 'Query or roll back to a past version'],
+    ['Schema', 'No enforcement - bad writes absorbed', 'Schema evolution and enforcement'],
+    ['Concurrent writes', 'Last-writer-corrupts', 'Safe, isolated concurrent writes'],
+    ['The combo', 'S3 alone', 'S3 + Apache Iceberg; Spark + Delta Lake'],
+  ]},
+  'analytics-engineering': { cols: ['Hand-run SQL', 'Analytics engineering (dbt)'], rows: [
+    ['Reproducible', 'No - ran once in a console', 'Versioned SQL models, re-runnable'],
+    ['Reviewed', 'No', 'Git pull requests - reviewed like code'],
+    ['Tested', 'You find out in the dashboard', 'Data tests run before it ships'],
+    ['Dependencies', 'Implicit and fragile', 'A model DAG dbt resolves and runs in order'],
+    ['The combo', 'A query someone wrote once', 'SQL + dbt, Git + dbt, Airflow + dbt'],
   ]},
   'oltp-olap': { cols: ['OLTP (row store)', 'OLAP (column store)'], rows: [
     ['Unit of work', 'One entity, all its fields', 'Few columns, a billion rows'],
