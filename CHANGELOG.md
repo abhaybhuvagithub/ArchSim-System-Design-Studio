@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.39.0 — 2026-09-03
+- 🔎 Capacity warnings now **reveal the component on the canvas** on hover — if the node a warning names is scrolled off-screen, hovering the warning pans the canvas to bring it into view (and glows it); if it is already visible, the view stays put. Wired on both the Needs-attention rows and the per-tier capacity rows
+- 💬 **Sharper capacity hints**: an over-capacity or bottleneck warning now states demand-vs-capacity in plain terms, keeps the p99-runaway physics, and adds what the fix buys — e.g. going to 4× would put it near 51%, back below the danger line
+
 ## 1.38.0 — 2026-09-03
 - 🔍 **Incident Mode → guided investigation**: instead of jumping straight to a root-cause guess, you now walk the evidence the way a senior does — metric → trace → log — revealing one signal at a time, and the diagnosis lineup stays **locked until you have looked at the evidence**. Investigation before conclusion: it teaches the method, applying the three-pillars observability concept, not just the answer
 

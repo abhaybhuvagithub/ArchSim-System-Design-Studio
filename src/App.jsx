@@ -455,6 +455,28 @@ export default function App() {
   }), [nodes, edges, rps, simOn, steps, chaosUsed, sim, cap, internalsViewed, wallUnderstood, cloud])
   const doneSteps = useMemo(() => LESSON.map(s => { try { return !!s.check(lessonCtx) } catch { return false } }), [lessonCtx])
 
+  // Bring a node into view when the user hovers a warning about it — but only
+  // if it is off-screen; if it is already visible, leave the view alone so the
+  // canvas does not lurch. Uses the live pan/zoom so the math matches what is drawn.
+  const revealNode = useCallback((id) => {
+    const el = svgRef.current
+    if (!id || !el) return
+    const n = nodes.find(x => x.id === id)
+    if (!n) return
+    setView(v => {
+      const r = el.getBoundingClientRect()
+      // node's screen-space box under the current transform
+      const sx = n.x * v.k + v.x, sy = n.y * v.k + v.y
+      const w = NODE_W * v.k, h = NODE_H * v.k
+      const M = 24 // margin: treat "nearly off-screen" as off-screen
+      const visible = sx >= M && sy >= M && sx + w <= r.width - M && sy + h <= r.height - M
+      if (visible) return v // already on screen — don't move
+      // pan so the node's centre sits at the viewport centre, keep zoom
+      const cx = n.x * v.k + w / 2, cy = n.y * v.k + h / 2
+      return { ...v, x: r.width / 2 - cx, y: r.height / 2 - cy }
+    })
+  }, [nodes])
+
   const fitView = useCallback(ns => {
     if (!ns?.length || !svgRef.current) return
     const r = svgRef.current.getBoundingClientRect()
@@ -1381,7 +1403,8 @@ export default function App() {
                   <div className="health-h">Needs attention ({health.length})</div>
                   {health.map(d => (
                     <div key={d.id} className={`diag ${d.level}`}
-                      onMouseEnter={() => setHover(d.id)} onMouseLeave={() => setHover(null)}>
+                      onMouseEnter={() => { setHover(d.id); revealNode(d.id) }} onMouseLeave={() => setHover(null)}
+                      title="Hover to find this component on the canvas">
                       <div className="diag-t">{d.icon} {d.title}</div>
                       <div className="diag-w">{d.why}</div>
                       <button className="btn quick" onClick={() => healFix(d)}>⚡ {d.fix.label}</button>
@@ -1393,7 +1416,8 @@ export default function App() {
                 const rowFault = faults.length && (r.util > 0.75 || r.down || (sim.stats[r.id]?.dropped || 0) > 0.5 || faults.some(f => f.targetId === r.id))
                   ? faultOnNode(faults, r.id) : null
                 return (
-                <div key={r.id} className="cap-row">
+                <div key={r.id} className="cap-row"
+                  onMouseEnter={() => { setHover(r.id); revealNode(r.id) }} onMouseLeave={() => setHover(null)}>
                   <div className="t">
                     <span>{r.label}{r.down && <span className="pill bad">DOWN</span>}</span>
                     <span style={{ color: utilColor(r.util) }}>{(r.util * 100).toFixed(0)}%</span>

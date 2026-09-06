@@ -59,8 +59,9 @@ export function diagnose(row, node, sim, fx = null, faults = []) {
       level: 'critical',
       icon: '🔴',
       title: `${row.label} is over capacity`,
-      why: `It is taking ${fmtRps(inRps)} against ${fmtRps(spec.cap * replicas * capMul)} of capacity across ${replicas} instance${replicas > 1 ? 's' : ''}. `
-        + `${shed > 0 ? `Roughly ${fmtRps(shed)} is being shed outright` : 'The queue never drains'}, and latency past 100% utilisation is unbounded — this is what a p99 blow-up looks like before the errors start.${chaosNote}`,
+      why: `Demand is ${fmtRps(inRps)} but capacity is only ${fmtRps(spec.cap * replicas * capMul)} (${replicas} instance${replicas > 1 ? 's' : ''} × ${fmtRps(spec.cap * capMul)} each). `
+        + `${shed > 0 ? `About ${fmtRps(shed)} of it is dropped outright right now` : 'The queue never drains'} — and past 100% the wait time runs away with no ceiling, so p99 explodes before you even see errors. `
+        + `Going to ${want}× would put it near ${Math.round(inRps / (spec.cap * want * capMul) * 100)}% — back below the danger line with headroom for a spike.${chaosNote}`,
       fix: { kind: 'scale', to: want, label: `Scale to ${want}× instances` },
     }
   }
@@ -70,8 +71,8 @@ export function diagnose(row, node, sim, fx = null, faults = []) {
       level: 'warn',
       icon: '🟠',
       title: `${row.label} is a bottleneck`,
-      why: `At ${(util * 100).toFixed(0)}% utilisation the queue is already the dominant part of its response time — the 1/(1−utilisation) curve means the next 10% of traffic costs far more latency than the last 10% did. `
-        + `p99 degrades here long before anything is dropped.${chaosNote}`,
+      why: `It is at ${(util * 100).toFixed(0)}% — the danger zone. Past ~70%, waiting-in-line becomes most of the response time (the 1/(1−util) curve), so the next 10% of traffic hurts latency far more than the last 10% did, and p99 climbs here long before anything is dropped. `
+        + `${want}× brings it to about ${Math.round(inRps / (spec.cap * want * capMul) * 100)}% — comfortably back under 70%.${chaosNote}`,
       fix: { kind: 'scale', to: want, label: `Scale to ${want}× instances` },
     }
   }

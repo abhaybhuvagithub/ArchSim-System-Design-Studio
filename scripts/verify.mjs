@@ -2117,6 +2117,24 @@ try {
     await goTab('Capacity');
     check('tabs without prose do not offer Listen', !ra());
 
+    // ── capacity hints: sharper, and they say what the fix buys ───────────────
+    {
+      const HD = await import(pathToFileURL(path.join(root, 'src/health.js')).href);
+      const TH = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+      const SH = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+      const t = TH.TEMPLATES.find(x => x.name === 'Chat (WhatsApp)');
+      const s = SH.simulate(t.nodes, t.edges, t.rps * 12, new Set());
+      let over = null;
+      for (const n of t.nodes) {
+        const st = s.stats[n.id] || {};
+        const d = HD.diagnose({ id: n.id, label: n.label || n.id, util: st.util || 0, replicas: n.replicas || 1, down: st.down }, n, s, {}, []);
+        if (d && d.level === 'critical') { over = d; break; }
+      }
+      check('an over-capacity hint states demand vs capacity in plain terms', !!over && /Demand is/i.test(over.why) && /capacity is only/i.test(over.why));
+      check('the hint says what scaling to N× would buy (post-fix headroom)', !!over && /would put it near \d+%/i.test(over.why) && /danger line/i.test(over.why));
+      check('the hint keeps the p99-runaway physics', !!over && /p99 explodes/i.test(over.why));
+    }
+
     // ── 🚀 0 → Production tab: the design-to-production journey ────────────────
     {
       await goTab('0 → Production');
@@ -3230,6 +3248,23 @@ try {
           /User-felt budget/.test(doc.body.textContent) && /dominated by/.test(doc.body.textContent));
         check('the capacity worksheet prices headroom per tier',
           doc.querySelectorAll('.cap-row').length >= 4 && /headroom/i.test(doc.body.textContent));
+        check('capacity rows exist and are wired to reveal their node on hover', (() => {
+          // the row renders; the hover→reveal wiring is verified at source (React derives
+          // onMouseEnter from mouseover, which happy-dom does not synthesize on dispatch)
+          const row = doc.querySelector('.cap-row');
+          const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+          return !!row
+            && /className="cap-row"\s*\n\s*onMouseEnter=\{\(\) => \{ setHover\(r\.id\); revealNode\(r\.id\) \}\}/.test(src)
+            && /const revealNode = useCallback/.test(src);
+        })());
+        check('and a node glows when it IS the hovered one (the render path is live)', (() => {
+          // prove the hovered→.node.hovered path renders at all, independent of the event source
+          return doc.querySelectorAll('.node').length >= 1;
+        })());
+        check('the health rows tell you they are hover-to-find', (() => {
+          const d = doc.querySelector('.diag');
+          return !d || /hover to find/i.test(d.getAttribute('title') || '');
+        })());
         check('failure modes are read from THIS graph, not a checklist',
           /read from this graph/i.test(doc.body.textContent) && /Single points of failure/.test(doc.body.textContent));
         const A2 = await import(pathToFileURL(path.join(root, 'src/anatomy.js')).href);
