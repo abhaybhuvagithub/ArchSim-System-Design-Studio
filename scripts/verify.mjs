@@ -3359,6 +3359,13 @@ try {
           // prove the hovered→.node.hovered path renders at all, independent of the event source
           return doc.querySelectorAll('.node').length >= 1;
         })());
+        check('the hovered glow pulses (blinks) so a report-row reveal is unmissable', (() => {
+          // happy-dom has no animation engine, so assert the CSS that drives the pulse
+          const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+          return /@keyframes node-glow-pulse/.test(css)
+            && /\.node-glow\s*\{[^}]*animation:\s*node-glow-pulse/.test(css)
+            && /prefers-reduced-motion[^}]*\.node-glow\s*\{[^}]*animation:\s*none/.test(css);
+        })());
         check('the health rows tell you they are hover-to-find', (() => {
           const d = doc.querySelector('.diag');
           return !d || /hover to find/i.test(d.getAttribute('title') || '');

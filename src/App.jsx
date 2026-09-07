@@ -1499,7 +1499,7 @@ function Node({ n, sim, simOn, t, cloud, selected, hovered, dimmed, onDown, onPo
     <g className={`node ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`} transform={`translate(${n.x},${n.y})`}
       onPointerDown={e => onDown(e, n)} onMouseEnter={onEnter} onMouseLeave={onLeave}
       style={{ cursor: 'move', opacity: dimmed ? 0.32 : 1, transition: 'opacity .12s' }}>
-      {hovered && <rect x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke={t.glow} strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
+      {hovered && <rect className="node-glow" x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="13" fill="none" stroke={t.glow} strokeWidth="2" opacity="0.9" filter="url(#glow)" />}
       <rect className="body" width={NODE_W} height={NODE_H} rx="10"
         fill={isDown ? t.downFill : hovered ? t.nodeFillHover : t.nodeFill}
         stroke={isDown ? t.downStroke : hovered ? t.nodeStrokeHover : color}

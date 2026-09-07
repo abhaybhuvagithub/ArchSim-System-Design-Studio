@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.42.2 — 2026-09-07
+- ✨ The node highlight now **pulses (blinks)** when you hover a Capacity or Improve report row — a static glow was easy to miss on a busy canvas; the pulse makes the component the warning is about unmistakable. Respects reduced-motion (steady glow, no blink)
+
 ## 1.42.1 — 2026-09-07
 - 🔍 The **Internals** button (on a selected component) is now visually highlighted with the accent colour — a dozen Mastery drills say "open the 🔍 internals", and as a plain faint button it was easy to miss. Now it stands out as the thing to click
 

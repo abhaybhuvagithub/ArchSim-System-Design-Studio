@@ -1990,3 +1990,11 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 .internals-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ── hovered node pulses, so a Capacity/Improve row reveal is unmissable ── */
+@keyframes node-glow-pulse {
+  0%, 100% { opacity: 0.95; stroke-width: 2.5; }
+  50%      { opacity: 0.30; stroke-width: 1.5; }
+}
+.node-glow { animation: node-glow-pulse 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) { .node-glow { animation: none; opacity: 0.95; } }
