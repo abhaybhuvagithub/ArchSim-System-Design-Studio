@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.41.2 — 2026-09-07
+- 🖥️ Fixed the layout collapsing to drawer buttons on desktop browsers (Edge/Opera/Brave, or with browser zoom): the compact breakpoint dropped from 1100px to 860px, so a normal desktop window keeps both the Components and Analysis panels docked. Also lifted the View menu (Arrange/Fit/Step numbers…) above the canvas so it can never render hidden behind it
+
 ## 1.41.1 — 2026-09-03
 - 📐 Widened the Analysis panel default (280→440px) so the first tab row includes Brief, HLD, LLD, Capacity and **Improve** — Improve no longer wraps to a second row on first open. Still fully resizable/maximisable as before
 

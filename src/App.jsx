@@ -174,7 +174,7 @@ export default function App() {
   const [detailsNode, setDetailsNode] = useState(null)  // node to show internals for
   const [internalsViewed, setInternalsViewed] = useState(false)  // whether user has viewed component internals
   const [wallUnderstood, setWallUnderstood] = useState(false)    // whether user has scrolled to wall section
-  const compact = vw < 1100        // tablet and below: panels become drawers
+  const compact = vw < 860         // only genuinely small windows/tablets get drawers; a normal desktop keeps both panels
   const mobile = vw < 700
   const resizeRef = useRef(null)
   const cloudInfo = cloudById(cloud)

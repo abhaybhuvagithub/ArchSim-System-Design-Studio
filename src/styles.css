@@ -131,7 +131,7 @@ body {
   /* Static, this scrolled away the moment a maximised panel made the page
      taller than the window — which is exactly when you still need the
      template picker and Simulate. */
-  position: sticky; top: 0; z-index: 40;
+  position: sticky; top: 0; z-index: 50;
   background: var(--bg); border-bottom: 1px solid var(--border);
 }
 .logo { font-weight: 600; font-size: 17.6px; letter-spacing: -.4px; margin-right: 6px; }
@@ -1098,7 +1098,7 @@ select.btn { appearance: auto; }
 .menu { position: relative; display: inline-flex; }
 .menu-caret { opacity: .5; font-size: 12px; }
 .menu-pop {
-  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 120;
   min-width: 232px; max-height: 70vh; overflow-y: auto; padding: 5px;
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
   box-shadow: 0 16px 42px rgba(0,0,0,.24);

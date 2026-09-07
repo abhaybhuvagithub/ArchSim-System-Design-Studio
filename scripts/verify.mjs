@@ -19,9 +19,9 @@ const log = (...a) => OUT.push(a.join(' '));
 const results = [];
 const check = (n, ok) => results.push([n, !!ok]);
 
-// happy-dom defaults to 1024px, which is below the app's 1100px breakpoint — so
-// without this the whole suite silently exercises the tablet drawer layout and
-// never sees the docked panels, splitters or their controls at all.
+// happy-dom defaults to 1024px; we set 1440 so the suite exercises the full
+// docked two-panel desktop layout (splitters, panel controls) rather than the
+// small-window drawer layout, which only kicks in below the app's 860px breakpoint.
 const win = new Window({ url: 'http://localhost/', width: 1440, height: 900 });
 const doc = win.document;
 doc.body.innerHTML = '<div id="root"></div>';
@@ -2806,7 +2806,24 @@ try {
     check('neither panel starts maximised',
       !palette()?.className.includes('maxed') && !side()?.className.includes('maxed'));
 
-    // the analysis panel defaults wide enough that the early tabs — through
+    // desktop browsers (Edge/Opera/Brave at normal widths, or with browser zoom)
+    // must NOT collapse into the drawer layout, and the View menu must float
+    // above the canvas — the two things that made those browsers show panels as
+    // buttons with the menu hidden behind the canvas.
+    {
+      const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+      const css = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+      const bp = src.match(/const compact = vw < (\d+)/);
+      check('the drawer layout only triggers on genuinely small windows (< ~900px)', !!bp && Number(bp[1]) <= 900);
+      // at the harness's 1440 width the app is NOT compact — both docked panels render
+      check('a desktop-width window keeps both docked panels, not drawers',
+        !doc.querySelector('.app.compact') && !!doc.querySelector('.palette') && !!doc.querySelector('.side') && !doc.querySelector('.palette.drawer'));
+      // the View menu popover outranks the canvas in z-index so it can never hide behind it
+      const menuZ = (css.match(/\.menu-pop \{[^}]*z-index:\s*(\d+)/) || [])[1];
+      check('the View menu floats above the canvas (z-index outranks it)', Number(menuZ) >= 100);
+    }
+
+        // the analysis panel defaults wide enough that the early tabs — through
     // Improve — sit on the first row rather than wrapping. happy-dom has no
     // real layout engine, so we assert the default WIDTH that guarantees it
     // (the first-row buttons Brief/HLD/LLD/Capacity/Improve need ~430px+).
