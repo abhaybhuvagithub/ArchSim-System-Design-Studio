@@ -2386,9 +2386,9 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all twenty-one areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 21 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 21);
+      check('the mastery hub renders all twenty-two areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 22 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 22);
       // full-page (focus) view is a PANEL-level control now: one toggle in the panel
       // bar that works for every analysis tab, not just Mastery.
       {
@@ -2410,7 +2410,28 @@ try {
       }
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the obs area teaches the three pillars — metrics/logs/traces + one pane of glass', await (async () => {
+      check('the Frameworks area teaches the thinking tools (C4, 4+1, PACELC, 12-factor, DDD) not buzzwords', await (async () => {
+        const MF = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const fw = MF.MASTERY.find(a => a.id === 'frameworks');
+        if (!fw || fw.items.length !== 5) return false;
+        const ids = fw.items.map(x => x.id);
+        const need = ['c4-model', 'four-plus-one', 'pacelc', 'twelve-factor', 'ddd-bounded-context'];
+        const pac = MF.MASTERY_CMP['pacelc'];
+        return need.every(id => ids.includes(id))
+          && !!pac && /the E, not the P/i.test(pac.rows.map(r => r.join(' ')).join(' '));  // PACELC's real lesson
+      })());
+      check('Frameworks does not duplicate the existing CAP concept', await (async () => {
+        const MF2 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        // CAP stays in rw; frameworks adds PACELC as the deeper cut, not a second CAP
+        const capCount = MF2.MASTERY.flatMap(a => a.items).filter(x => x.id === 'cap').length;
+        return capCount === 1 && MF2.MASTERY.find(a => a.id === 'frameworks').items.some(x => x.id === 'pacelc');
+      })());
+      check('the AI area teaches single-vs-multi-agent as a durable pattern (not a tool list)', await (async () => {
+        const MA = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const it = MA.MASTERY.find(a => a.id === 'llm-prod')?.items.find(x => x.id === 'agent-architecture');
+        return !!it && /single agent/i.test(it.d) && /distributed systems/i.test(it.d) && !!MA.MASTERY_CMP['agent-architecture'];
+      })());
+            check('the obs area teaches the three pillars — metrics/logs/traces + one pane of glass', await (async () => {
         const MO = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const it = MO.MASTERY.find(a => a.id === 'obs-sec')?.items.find(x => x.id === 'obs-stack');
         if (!it) return false;
@@ -4450,7 +4471,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about', 'hld', 'lld', 'brief']);
-      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE, IAM, data-eng, eng-lead', M.MASTERY.length === 21);
+      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE, IAM, data-eng, eng-lead, frameworks', M.MASTERY.length === 22);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));

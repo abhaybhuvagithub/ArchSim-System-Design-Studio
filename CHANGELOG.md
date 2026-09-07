@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.42.0 — 2026-09-07
+- 📐 Mastery gains its 22nd area: **Frameworks Experts Think With** — the frameworks a staff engineer reasons *with*, not tools they install: the C4 model (four zoom levels, one audience each), the 4+1 view model (five lenses that end review arguments), PACELC (the daily consistency-vs-latency choice CAP ignored), the Twelve-Factor App (the preconditions for horizontal scale), and DDD bounded contexts (where to actually cut service boundaries). Each a ⇄ table.
+- 🤖 AI patterns: a durable **single-agent vs multi-agent** concept — when a crew of agents earns its cost and when it is just distributed-systems pain with an LLM attached. (No throwaway tool list — the studio teaches the patterns beneath the tools.)
+
 ## 1.41.2 — 2026-09-07
 - 🖥️ Fixed the layout collapsing to drawer buttons on desktop browsers (Edge/Opera/Brave, or with browser zoom): the compact breakpoint dropped from 1100px to 860px, so a normal desktop window keeps both the Components and Analysis panels docked. Also lifted the View menu (Arrange/Fit/Step numbers…) above the canvas so it can never render hidden behind it
 
