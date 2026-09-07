@@ -1982,3 +1982,11 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .defend-mine { margin-bottom: 8px; font-size: 12.5px; }
 .defend-mine summary { cursor: pointer; opacity: .8; }
 .defend-mine blockquote { margin: 6px 0 0; padding: 6px 10px; border-left: 3px solid var(--border); font-style: italic; opacity: .85; }
+
+/* ── 🔍 Internals button — the drills point at it, so it must stand out ── */
+.internals-btn {
+  font-size: 12.5px; font-weight: 600;
+  border-color: var(--accent); color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.internals-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }

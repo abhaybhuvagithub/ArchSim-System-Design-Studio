@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.42.1 — 2026-09-07
+- 🔍 The **Internals** button (on a selected component) is now visually highlighted with the accent colour — a dozen Mastery drills say "open the 🔍 internals", and as a plain faint button it was easy to miss. Now it stands out as the thing to click
+
 ## 1.42.0 — 2026-09-07
 - 📐 Mastery gains its 22nd area: **Frameworks Experts Think With** — the frameworks a staff engineer reasons *with*, not tools they install: the C4 model (four zoom levels, one audience each), the 4+1 view model (five lenses that end review arguments), PACELC (the daily consistency-vs-latency choice CAP ignored), the Twelve-Factor App (the preconditions for horizontal scale), and DDD bounded contexts (where to actually cut service boundaries). Each a ⇄ table.
 - 🤖 AI patterns: a durable **single-agent vs multi-agent** concept — when a crew of agents earns its cost and when it is just distributed-systems pain with an LLM attached. (No throwaway tool list — the studio teaches the patterns beneath the tools.)

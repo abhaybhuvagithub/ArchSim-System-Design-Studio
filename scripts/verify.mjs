@@ -2217,6 +2217,7 @@ try {
       await wait(150);
       const detailsBtn = byText('.btn', '🔍 Internals');
       check('selecting a node offers the 🔍 Internals button', !!detailsBtn);
+      check('the 🔍 Internals button is visually highlighted (drills point at it)', !!detailsBtn && detailsBtn.classList.contains('internals-btn'));
       click(detailsBtn);
       await wait(200);
       const modal = doc.querySelector('.modal-content');

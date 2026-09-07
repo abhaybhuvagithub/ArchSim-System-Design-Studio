@@ -3198,7 +3198,7 @@ function Inspector({ n, sim, setNodes, cloud, cloudMult = 1, onShowDetails }) {
     <section>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <h3 style={{ margin: 0 }}>{spec.glyph} {spec.name}</h3>
-        {onShowDetails && <button className="btn" style={{ fontSize: 12 }} onClick={() => showInternals(n)}>🔍 Internals</button>}
+        {onShowDetails && <button className="btn internals-btn" onClick={() => showInternals(n)}>🔍 Internals</button>}
       </div>
       <div className="muted" style={{ marginBottom: 10 }}>{spec.desc}</div>
       {map && (
