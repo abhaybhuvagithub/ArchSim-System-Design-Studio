@@ -2806,6 +2806,18 @@ try {
     check('neither panel starts maximised',
       !palette()?.className.includes('maxed') && !side()?.className.includes('maxed'));
 
+    // the analysis panel defaults wide enough that the early tabs — through
+    // Improve — sit on the first row rather than wrapping. happy-dom has no
+    // real layout engine, so we assert the default WIDTH that guarantees it
+    // (the first-row buttons Brief/HLD/LLD/Capacity/Improve need ~430px+).
+    {
+      const w = parseInt((side().getAttribute('style') || '').match(/width:\s*(\d+)/)?.[1] || '0', 10);
+      check('the analysis panel defaults wide (≥430px) so Improve is on the first tab row', w >= 430);
+      // and Improve is present in the tab bar to land there
+      check('the Improve tab button exists in the analysis tab bar',
+        [...side().querySelectorAll('.tabs button')].some(b => /Improve/.test(b.textContent)));
+    }
+
     // maximise the components panel
     click(maxBtns[0]);
     await wait(120);

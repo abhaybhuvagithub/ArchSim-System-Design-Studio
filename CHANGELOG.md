@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.41.1 — 2026-09-03
+- 📐 Widened the Analysis panel default (280→440px) so the first tab row includes Brief, HLD, LLD, Capacity and **Improve** — Improve no longer wraps to a second row on first open. Still fully resizable/maximisable as before
+
 ## 1.41.0 — 2026-09-03
 - 🥊 **Defend It mode** in Mastery: a toggle that hides every concept's answer behind its 🎤 interviewer question, with a scratch box to commit your own answer before revealing the real one to compare against. Active recall — producing the answer before you see it — is what turns hours of reading into the ability to defend a design in a room. Off by default (browsing reads normally); the choice persists
 

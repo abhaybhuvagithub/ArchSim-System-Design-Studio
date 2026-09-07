@@ -70,7 +70,7 @@ import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
 // Default docked widths, so "restore" has something definite to go back to.
-const PANEL_DEFAULT = { left: 220, right: 280 }
+const PANEL_DEFAULT = { left: 220, right: 440 }
 // Text box inside a node: starts after the glyph, stops short of the right
 // edge. The replica badge sits on the corner above the label's cap height, so
 // the title gets the full width.
