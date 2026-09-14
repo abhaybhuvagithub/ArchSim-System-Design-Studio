@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.43.0 — 2026-09-07
+- 📖 About now opens with **why system design is trade-offs** — the thesis the whole studio is built on (a system works for 100 users and collapses at scale; good architecture is the right decisions for the workload, not the best tech; every improvement buys a new trade-off; the goal is to keep sailing through the storm, not remove it) — before the what-this-is mechanics. The eight ideas it names are each already a concept here
+
 ## 1.42.2 — 2026-09-07
 - ✨ The node highlight now **pulses (blinks)** when you hover a Capacity or Improve report row — a static glow was easy to miss on a busy canvas; the pulse makes the component the warning is about unmistakable. Respects reduced-motion (steady glow, no blink)
 

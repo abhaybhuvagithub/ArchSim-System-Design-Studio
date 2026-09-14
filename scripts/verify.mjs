@@ -4035,9 +4035,13 @@ try {
       const aboutSrc = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
       check('the About page states the model-honesty contract',
         aboutSrc.includes('How honest are the numbers?') && aboutSrc.includes('flight simulator'));
-      check('About opens with "What this is" — the elevator pitch before the caveats', (() => {
-        const first = aboutSrc.match(/title: '([^']+)'/);
-        return !!first && first[1] === 'What this is';
+      check('About opens with the trade-offs thesis, then "What this is" — the why before the what', (() => {
+        const titles = [...aboutSrc.matchAll(/title: '([^']+)'/g)].map(m => m[1]);
+        return titles[0] === 'Why system design is trade-offs' && titles[1] === 'What this is';
+      })());
+      check('the thesis names the trade-offs and the storm metaphor (the studio\'s reason to exist)', (() => {
+        return /trade-offs? you choose on purpose/i.test(aboutSrc) && /sailing through one/i.test(aboutSrc)
+          && /collapse when traffic grows/i.test(aboutSrc);
       })());
     }
 

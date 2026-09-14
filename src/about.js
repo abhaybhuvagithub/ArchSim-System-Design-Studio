@@ -16,6 +16,17 @@ const tips = TIPS.reduce((n, g) => n + g.items.length, 0)
 
 export const ABOUT = [
   {
+    title: 'Why system design is trade-offs',
+    lines: [
+      'A system can run perfectly for a hundred users and still collapse when traffic grows, latency spikes, a database goes hot, or one dependency fails. That gap is the whole subject.',
+      'Good architecture is rarely about picking the "best" technology. It is about the right decisions for THIS workload, THIS scale, THIS reliability target, and THIS user experience \u2014 and the same design that is right at one scale is wrong at another.',
+      'A strong design usually combines a handful of ideas \u2014 load balancers to spread traffic, caching and CDNs to cut latency, queues to absorb spikes, sharding to scale data, replication for availability, autoscaling for changing demand, failover to survive a component dying, and observability to see what production is actually doing. Every one of those is a concept in this studio.',
+      'But every improvement buys a new problem. More replicas raise availability and complicate consistency. Sharding scales writes and makes data harder to reach. Caching cuts latency and creates invalidation. Queues smooth bursts and add eventual processing and backpressure. There is no free lever \u2014 only trade-offs you choose on purpose.',
+      'So the goal is never the most elaborate architecture. It is a system that stays reliable, fast, affordable and maintainable as usage grows, while preparing for the failures that eventually arrive. That is what this tool exists to let you practise: balancing scale, reliability, performance, cost and simplicity, and defending the balance you struck.',
+      'Good architecture does not remove every storm. It keeps the system sailing through one.',
+    ],
+  },
+  {
     title: 'What this is',
     lines: [
       '**ArchSim is a system design studio that runs your architecture instead of just drawing it.**',
