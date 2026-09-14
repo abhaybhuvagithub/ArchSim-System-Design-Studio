@@ -40,4 +40,6 @@ node scripts/verify.mjs   # the full 971-check suite against the built bundle
 
 **[archsim-gate](https://github.com/abhaybhuvagithub/archsim-gate)** — the CI half of this thesis: fail the PR when the architecture can not keep its promises. Same physics, pointed at your Terraform plan, with the cheapest priced repair in the comment.
 
+**[bharat-pay-core](https://github.com/abhaybhuvagithub/bharat-pay-core)** — an account-to-account instant payment core for India: an immutable double-entry ledger, deterministic idempotency (no double-debit), offline-tolerant capture, reversals as new legs, per-bank circuit breakers and programmable mandates — every invariant enforced in code and proven by tests. The architecture of systems like this (UPI switch, card auth, merchant POS) is taught in this studio.
+
 
