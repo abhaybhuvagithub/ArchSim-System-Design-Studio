@@ -1998,3 +1998,6 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 }
 .node-glow { animation: node-glow-pulse 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: reduce) { .node-glow { animation: none; opacity: 0.95; } }
+
+/* ── Defend It discoverability nudge (shown when the mode is off) ── */
+.ms-defend-nudge { font-size: 12px; opacity: .65; font-style: italic; }

@@ -1957,9 +1957,12 @@ function MasteryTab({ onGo }) {
       <div className="ms-controls">
         <label className="ms-opt"><input type="checkbox" checked={ui.hideMastered}
           onChange={e => setPref({ hideMastered: e.target.checked })} /> ✅ Hide mastered</label>
-        <label className="ms-opt ms-defend-toggle"><input type="checkbox" checked={ui.defendIt}
+        <label className="ms-opt ms-defend-toggle" title="Hide every answer behind its question — produce it yourself, then reveal. The single best way to actually learn this.">
+          <input type="checkbox" checked={ui.defendIt}
           onChange={e => setPref({ defendIt: e.target.checked })} /> 🥊 Defend It mode</label>
-        {ui.defendIt && <span className="ms-defend-hint muted">Answers are hidden — read the 🎤 question, commit your answer, then reveal. Recall beats re-reading.</span>}
+        {ui.defendIt
+          ? <span className="ms-defend-hint muted">Answers are hidden — read the 🎤 question, commit your answer, then reveal. Recall beats re-reading.</span>
+          : <span className="ms-defend-hint ms-defend-nudge muted">← the highest-return way to study: produce the answer before you see it</span>}
       </div>
       <TracksStrip done={done} onGo={onGo} onArea={(aid) => { const el = document.querySelector(`[data-ms-area="${aid}"]`); el?.scrollIntoView?.({ block: 'start' }) }} />
       <JDPlanner onTemplate={(name) => onGo({ tpl: name, tab: 'breakdown' })} onConcept={(id) => { const el = document.querySelector(`[data-ms-item="${id}"]`); el?.scrollIntoView?.({ block: 'center' }); el?.classList.add('ms-pulse'); setTimeout(() => el?.classList.remove('ms-pulse'), 1600) }} />

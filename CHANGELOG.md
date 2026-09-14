@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.44.0 — 2026-09-07
+- 🥊 Made **Defend It discoverable** — the active-recall mode was a hidden toggle nobody was told about, so learners browsed answers passively and never found the one feature that turns reading into the ability to defend a design. The guided tour now points to it as the highest-return way to study, and a nudge beside the toggle invites you to switch it on when it is off
+
 ## 1.43.0 — 2026-09-07
 - 📖 About now opens with **why system design is trade-offs** — the thesis the whole studio is built on (a system works for 100 users and collapses at scale; good architecture is the right decisions for the workload, not the best tech; every improvement buys a new trade-off; the goal is to keep sailing through the storm, not remove it) — before the what-this-is mechanics. The eight ideas it names are each already a concept here
 

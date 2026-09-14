@@ -2655,6 +2655,16 @@ try {
         ms().querySelectorAll('.ms-controls .btn').length === 0 &&
         ms().querySelectorAll('.ms-controls .ms-opt').length === 2);
 
+        // Defend It must be DISCOVERABLE — the tour points at it, and a nudge shows when it's off
+        check('the tour tells learners to use Defend It (active recall)', await (async () => {
+          const TT = await import(pathToFileURL(path.join(root, 'src/tour.js')).href);
+          const s = TT.TOUR_STEPS.find(x => x.id === 'mastery');
+          return !!s && /Defend It/.test(s.body) && /produce/i.test(s.body);
+        })());
+        check('when Defend It is off, a nudge invites you to turn it on', (() => {
+          // off by default → the discoverability nudge is visible
+          return !!doc.querySelector('.ms-defend-nudge') && /highest-return way to study/i.test(doc.body.textContent);
+        })());
       // ── 🥊 Defend It: active recall — the answer hides until you commit ────────
       {
         check('by default (Defend It off) answers show directly', [...ms().querySelectorAll('.ms-item')].every(it => !!it.querySelector('.ms-d')) && !doc.querySelector('.defend-gate'));
