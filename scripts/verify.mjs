@@ -2411,7 +2411,22 @@ try {
       }
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the Capacity & Cost area teaches utilization-vs-allocation, packing, FinOps, MFU', await (async () => {
+      check('the envelope area teaches the bottleneck EQUATIONS — Little\'s Law and LLM inference math', await (async () => {
+        const ME = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const en = ME.MASTERY.find(a => a.id === 'envelope');
+        const ll = en.items.find(x => x.id === 'littles-law');
+        const li = en.items.find(x => x.id === 'llm-inference-math');
+        if (!ll || !li) return false;
+        return /L = /.test(ll.d) && /\u03bb/.test(ll.d) && /1 \/ \(\u03bc/.test(ll.d)  // Little's Law + M/M/1
+          && /prefill/i.test(li.d) && /decode/i.test(li.d) && /memory[- ]bandwidth/i.test(li.d) && /KV/i.test(li.d)  // inference math
+          && !!ME.MASTERY_CMP['littles-law'] && !!ME.MASTERY_CMP['llm-inference-math'];
+      })());
+      check('the inference-math concept makes the compute-vs-bandwidth point (not "add a GPU")', await (async () => {
+        const ME2 = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const li = ME2.MASTERY.find(a => a.id === 'envelope').items.find(x => x.id === 'llm-inference-math');
+        return /not 'add a GPU'|barely helps/i.test(li.d) && /bandwidth[- ]bound/i.test(li.d);
+      })());
+            check('the Capacity & Cost area teaches utilization-vs-allocation, packing, FinOps, MFU', await (async () => {
         const MC = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const ce = MC.MASTERY.find(a => a.id === 'capacity-eng');
         if (!ce || ce.items.length !== 5) return false;

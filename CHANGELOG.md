@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.47.0 — 2026-09-07
+- 🧮 Two equation-bearing concepts in the back-of-envelope area (the studio's first with real formulas): **Little's Law** (L = \u03bb \u00d7 W — the master equation of every queue — plus the M/M/1 wait W = 1/(\u03bc\u2212\u03bb) and why p99 explodes as \u03c1\u21921), and **LLM inference math** (prefill is compute-bound and sets TTFT; decode is memory-bandwidth-bound so throughput \u2248 bandwidth/bytes-per-token; the KV-cache memory equation; and why batching trades throughput for latency — the answer to a slow LLM endpoint is naming the phase and the bound, not "add a GPU"). +2 acronyms: TPOT, FLOPS
+
 ## 1.46.0 — 2026-09-07
 - 🤖 New GenAI template **Agent Platform (Durable Execution)** — the production infrastructure to run autonomous agents (distinct from the studio's agent-workflow templates): a durable orchestrator that journals every step so a crash resumes with exactly-once effects (an agent must not re-send an email after a crash), a permissioned MCP-style tool gateway (the agent requests, the gateway decides what it may run), sandboxed code execution, human-in-the-loop gates on irreversible actions that the durable engine waits on for days, a budget/policy governor enforced before a run spends, and episodic + semantic memory with full trace/replay. Wall: autonomy scales, but the guarantees that make it safe are the ceiling. +3 acronyms: MCP, ReAct, HITL
 
