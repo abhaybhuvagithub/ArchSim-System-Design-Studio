@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.45.0 — 2026-09-07
+- 💰 Mastery gains its 23rd area: **Capacity & Cost Engineering (FinOps)** — the discipline of running large, expensive compute fleets efficiently: utilization vs allocation (allocated is not used — the biggest waste line), capacity planning (committed base + on-demand burst), packing & fragmentation (why a 60%-full cluster can't place a big job), multi-cloud cost normalization (making three billing formats comparable), and efficiency baselines (MFU/goodput — is a workload using the hardware it holds?). Each a ⇄ table. +4 acronyms: FinOps, MFU, DCGM, TCO
+
 ## 1.44.0 — 2026-09-07
 - 🥊 Made **Defend It discoverable** — the active-recall mode was a hidden toggle nobody was told about, so learners browsed answers passively and never found the one feature that turns reading into the ability to defend a design. The guided tour now points to it as the highest-return way to study, and a nudge beside the toggle invites you to switch it on when it is off
 

@@ -2387,9 +2387,9 @@ try {
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');
       const ms = () => doc.querySelector('.mastery');
-      check('the mastery hub renders all twenty-two areas with a progress bar',
-        ms().querySelectorAll('.ms-area').length === 22 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
-      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 22);
+      check('the mastery hub renders all twenty-three areas with a progress bar',
+        ms().querySelectorAll('.ms-area').length === 23 && !!ms().querySelector('.ms-fill') && /0 of \d+ mastered/.test(ms().textContent));
+      check('every area shows its 🚩 red flag', ms().querySelectorAll('.ms-flag').length === 23);
       // full-page (focus) view is a PANEL-level control now: one toggle in the panel
       // bar that works for every analysis tab, not just Mastery.
       {
@@ -2411,7 +2411,17 @@ try {
       }
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the Frameworks area teaches the thinking tools (C4, 4+1, PACELC, 12-factor, DDD) not buzzwords', await (async () => {
+      check('the Capacity & Cost area teaches utilization-vs-allocation, packing, FinOps, MFU', await (async () => {
+        const MC = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const ce = MC.MASTERY.find(a => a.id === 'capacity-eng');
+        if (!ce || ce.items.length !== 5) return false;
+        const need = ['utilization-vs-allocation', 'capacity-planning', 'packing-fragmentation', 'cloud-cost-normalization', 'efficiency-baselines'];
+        const uva = MC.MASTERY_CMP['utilization-vs-allocation'];
+        return need.every(id => ce.items.map(x => x.id).includes(id))
+          && !!uva && /vanity metric/i.test(uva.rows.map(r => r.join(' ')).join(' '))  // the allocation-is-not-utilization lesson
+          && /allocated is not used/i.test(ce.flag);
+      })());
+            check('the Frameworks area teaches the thinking tools (C4, 4+1, PACELC, 12-factor, DDD) not buzzwords', await (async () => {
         const MF = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const fw = MF.MASTERY.find(a => a.id === 'frameworks');
         if (!fw || fw.items.length !== 5) return false;
@@ -4493,7 +4503,7 @@ try {
       const T5 = (await import(pathToFileURL(path.join(root, 'src/templates.js')).href)).TEMPLATES;
       const names = new Set(T5.map(t => t.name));
       const validTabs = new Set(['capacity', 'breakdown', 'scale', 'chaos', 'assist', 'roi', 'slo', 'acr', 'improve', 'learn', 'interview', 'cost', 'code', 'compare', 'explain', 'trips', 'about', 'hld', 'lld', 'brief']);
-      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE, IAM, data-eng, eng-lead, frameworks', M.MASTERY.length === 22);
+      check('the curriculum covers the seventeen areas — canonical, arithmetic, production LLM drills, deploy & migrate, networking, testing, analytics, FDE, IAM, data-eng, eng-lead, frameworks, capacity-eng', M.MASTERY.length === 23);
       check('every area carries its one-line red flag', M.MASTERY.every(a => (a.flag || '').length >= 40));
       check('every concept outside the LLM drills carries its interviewer phrasing (the question in costume)',
         M.MASTERY.filter(a => a.id !== 'llm-prod').every(a => a.items.every(x => (x.asks || '').length >= 30)));
