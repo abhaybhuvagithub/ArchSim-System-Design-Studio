@@ -2078,4 +2078,19 @@ T('Billing & Revenue Platform', 'Meter usage nobody can dispute, rate it, invoic
     'The invoice is a state machine - draft to finalized to sent to paid, or the collections branch sent to overdue to dunning to write-off - and finalized is the point of no return: a finalized invoice is immutable, and any change after it is a credit or debit note, never an edit',
     'Money billed is not money earned: revenue recognition spreads an annual contract across the months it is delivered (deferred revenue draining to earned), so the general ledger tells the auditor the truth even when cash arrived all at once up front',
   ], 'Unicorns · USA'),
+T('Agent Platform (Durable Execution)', 'The infrastructure to run autonomous agents in production: a step survives a crash, tools are permissioned, humans approve the dangerous ones, and no agent loops the budget away', 2000, [
+    ['u', 'client', 'Users & Triggers', 40, 240], ['gw', 'gateway', 'Agent API Gateway', 180, 240, 4],
+    ['orch', 'agentgraph', 'Durable Orchestrator (workflow engine)', 340, 240, 5], ['plan', 'llm', 'Planner / Reasoner (LLM)', 500, 130, 10],
+    ['state', 'sql', 'Workflow State & Event History', 340, 400, 3], ['guard', 'guard', 'Policy & Budget Governor', 500, 350, 3],
+    ['toolgw', 'micro', 'Tool Gateway (MCP, permissioned)', 660, 240, 5], ['tools', 'app', 'External Tools & APIs', 820, 160, 5],
+    ['hitl', 'app', 'Human Approval Queue', 660, 400, 3], ['mem', 'vector', 'Agent Memory (episodic + semantic)', 500, 470, 3],
+    ['sandbox', 'worker', 'Code Sandbox (isolated exec)', 820, 300, 4], ['trace', 'otel', 'Traces, Tokens & Replay', 820, 440, 3],
+    ['queue', 'queue', 'Task Queue', 180, 400, 3],
+  ], [['u','gw'],['gw','orch'],['orch','plan'],['orch','state'],['orch','guard'],['orch','toolgw'],['toolgw','tools'],['toolgw','sandbox'],['orch','hitl'],['plan','mem'],['orch','trace'],['gw','queue'],['queue','orch']], [
+    'The orchestrator is a DURABLE workflow engine, not a while-loop: every step - a plan, a tool call, a wait for a human - is journaled to an event history, so if the process crashes mid-task it resumes from the last completed step instead of restarting or, worse, repeating a side-effecting action; an agent that re-sends an email after a crash is a production incident',
+    'Every tool call goes through a permissioned gateway (MCP-style), never directly: the agent may REQUEST any tool, but the gateway decides what it is ALLOWED to run, with what arguments, on whose behalf - because an autonomous agent with unmediated access to your APIs is an autonomous way to cause damage',
+    'The dangerous actions stop for a human: spending money, deleting data, sending an external message pause at an approval queue, and the durable engine simply waits - for minutes or days - then continues exactly where it left off when the human clicks approve, because full autonomy on irreversible actions is a bug, not a feature',
+    'A budget governor bounds every run before a token is spent: a step ceiling, a token/cost cap, and a wall-clock timeout, so a reasoning loop that goes sideways is killed by policy rather than discovered on the bill - an agent that can spend is an agent that must be bounded',
+    'Memory is two systems, not a bigger prompt: episodic memory (what happened in past runs, retrievable) and semantic memory (durable facts and learned procedures), so the agent improves across sessions instead of starting blank every time - and every run is fully traced and replayable, because when no human watched the agent act, the trace is the only way to trust or debug it',
+  ], 'GenAI'),
 ]

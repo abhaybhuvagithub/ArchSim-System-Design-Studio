@@ -542,4 +542,22 @@ export default {
   wall: { t: 'The bottleneck is reconciliation, not throughput', d: 'Ingesting more usage is a partitioning problem you can always throw hardware at; the real ceiling at scale is proving that four systems still agree - that every usage event became a line on an invoice, every invoice a payment or a write-off, and every recognized dollar a journal entry the GL balances. That reconciliation is exactly-once accounting across a firehose, and it is unforgiving: a dropped or double-counted event is not a latency blip, it is a wrong number in a customer\'s bill or a company\'s financial statement. The honest design treats the usage log as the immutable source of truth, makes every derived stage rebuildable from it, and measures success by whether the books reconcile to the penny - because in billing, correctness is the product and throughput is just table stakes.' },
 },
 
+
+'Agent Platform (Durable Execution)': {
+  constraint: 'Agent tasks are long-lived, side-effecting, and each holds durable state that must survive crashes and waits. Scaling means running many concurrent long workflows safely - without losing work, exceeding budgets, or letting an agent do something it should not.',
+  ladder: [
+    ['a few agents', 'a handful of runs', 'One durable workflow engine, a tool gateway with a permission list, budget ceilings and human approval from day one - retrofitting exactly-once effects and permissions after an agent double-charges someone is painful.'],
+    ['a team of agents', 'hundreds of concurrent workflows', 'Sandboxed code execution hardens; memory (episodic + semantic) makes agents improve; the approval queue and trace/replay become real operational surfaces.'],
+    ['a platform', 'thousands of long-running workflows', 'The workflow engine is the scaling core - it holds all that durable state; tool-gateway permissions become policy managed per team; budget governance is fleet-wide; per-agent cost and MFU-style efficiency are tracked.'],
+    ['org-wide autonomy', 'agents acting across the business', 'Multi-tenant isolation of agents and their tool grants; the binding constraints are the human-approval throughput and the trust/audit standard - governance, not compute, sets the ceiling.'],
+  ],
+  levers: [
+    { t: 'Journal steps, resume don\'t restart', d: 'A durable event history per workflow means a crash resumes from the last step with exactly-once effects - the foundation that lets everything else wait safely.', n: ['orch', 'state'] },
+    { t: 'Permission every tool call', d: 'The gateway checks each call against the agent\'s grant before it runs; least privilege is what makes autonomous tool use safe at all.', n: ['toolgw', 'tools'] },
+    { t: 'Gate the irreversible, wait durably', d: 'Money, deletion and external messages pause for a human, and the durable engine holds the workflow for minutes or days at no cost until approved.', n: ['hitl'] },
+    { t: 'Bound every run up front', d: 'Step, token and time ceilings enforced before a run starts turn a runaway loop into a killed run instead of a surprise bill.', n: ['guard'] },
+  ],
+  wall: { t: 'Autonomy scales; the guarantees that make it safe are the ceiling', d: 'Adding more agents and more concurrent workflows is a matter of scaling the workflow engine and the model calls behind it. The real limits are the boundaries that keep autonomy safe, and they do not scale by adding hardware: human approval on irreversible actions is rate-limited by humans; the permission model has to stay correct as agents and tools multiply; the trace/replay and audit standard has to hold as unsupervised actions grow; and budget governance has to bound a whole fleet at once. Past a point the constraint is not how many agents you can run but how much autonomy you can safely GRANT - and that is a governance, permission and trust problem, which is exactly why this platform is mostly boundaries around a loop rather than the loop itself.' },
+},
+
 }

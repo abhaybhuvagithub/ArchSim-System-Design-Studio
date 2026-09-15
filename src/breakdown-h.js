@@ -1804,4 +1804,74 @@ export default {
   },
 },
 
+
+'Agent Platform (Durable Execution)': {
+  meta: 'GenAI - agent infrastructure - very hard - running autonomous agents in production without them losing work or causing damage',
+  overview: 'A demo agent is a while-loop calling an LLM and some tools. A production agent PLATFORM is a different thing entirely, because three facts break the demo: the process will crash mid-task, the agent will be given access to tools that can spend money and delete data, and a reasoning loop will eventually go sideways. This template is the infrastructure that makes autonomous agents safe and reliable at scale: a durable workflow engine so a crash resumes instead of restarting or repeating a side effect, a permissioned tool gateway so the agent can only do what it is allowed to, human-in-the-loop gates on the irreversible actions, a budget governor so no run can burn the bill, and real memory so agents improve across sessions. The theme throughout: autonomy is powerful precisely because it is unsupervised, which is exactly why every dangerous edge needs an engineered boundary.',
+  scope: 'The execution and safety substrate for agents: durable orchestration with an event history, the planner/reasoner loop, a permissioned tool/MCP gateway, isolated code execution, human approval queues, budget/policy governance, episodic + semantic memory, and full tracing/replay. The foundation models, the external tools themselves, and the business task the agent performs are consumed or downstream.',
+  fr: {
+    core: ['Run a multi-step agent task durably: journal every step, resume from the last one after a crash', 'Let the agent plan and reason (LLM), retrieving relevant memory', 'Mediate every tool call through a permissioned gateway (what tool, what args, on whose behalf)', 'Pause dangerous/irreversible actions for human approval, then continue', 'Bound every run by step count, token/cost budget, and wall-clock', 'Persist episodic and semantic memory across runs; trace and replay everything'],
+    out: ['Training the models the planner uses (consumed)', 'The external tools and APIs the agent calls (integrated, governed here)', 'The end business outcome the agent is pointed at'],
+  },
+  nfr: {
+    core: ['Durability: a crash never loses progress and never repeats a side-effecting step (exactly-once effects, not at-least-once)', 'Least privilege: an agent can only invoke tools and arguments it is explicitly permitted, per request', 'Human control on irreversibility: money, deletion, external messages require approval and the workflow waits durably', 'Bounded cost: a runaway loop is killed by budget policy before it is seen on the bill', 'Observability: every run is fully traced and replayable, because unsupervised action must be auditable'],
+    out: ['Sub-second end-to-end task completion - agent tasks are minutes-to-days workflows, not request-response'],
+  },
+  nums: [['exactly-once', 'the effect guarantee: a crash resumes, it does not re-send the email'], ['least privilege', 'the tool gateway decides what the agent may do, per call'], ['approve', 'the durable pause on irreversible actions - waits minutes or days'], ['budget', 'step + token + time ceiling, enforced before a run can overspend']],
+  entities: [
+    ['Workflow', 'one agent task as a durable execution: an ordered, journaled event history that can resume from any completed step'],
+    ['Step', 'a plan, a tool call, or a wait - each recorded before its effect, so a replay knows exactly what already happened'],
+    ['ToolGrant', 'permission for THIS agent, on THIS request, to call THAT tool with THOSE argument constraints - checked at the gateway'],
+    ['ApprovalTask', 'a paused irreversible action waiting on a human; approving it resumes the exact workflow that was waiting'],
+    ['Memory', 'episodic (retrievable past-run events) and semantic (durable facts + learned procedures) - not a longer prompt'],
+  ],
+  apiIntro: 'The API starts a durable workflow and streams its progress; the heavy motion is internal - the orchestrator journaling steps, gating tools, and waiting on humans - because an agent task is a long-lived process, not a request.',
+  api: [
+    { dir: '->', name: 'POST /agent/runs', body: '{ goal, tools_allowed, budget }\n-> a durable workflow id; it runs autonomously within the grant and the budget, surviving crashes' },
+    { dir: '<->', name: '(internal) tool-gateway.call(tool, args, grant)', body: 'every tool invocation is checked against the grant BEFORE it runs; a disallowed tool or argument is refused and logged, never executed' },
+    { dir: '->', name: 'POST /approvals/{id}', body: '{ decision }\n-> resumes the durable workflow that paused on this irreversible action, exactly where it left off' },
+  ],
+  dives: [
+    {
+      title: 'Durable execution: a crash must not lose work or repeat a side effect', focus: ['orch', 'state', 'plan', 'queue'],
+      blocks: [
+        ['p', 'The single biggest gap between a demo agent and a production one is what happens when the process dies mid-task - and on a long multi-step run, it will. A naive while-loop restarts from scratch (wasting all the work and money spent so far) or, far worse, repeats a step that already had an effect - re-sending an email, re-charging a card, re-filing a ticket. A durable orchestrator (a workflow engine of the Temporal/Step-Functions family) fixes this by journaling every step to an event history BEFORE its effect is applied, so after a crash the engine replays the history, sees exactly which steps completed, and resumes from the first unfinished one. The property this buys is exactly-once EFFECTS on top of an at-least-once world, and it is the foundation everything else is built on: you cannot safely gate tools or wait days for a human if the process holding that state might vanish.'],
+        ['bul', [
+          'Journal-before-effect is the trick: the step is recorded as intended, then executed, so a replay never re-runs a completed side effect.',
+          'The workflow is the durable unit: it can wait minutes or days (for a human, for a slow tool) because its state lives in the event history, not in a process\'s memory.',
+          'Idempotency keys on side-effecting tool calls close the last gap: even if a step is retried, the downstream action happens once.',
+        ]],
+        ['warn', 'The seductive mistake is to treat an agent as a stateless request handler with a retry. It is the opposite: a long-lived, side-effecting process where a blind retry is not a recovery, it is a duplicate charge. Durability is not a nice-to-have you add later - it is the difference between an agent that is safe to run unattended and one that is not.'],
+      ],
+    },
+    {
+      title: 'The tool gateway: an autonomous agent is only as safe as what it is allowed to touch', focus: ['toolgw', 'tools', 'sandbox', 'guard'],
+      blocks: [
+        ['p', 'An agent that can call any tool with any arguments is an autonomous way to cause damage, so no tool call goes direct - every one passes through a permissioned gateway (the MCP pattern generalised). The agent may REQUEST a tool; the gateway decides whether THIS agent, on THIS request, is ALLOWED to run it, with what argument constraints, on whose behalf - and refuses and logs anything outside the grant. Code the agent writes runs in an isolated sandbox, never on the platform itself, because arbitrary generated code is arbitrary risk. Above it sits the budget governor: a step ceiling, a token/cost cap, and a wall-clock timeout applied before the run starts, so a loop that goes sideways is killed by policy rather than discovered on the invoice. Least privilege and bounded cost are not features here - they are the conditions under which autonomy is allowed at all.'],
+        ['bul', [
+          'Request vs permit: the agent asks, the gateway decides - the same separation as a user asking an API and an authz layer deciding, applied to an autonomous caller.',
+          'Sandbox generated code: isolated execution with no access to the platform\'s own credentials or network, because you are running code an LLM just wrote.',
+          'Budget before tokens: the ceiling is enforced up front, so the worst case is a killed run, not an unbounded bill - an agent that can spend must be bounded.',
+        ]],
+      ],
+    },
+    {
+      title: 'Humans on the irreversible, memory across sessions', focus: ['hitl', 'mem', 'trace', 'orch'],
+      blocks: [
+        ['p', 'Full autonomy on actions you cannot undo is a bug, not a feature, so the platform draws a bright line: reversible actions the agent takes freely, irreversible ones (spending money, deleting data, sending an external message) pause at a human approval queue - and because the orchestrator is durable, it simply waits, for minutes or days, then continues the exact workflow when the human approves. Separately, memory is what lets an agent improve rather than start blank every run: episodic memory holds retrievable events from past runs, semantic memory holds durable facts and learned procedures - two systems, not a longer prompt. And everything is traced and replayable, because when no human watched the agent act, the pinned trace of every plan, tool call and result is the only way to trust the outcome or debug the failure - the same provenance discipline this studio uses for money and experiments, pointed at autonomous action.'],
+        ['bul', [
+          'Reversible vs irreversible is the gate: the agent is fast and free on what can be undone, and stops for a human on what cannot.',
+          'Episodic + semantic memory: past events retrievable, durable facts persistent - the agent compounds across sessions instead of resetting.',
+          'Trace-and-replay is non-negotiable for autonomy: an unsupervised actor whose actions you cannot reconstruct is one you cannot trust.',
+        ]],
+      ],
+    },
+  ],
+  bar: {
+    mid: 'A while-loop that calls an LLM and some tools.',
+    senior: 'A durable orchestrator journaling every step for exactly-once effects and crash resumption, a permissioned tool/MCP gateway with sandboxed code execution, human-in-the-loop gates on irreversible actions that the durable engine waits on, a budget/policy governor enforced before a run spends, episodic + semantic memory, and full trace/replay.',
+    staff: 'Design the guarantees at platform scale: the exactly-once-effect model across crashes and retries with idempotent tool calls, the permission model for autonomous callers (what an agent may do, per request, and how that is granted and revoked), the human-approval workflow that stays durable for days, the budget economics that keep a fleet of agents from an unbounded bill, and the trace/replay standard that makes unsupervised action auditable - because the whole platform exists to make autonomy safe, and every guarantee is a boundary on an agent that would otherwise act without one.',
+  },
+},
+
 }

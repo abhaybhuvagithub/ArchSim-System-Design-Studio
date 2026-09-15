@@ -2551,6 +2551,22 @@ try {
         const notes = t.checklist.join(' ');
         return /\(customer, period\)/.test(notes) && /(immutable|point of no return)/i.test(notes) && /credit or debit note|credit\/debit note/i.test(notes);
       })());
+            check('the Agent Platform template exists, is healthy, and models durable-exec + tool-gateway + HITL', await (async () => {
+        const TA = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const SA = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
+        const t = TA.TEMPLATES.find(x => x.name === 'Agent Platform (Durable Execution)');
+        if (!t) return false;
+        const sim = SA.simulate(t.nodes, t.edges, t.rps, new Set());
+        const notes = t.checklist.join(' ');
+        return sim.successRate > 0.98 && /durable/i.test(notes) && /permissioned/i.test(notes) && /approval|human/i.test(notes) && /budget/i.test(notes)
+          && t.nodes.some(n => /Tool Gateway/i.test(n.label)) && t.nodes.some(n => /Approval/i.test(n.label)) && t.nodes.some(n => n.type === 'agentgraph');
+      })());
+      check('Agent Platform teaches the two non-negotiables — exactly-once effects, and permission-not-direct tool calls', await (async () => {
+        const TA2 = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const t = TA2.TEMPLATES.find(x => x.name === 'Agent Platform (Durable Execution)');
+        const notes = t.checklist.join(' ');
+        return /re-send|repeat|resumes/i.test(notes) && /(request|REQUEST).*allowed|allowed.*run|gateway decides/i.test(notes);
+      })());
             check('the Discovery Loop template exists, is healthy, and models the converge/schedule/provenance core', await (async () => {
         const TD = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
         const SD = await import(pathToFileURL(path.join(root, 'src/sim.js')).href);
