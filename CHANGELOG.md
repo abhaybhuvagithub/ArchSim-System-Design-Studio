@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.48.0 — 2026-09-07
+- 🏦 Engineering Leadership gains a concept: **Technical debt — the interest metaphor, and when NOT to pay it** — debt as a loan you pay interest on as future changes slow; AI tooling makes borrowing frictionless so managing it matters more; pay down the high-interest hot paths, leave the debt in stable corners nobody edits, use the strangler-fig (never a big-bang rewrite) for big paydowns, and make debt visible on the roadmap. Graded in a ⇄ table. (AI-cost reduction levers — caching, model routing — are already the cost-spike drill in LLM-prod; not duplicated.)
+
 ## 1.47.0 — 2026-09-07
 - 🧮 Two equation-bearing concepts in the back-of-envelope area (the studio's first with real formulas): **Little's Law** (L = \u03bb \u00d7 W — the master equation of every queue — plus the M/M/1 wait W = 1/(\u03bc\u2212\u03bb) and why p99 explodes as \u03c1\u21921), and **LLM inference math** (prefill is compute-bound and sets TTFT; decode is memory-bandwidth-bound so throughput \u2248 bandwidth/bytes-per-token; the KV-cache memory equation; and why batching trades throughput for latency — the answer to a slow LLM endpoint is naming the phase and the bound, not "add a GPU"). +2 acronyms: TPOT, FLOPS
 

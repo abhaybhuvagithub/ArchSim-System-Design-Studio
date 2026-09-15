@@ -2411,7 +2411,15 @@ try {
       }
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('the envelope area teaches the bottleneck EQUATIONS — Little\'s Law and LLM inference math', await (async () => {
+      check('Engineering Leadership teaches technical debt as a portfolio (interest, hot-paths, strangler-fig)', await (async () => {
+        const MT = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const it = MT.MASTERY.find(a => a.id === 'eng-lead')?.items.find(x => x.id === 'tech-debt');
+        if (!it) return false;
+        const c = MT.MASTERY_CMP['tech-debt'];
+        return /interest/i.test(it.d) && /strangler/i.test(it.d) && /hot path/i.test(it.d) && /not to pay|leave the debt|leave it/i.test(it.d)
+          && !!c && /big-bang rewrite/i.test(c.rows.map(r => r.join(' ')).join(' '));
+      })());
+            check('the envelope area teaches the bottleneck EQUATIONS — Little\'s Law and LLM inference math', await (async () => {
         const ME = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const en = ME.MASTERY.find(a => a.id === 'envelope');
         const ll = en.items.find(x => x.id === 'littles-law');
@@ -2483,7 +2491,7 @@ try {
             check('Engineering Leadership teaches technical judgment (one-way doors, build-vs-buy) not people-management', await (async () => {
         const MEL = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const el = MEL.MASTERY.find(a => a.id === 'eng-lead');
-        if (!el || el.items.length !== 6) return false;
+        if (!el || el.items.length !== 7) return false;
         const doors = MEL.MASTERY_CMP['one-way-doors'];
         const bba = MEL.MASTERY_CMP['build-buy-adopt'];
         // it must be the technical slice: reversibility + build/buy, not morale/attrition/D&I
