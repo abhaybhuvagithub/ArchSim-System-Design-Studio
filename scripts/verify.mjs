@@ -2411,7 +2411,15 @@ try {
       }
       check('the 🎤 as-asked lines render on the concepts',
         ms().querySelectorAll('.ms-ask').length >= 39 && /celebrity just broke shard 7/.test(ms().textContent));
-      check('Engineering Leadership teaches technical debt as a portfolio (interest, hot-paths, strangler-fig)', await (async () => {
+      check('LLM-prod teaches hallucination as a systemic risk — blast radius (cost + correctness) and containment', await (async () => {
+        const MH = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const it = MH.MASTERY.find(a => a.id === 'llm-prod')?.items.find(x => x.id === 'halluc-blast-radius');
+        if (!it) return false;
+        const c = MH.MASTERY_CMP['halluc-blast-radius'];
+        return /blast radius/i.test(it.d) && /read path/i.test(it.d) && /abstain|abstention/i.test(it.d) && /contain/i.test(it.d)
+          && !!c && /READ path|written/i.test(c.rows.map(r => r.join(' ')).join(' '));
+      })());
+            check('Engineering Leadership teaches technical debt as a portfolio (interest, hot-paths, strangler-fig)', await (async () => {
         const MT = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
         const it = MT.MASTERY.find(a => a.id === 'eng-lead')?.items.find(x => x.id === 'tech-debt');
         if (!it) return false;

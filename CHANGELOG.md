@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.49.0 — 2026-09-07
+- 🛡️ LLM-prod gains a concept: **Hallucination as a systemic risk — its blast radius, cost, and containment** — the mature framing that you cannot make an LLM never hallucinate, so you design so a wrong answer is a shrug not an incident. Its blast radius is cost (retries/loops chasing a bad output burn tokens for zero value) and correctness (a hallucinated fact WRITTEN downstream is far worse than one on a screen). Contain it like any fault: keep the LLM on the read path, gate writes and irreversible actions behind a check/human, and make abstention ("I don't know") a first-class, cheap output. Graded in a ⇄ table. (Distinct from the existing detect-it and reduce-it hallucination drills.)
+
 ## 1.48.0 — 2026-09-07
 - 🏦 Engineering Leadership gains a concept: **Technical debt — the interest metaphor, and when NOT to pay it** — debt as a loan you pay interest on as future changes slow; AI tooling makes borrowing frictionless so managing it matters more; pay down the high-interest hot paths, leave the debt in stable corners nobody edits, use the strangler-fig (never a big-bang rewrite) for big paydowns, and make debt visible on the roadmap. Graded in a ⇄ table. (AI-cost reduction levers — caching, model routing — are already the cost-spike drill in LLM-prod; not duplicated.)
 
