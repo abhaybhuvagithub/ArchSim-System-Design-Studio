@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.50.0 — 2026-09-07
+- 🔤 Acronyms tab now has **category emojis** — each of the 8 categories carries an icon (🚦 Traffic, 🗄️ Data, 📬 Messaging, 🛡️ Reliability, 🔐 Security, ☁️ Cloud, 💼 Business, 🤖 AI), shown on the filter chips and beside every acronym so the 158 entries are faster to scan and group. Also fixed a stale search placeholder (94 → live count)
+
 ## 1.49.0 — 2026-09-07
 - 🛡️ LLM-prod gains a concept: **Hallucination as a systemic risk — its blast radius, cost, and containment** — the mature framing that you cannot make an LLM never hallucinate, so you design so a wrong answer is a shrug not an incident. Its blast radius is cost (retries/loops chasing a bad output burn tokens for zero value) and correctness (a hallucinated fact WRITTEN downstream is far worse than one on a screen). Contain it like any fault: keep the LLM on the read path, gate writes and irreversible actions behind a check/human, and make abstention ("I don't know") a first-class, cheap output. Graded in a ⇄ table. (Distinct from the existing detect-it and reduce-it hallucination drills.)
 

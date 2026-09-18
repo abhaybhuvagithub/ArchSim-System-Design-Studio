@@ -2001,3 +2001,7 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 
 /* ── Defend It discoverability nudge (shown when the mode is off) ── */
 .ms-defend-nudge { font-size: 12px; opacity: .65; font-style: italic; }
+
+/* ── acronym category emojis ── */
+.acr-a .acr-emoji { font-size: 0.9em; margin-right: 2px; opacity: 0.9; }
+.acr-cats .btn { display: inline-flex; align-items: center; gap: 4px; }

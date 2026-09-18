@@ -1,14 +1,16 @@
 // Every acronym the studio uses, expanded once, searchably. Studio voice:
 // one honest sentence each, no fluff. ASCII quotes only.
+// Each category carries a label and an emoji, so the acronym browser has a
+// visual anchor per group (on the filter chips and every row).
 export const ACRONYM_CATS = {
-  traffic: 'Traffic & Protocols',
-  data: 'Data & Storage',
-  messaging: 'Messaging & Streaming',
-  reliability: 'Reliability & Ops',
-  security: 'Security & Identity',
-  cloud: 'Cloud & Infra',
-  business: 'Business & Product',
-  ai: 'AI & ML',
+  traffic:     { label: 'Traffic & Protocols',    icon: '🚦' },
+  data:        { label: 'Data & Storage',         icon: '🗄️' },
+  messaging:   { label: 'Messaging & Streaming',  icon: '📬' },
+  reliability: { label: 'Reliability & Ops',      icon: '🛡️' },
+  security:    { label: 'Security & Identity',    icon: '🔐' },
+  cloud:       { label: 'Cloud & Infra',          icon: '☁️' },
+  business:    { label: 'Business & Product',     icon: '💼' },
+  ai:          { label: 'AI & ML',                icon: '🤖' },
 }
 
 export const ACRONYMS = [

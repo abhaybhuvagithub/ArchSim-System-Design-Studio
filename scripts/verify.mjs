@@ -2378,11 +2378,18 @@ try {
         acr().querySelectorAll('.acr-row').length === 1 && /Command Query Responsibility Segregation/.test(acr().textContent));
       typeInto(acr().querySelector('.acr-q'), '');
       await wait(120);
-      click([...acr().querySelectorAll('.acr-cats .btn')].find(b => b.textContent === 'Security & Identity'));
+      click([...acr().querySelectorAll('.acr-cats .btn')].find(b => /Security & Identity/.test(b.textContent)));
       await wait(150);
       check('a category chip narrows to its family',
-        acr().querySelectorAll('.acr-row').length >= 10 && [...acr().querySelectorAll('.acr-c')].every(el => el.textContent === 'Security & Identity'));
-      click([...acr().querySelectorAll('.acr-cats .btn')].find(b => b.textContent === 'All'));
+        acr().querySelectorAll('.acr-row').length >= 10 && [...acr().querySelectorAll('.acr-c')].every(el => /Security & Identity/.test(el.textContent)));
+      check('category chips and rows carry a category emoji', (() => {
+        const secChip = [...acr().querySelectorAll('.acr-cats .btn')].find(b => /Security & Identity/.test(b.textContent));
+        const rowCat = acr().querySelector('.acr-row .acr-c');
+        // the security emoji (🔐) appears on the chip and the row category label
+        return !!secChip && /\uD83D\uDD10/.test(secChip.textContent) && !!rowCat && /\uD83D\uDD10/.test(rowCat.textContent)
+          && !!acr().querySelector('.acr-a .acr-emoji');
+      })());
+      click([...acr().querySelectorAll('.acr-cats .btn')].find(b => /^\s*(\S+\s+)?All\s*$/.test(b.textContent) || b.textContent.trim() === 'All'));
       await wait(120);
       // ── the mastery hub, driven ────────────────────────────────────────────
       await goTab('Mastery');

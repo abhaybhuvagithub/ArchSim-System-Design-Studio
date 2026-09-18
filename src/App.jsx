@@ -2018,20 +2018,20 @@ function AcronymsTab() {
       <h3>🔤 Acronyms</h3>
       <div className="acr-bar">
         <input className="acr-q" value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search 94 acronyms - try CQRS, burn, vector…" aria-label="Search acronyms" />
+          placeholder={`Search ${ACRONYMS.length} acronyms — try CQRS, burn, vector…`} aria-label="Search acronyms" />
         <span className="muted acr-n">{hits.length} of {ACRONYMS.length}</span>
       </div>
       <div className="acr-cats">
         <button className={`btn ${cat === '' ? 'active' : ''}`} onClick={() => setCat('')}>All</button>
         {Object.entries(ACRONYM_CATS).map(([k, v]) => (
-          <button key={k} className={`btn ${cat === k ? 'active' : ''}`} onClick={() => setCat(cat === k ? '' : k)}>{v}</button>
+          <button key={k} className={`btn ${cat === k ? 'active' : ''}`} onClick={() => setCat(cat === k ? '' : k)}>{v.icon} {v.label}</button>
         ))}
       </div>
       <div className="acr-list">
         {hits.map(x => (
           <div key={x.a} className="acr-row">
-            <div className="acr-a">{x.a}</div>
-            <div><b>{x.f}.</b> <span className="acr-d">{x.d}</span> <span className="acr-c muted">{ACRONYM_CATS[x.c]}</span></div>
+            <div className="acr-a"><span className="acr-emoji" title={ACRONYM_CATS[x.c]?.label}>{ACRONYM_CATS[x.c]?.icon}</span> {x.a}</div>
+            <div><b>{x.f}.</b> <span className="acr-d">{x.d}</span> <span className="acr-c muted">{ACRONYM_CATS[x.c]?.icon} {ACRONYM_CATS[x.c]?.label}</span></div>
           </div>
         ))}
         {hits.length === 0 && <p className="muted">Nothing matches "{q}" - the Ask AI tab can explain terms beyond this list.</p>}
