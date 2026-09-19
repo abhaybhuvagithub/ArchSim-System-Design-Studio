@@ -4458,6 +4458,12 @@ try {
       const seen = new Set(); let dups = 0;
       for (const x of ACRONYMS) { if (seen.has(x.a)) dups++; seen.add(x.a); }
       check('every acronym appears exactly once', dups === 0);
+      // every acronym has a UNIQUE emoji — no repeats, none missing (as requested)
+      check('every acronym carries an emoji', ACRONYMS.every(x => !!x.e && x.e.trim().length > 0));
+      check('every acronym emoji is unique — zero repeats across all ' + ACRONYMS.length, (() => {
+        const emojis = ACRONYMS.map(x => x.e);
+        return new Set(emojis).size === emojis.length;
+      })());
       const bad = ACRONYMS.filter(x => !x.a || !x.f || !x.d || x.d.length < 25 || !ACRONYM_CATS[x.c]);
       check('every entry has an expansion, a real one-liner and a valid category' + (bad.length ? ' — ' + bad.map(x => x.a).slice(0, 4).join(', ') : ''), bad.length === 0);
       const src2 = fs.readFileSync(path.join(root, 'src/acronyms.js'), 'utf8');

@@ -2030,7 +2030,7 @@ function AcronymsTab() {
       <div className="acr-list">
         {hits.map(x => (
           <div key={x.a} className="acr-row">
-            <div className="acr-a"><span className="acr-emoji" title={ACRONYM_CATS[x.c]?.label}>{ACRONYM_CATS[x.c]?.icon}</span> {x.a}</div>
+            <div className="acr-a"><span className="acr-emoji">{x.e}</span> {x.a}</div>
             <div><b>{x.f}.</b> <span className="acr-d">{x.d}</span> <span className="acr-c muted">{ACRONYM_CATS[x.c]?.icon} {ACRONYM_CATS[x.c]?.label}</span></div>
           </div>
         ))}

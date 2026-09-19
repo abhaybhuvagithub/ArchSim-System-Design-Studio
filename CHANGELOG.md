@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.51.0 — 2026-09-07
+- 🔣 Every acronym now has its **own unique emoji** — all 158 entries carry a distinct icon (JWT 🎫, CDN 🌍, GPU 🎮, DDoS 🌊, RAG 📚, UPI 📲, K8s ☸️ …), relevant to the term where a clear fit exists. Uniqueness is enforced by the suite: zero repeats, none missing, across all 158
+
 ## 1.50.0 — 2026-09-07
 - 🔤 Acronyms tab now has **category emojis** — each of the 8 categories carries an icon (🚦 Traffic, 🗄️ Data, 📬 Messaging, 🛡️ Reliability, 🔐 Security, ☁️ Cloud, 💼 Business, 🤖 AI), shown on the filter chips and beside every acronym so the 158 entries are faster to scan and group. Also fixed a stale search placeholder (94 → live count)
 
