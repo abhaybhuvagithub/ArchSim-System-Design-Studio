@@ -17,7 +17,7 @@ export const LICENSE_STORE = 'archsim.license.v1'
 // false = open access: no locks, no ⭐ Pro button, every design free. All the
 // paywall machinery (keys, tiers, revocation, ledger) stays intact and
 // tested underneath — re-arming is flipping this one line to true.
-export const PRO_ENABLED = false
+export const PRO_ENABLED = true
 
 // ── pricing (single source of truth for the pricing modal) ─────────────────
 export const PRICES = {

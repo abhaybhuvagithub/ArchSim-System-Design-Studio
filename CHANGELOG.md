@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.52.0 — 2026-09-07
+- 💎 **ArchSim Pro is live** — the paywall master switch (PRO_ENABLED) is now on. 15 templates stay free (everything the wizard and tour load); the other 95 are Pro, unlocked by a license key (₹999 / 6 months ₹4,999 / 1 year ₹7,999, paid by UPI, key delivered after payment). Locked designs show a 🔒 in the picker and open the pricing dialog; the simulator, chaos, learning and the free templates are untouched
+
 ## 1.51.0 — 2026-09-07
 - 🔣 Every acronym now has its **own unique emoji** — all 158 entries carry a distinct icon (JWT 🎫, CDN 🌍, GPU 🎮, DDoS 🌊, RAG 📚, UPI 📲, K8s ☸️ …), relevant to the term where a clear fit exists. Uniqueness is enforced by the suite: zero repeats, none missing, across all 158
 
