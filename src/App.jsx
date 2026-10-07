@@ -66,6 +66,7 @@ const GROUP_ICON = {
   'GenAI': '🤖', 'Cloud business': '☁️', 'Classics': '🏛️', 'Infra': '🔧',
 }
 import { VERSION } from './version.js'
+import { readVersions, saveVersion, deleteVersion, diffVersions, describeDiff } from './versions.js'
 import { initAnalytics } from './analytics.js'
 
 const NODE_W = 118, NODE_H = 46
@@ -2395,6 +2396,49 @@ function Assistant({ nodes, edges, sim, cost, sugs, faults, rps, cloud, template
   )
 }
 
+// Version history: named snapshots of the canvas, kept in THIS browser only.
+function VersionsPanel({ nodes, edges, rps, onImport }) {
+  const [list, setList] = useState(() => readVersions())
+  const [name, setName] = useState('')
+  const [open, setOpen] = useState(null)
+  const [msg, setMsg] = useState(null)
+  const save = () => {
+    const r = saveVersion({ name, nodes, edges, rps })
+    setList(r.list); setName('')
+    setMsg(r.ok ? { text: `Saved “${r.snapshot.name}”.` } : { bad: true, text: 'Browser storage refused the save (private window or full). Export the ArchSim JSON instead.' })
+  }
+  const cur = { nodes, edges, rps }
+  return (
+    <details className="dac-import versions-panel" style={{ marginBottom: 10 }}>
+      <summary>🕘 Version history — {list.length} saved in this browser</summary>
+      <div className="dac-row" style={{ marginTop: 6 }}>
+        <input className="dac-name" aria-label="Version name" value={name} maxLength={60} placeholder="Name this version (e.g. before adding cache)"
+          onChange={e => setName(e.target.value)} style={{ flex: 1, minWidth: 0, fontSize: 12 }} />
+        <button className="btn" onClick={save} disabled={!nodes.length}>Save snapshot</button>
+      </div>
+      {msg && <div className={`dac-msg ${msg.bad ? 'bad' : ''}`}>{msg.text}</div>}
+      {list.length === 0 && <p className="muted" style={{ fontSize: 12 }}>No snapshots yet. Save one before a risky change, then compare or restore it later. History stays in this browser only — it is not synced anywhere.</p>}
+      {[...list].reverse().map(v => {
+        const d = diffVersions(v, cur)
+        return (
+          <div key={v.id} className="version-row" style={{ borderTop: '1px solid var(--border, #2a3140)', padding: '6px 0', fontSize: 12 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <strong style={{ flex: 1 }}>{v.name}</strong>
+              <span className="muted">{new Date(v.at).toLocaleString()} · {v.nodes.length} components</span>
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+              <button className="btn" onClick={() => setOpen(open === v.id ? null : v.id)}>{open === v.id ? 'Hide changes' : `Changes since (${d.changes})`}</button>
+              <button className="btn" onClick={() => { onImport(v.nodes.map(n => ({ ...n })), v.edges.map(e => ({ ...e })), v.rps || undefined); setMsg({ text: `Restored “${v.name}”.` }) }}>Restore</button>
+              <button className="btn" onClick={() => setList(deleteVersion(v.id))}>Delete</button>
+            </div>
+            {open === v.id && <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>{describeDiff(d).map((l, i) => <li key={i}>{l}</li>)}</ul>}
+          </div>
+        )
+      })}
+    </details>
+  )
+}
+
 // The Code tab: three generated artifacts, re-derived from nodes and edges on
 // every change — which is what makes "the code evolves with Improve and Quick
 // Fix" true by construction rather than by bookkeeping.
@@ -2447,6 +2491,7 @@ function CodeGen({ nodes, edges, cloud, sugs, rps, onImport }) {
         suggestion or a chaos quick fix, and this code changes with it.
         {sugs.length > 0 && <> There {sugs.length === 1 ? 'is 1 open finding' : `are ${sugs.length} open findings`} in Improve — apply one and watch this file follow.</>}
       </p>
+      <VersionsPanel nodes={nodes} edges={edges} rps={rps} onImport={onImport} />
       <div className="code-subtabs" role="tablist" aria-label="Generated artifact">
         <button role="tab" aria-selected={isProject}
           className={`btn ${isProject ? 'active' : ''}`}

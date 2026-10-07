@@ -4540,6 +4540,36 @@ try {
       })());
       check('the JSON reader refuses foreign documents', IG.fromDesignJSON('{"x":1}') === null && IG.fromDesignJSON('not json') === null && IG.fromDesignJSON('{"$schema":"other/v1","nodes":[]}') === null);
       check('pasted text is sniffed as JSON, Mermaid, or refused', IG.detectFormat('{"nodes":[]}') === 'json' && IG.detectFormat('flowchart LR\n a-->b') === 'mermaid' && IG.detectFormat('hello') === null);
+      const VH = await import(pathToFileURL(path.join(root, 'src/versions.js')).href);
+      const memStore = (() => { const m = new Map(); return { getItem: k => m.has(k) ? m.get(k) : null, setItem: (k, v) => m.set(k, v) }; })();
+      const vn = [{ id: 'a', type: 'client', label: 'Users', x: 0, y: 0, replicas: 1 }, { id: 'db', type: 'database', label: 'DB', x: 9, y: 9, replicas: 1, replication: 'sync' }];
+      const ve = [{ from: 'a', to: 'db' }];
+      check('version history: a snapshot round-trips whole nodes (inspector state survives) and rolls off at the cap', (() => {
+        const r = VH.saveVersion({ name: 'base', nodes: vn, edges: ve, rps: 500 }, memStore, 1000);
+        const back = VH.readVersions(memStore)[0];
+        for (let i = 0; i < VH.MAX_VERSIONS + 3; i++) VH.saveVersion({ name: 'x' + i, nodes: vn, edges: ve, rps: 1 }, memStore, 2000 + i);
+        return r.ok && back.name === 'base' && back.nodes[1].replication === 'sync' && back.rps === 500
+          && VH.readVersions(memStore).length === VH.MAX_VERSIONS;
+      })());
+      check('version history: the diff names added/removed components, replica changes, links and traffic — and says nothing when identical', (() => {
+        const a = { nodes: vn, edges: ve, rps: 500 };
+        const same = VH.diffVersions(a, a);
+        const b = { nodes: [{ ...vn[0] }, { ...vn[1], replicas: 3 }, { id: 'c', type: 'cache', label: 'Cache', x: 1, y: 1, replicas: 1 }], edges: [...ve, { from: 'a', to: 'c' }], rps: 900 };
+        const d = VH.diffVersions(a, b);
+        const lines = VH.describeDiff(d).join('|');
+        return same.changes === 0 && VH.describeDiff(same)[0] === 'No structural difference'
+          && d.addedNodes[0] === 'Cache' && d.replicaChanges[0].to === 3 && d.addedEdges.length === 1 && d.rps.to === 900
+          && /replicas 1 → 3/.test(lines) && /Users → Cache/.test(lines);
+      })());
+      check('version history: corrupt or refused storage never crashes — reads empty, reports ok:false on write failure', (() => {
+        const bad = { getItem: () => '{not json', setItem: () => { throw new Error('quota'); } };
+        return VH.readVersions(bad).length === 0 && VH.saveVersion({ name: 'q', nodes: vn, edges: ve, rps: 1 }, bad).ok === false;
+      })());
+      check('version history is wired into the Code tab', /VersionsPanel/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')) && /Restore/.test(fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8')));
+      check('contributor docs exist: ARCHITECTURE.md and CONTRIBUTING.md name the real module seams', (() => {
+        const a = fs.readFileSync(path.join(root, 'ARCHITECTURE.md'), 'utf8'), c = fs.readFileSync(path.join(root, 'CONTRIBUTING.md'), 'utf8');
+        return ['sim.js', 'templates.js', 'mastery.js', 'integrity.js', 'versions.js', 'license.js'].every(m => a.includes(m)) && /verify\.mjs/.test(c) && /CHANGELOG/.test(c);
+      })());
       check('About states the six pillars', (() => {
         const src = fs.readFileSync(path.join(root, 'src/about.js'), 'utf8');
         return ['Strong Foundation', 'Modular Design', 'Data Integrity', 'Flexible and Scalable', 'Built to Endure', 'AI Ready'].every(p => src.includes(p));
