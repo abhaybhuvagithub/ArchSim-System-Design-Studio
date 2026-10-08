@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.53.1 — 2026-10-08
+- 💎 Pro **1 Year is now ₹9,999** (was ₹7,999) — ₹833/month, 17% off twelve monthly payments. 1 Month (₹999) and 6 Months (₹4,999) are unchanged. Keys already issued keep working
+
 ## 1.53.0 — 2026-10-07
 - 🕘 **Version history** — save named snapshots of your design in the Code tab, see exactly what changed since (components, replicas, links, traffic) and restore any of them. Stored in this browser only; export the JSON to move a design between devices
 - 📐 **ARCHITECTURE.md** and **CONTRIBUTING.md** — the module map, the rules the code keeps, and what a static site cannot do

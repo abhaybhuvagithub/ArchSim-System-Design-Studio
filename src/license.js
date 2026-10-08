@@ -23,7 +23,7 @@ export const PRO_ENABLED = true
 export const PRICES = {
   monthly: { label: '1 Month', inr: 999, note: 'per month', keyPlan: 'M' },
   halfyear: { label: '6 Months', inr: 4999, note: '₹833/month — save 17%', keyPlan: 'H' },
-  yearly: { label: '1 Year', inr: 7999, note: '₹667/month — save 33%', keyPlan: 'Y', highlight: true },
+  yearly: { label: '1 Year', inr: 9999, note: '₹833/month — save 17%', keyPlan: 'Y', highlight: true },
 }
 export const UPI_ID = 'abhay.bhuva@okhdfcbank'
 export const UPI_NAME = 'Abhay Bhuva'

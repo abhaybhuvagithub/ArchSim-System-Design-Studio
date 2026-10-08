@@ -4155,10 +4155,10 @@ try {
       })());
       check('the paywall master switch is ON — Pro is live', L.PRO_ENABLED === true);
       check('the free tier is still genuinely useful: every wizard and tour template stays free', ['URL Shortener (Bitly)', 'GenAI: RAG Assistant', 'Ramp', 'Ticketmaster'].every(n => L.isTemplateFree(n)) && L.FREE_TEMPLATES.size >= 15);
-      check('Pro pricing is the single source of truth (monthly, six-month, yearly in INR)', L.PRICES.monthly.inr === 999 && L.PRICES.halfyear.inr === 4999 && L.PRICES.yearly.inr === 7999);
+      check('Pro pricing is the single source of truth (monthly, six-month, yearly in INR)', L.PRICES.monthly.inr === 999 && L.PRICES.halfyear.inr === 4999 && L.PRICES.yearly.inr === 9999);
       check('the UPI link carries id, amount and currency', (() => {
-        const u = L.upiLink(7999, 'Lifetime');
-        return u.startsWith('upi://pay?') && u.includes(encodeURIComponent('abhay.bhuva@okhdfcbank')) && u.includes('am=7999') && u.includes('cu=INR');
+        const u = L.upiLink(9999, 'Lifetime');
+        return u.startsWith('upi://pay?') && u.includes(encodeURIComponent('abhay.bhuva@okhdfcbank')) && u.includes('am=9999') && u.includes('cu=INR');
       })());
       // Forged / revoked / duplicate protections, at their honest layers:
       // signature rejects forgeries, the revocation list kills leaked keys on
