@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.53.2 — 2026-10-09
+- 🔓 **Pro is switched off for now** (PRO_ENABLED = false): every template is open again, no 🔒 in the picker, no ⭐ Pro button, no pricing dialog. The licence keys, pricing and gating code stay intact and tested underneath — turning Pro back on is flipping that one line to true
+
 ## 1.53.1 — 2026-10-08
 - 💎 Pro **1 Year is now ₹9,999** (was ₹7,999) — ₹833/month, 17% off twelve monthly payments. 1 Month (₹999) and 6 Months (₹4,999) are unchanged. Keys already issued keep working
 
