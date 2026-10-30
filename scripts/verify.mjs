@@ -2682,6 +2682,14 @@ try {
           return /prove|proof|prove it|held-out|labeled|before\/after|regression|calibrat/.test(flat);
         });
       })());
+      check('the Lead AI Engineer drills exist, each with a real practice template, a table and proof language', await (async () => {
+        const MX = await import(pathToFileURL(path.join(root, 'src/mastery.js')).href);
+        const TX = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const names = new Set(TX.TEMPLATES.map(t => t.name));
+        const ids = ['model-routing', 'quantization-latency', 'hybrid-rerank', 'workflow-vs-agent', 'hosted-vs-open', 'llm-observability'];
+        const area = MX.MASTERY.find(a => a.id === 'llm-prod');
+        return ids.every(id => { const it = area.items.find(x => x.id === id); return it && it.asks.length > 60 && names.has(it.go.tpl) && !!MX.MASTERY_CMP[id]; });
+      })());
       check('every comparison table arrives expanded — the table IS the mastery',
         [...ms().querySelectorAll('details.ms-cmp')].every(d => d.hasAttribute('open')));
       check('comparison tables live inside the items, in this same tab',

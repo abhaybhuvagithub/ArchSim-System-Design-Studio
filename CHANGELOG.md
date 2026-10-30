@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.53.3 — 2026-10-30
+- 🧠 **Lead AI Engineer gaps closed** — six new production-LLM drills in Mastery (122 concepts), each with its interviewer phrasing, a compare table with proof, and a practice link: model routing and fallback, cutting inference latency (quantization, batching, caching), retrieval quality (hybrid search, reranking, query rewriting), workflow vs agent, hosted vs open-source models with LoRA/QLoRA, and monitoring an AI feature (traces, cost, quality drift, regression gates)
+
 ## 1.53.2 — 2026-10-09
 - 🔓 **Pro is switched off for now** (PRO_ENABLED = false): every template is open again, no 🔒 in the picker, no ⭐ Pro button, no pricing dialog. The licence keys, pricing and gating code stay intact and tested underneath — turning Pro back on is flipping that one line to true
 
