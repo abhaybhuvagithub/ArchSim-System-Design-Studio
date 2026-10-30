@@ -37,6 +37,12 @@ export const JD_SKILLS = [
     tpls: ['News Feed (Instagram)'], concepts: [], acr: [] },
   { id: 'payments', label: 'Payments & fintech', rx: /\b(payments?|fintech|ledger|upi|banking|cards?)\b/i,
     tpls: ['Card Payments (Auth + Settlement)', 'UPI Switch (NPCI)'], concepts: ['consistency'], acr: ['UPI', 'PCI DSS'] },
+  { id: 'platform', label: 'Platform services & SDKs', rx: /\b(sdks?|platform (services?|component|engineering)|api (versioning|lifecycle|contracts?|integration)|backward[- ]compat\w*|interoperability|developer tooling|integration framework)\b/i,
+    tpls: ['Cloud-Native Gateway API Platform'], concepts: ['sdk-contracts', 'deprecation-lifecycle', 'versioning'], acr: ['REST'] },
+  { id: 'debugging', label: 'Debugging distributed services', rx: /\b(debugging|troubleshoot\w*|root cause|performance profiling|incident|error budgets?)\b/i,
+    tpls: ['µsvc: E-commerce (Saga)'], concepts: ['debug-distributed', 'tracing', 'metrics'], acr: ['SLO'] },
+  { id: 'secpatch', label: 'Secure coding & patching', rx: /\b(secure coding|vulnerabilit\w*|patch(ing|es)?|security and compliance|cve)\b/i,
+    tpls: ['Cloud-Native Gateway API Platform'], concepts: ['patch-vulns', 'authn', 'encryption'], acr: [] },
 ]
 
 // tplExists / conceptExists let the plan stay honest if content is renamed.

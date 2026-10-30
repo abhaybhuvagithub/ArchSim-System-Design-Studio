@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.54.0 — 2026-10-30
+- 🧩 **Platform engineering** — four new Mastery drills (126 concepts): platform and SDK contracts (additive vs breaking, contract tests), API lifecycle (deprecate, brownout, sunset), deep debugging across a service graph, and patching a critical vulnerability without an outage. The JD planner now recognises platform/SDK, debugging, and secure-coding/patching postings and maps them to these drills
+
 ## 1.53.3 — 2026-10-30
 - 🧠 **Lead AI Engineer gaps closed** — six new production-LLM drills in Mastery (122 concepts), each with its interviewer phrasing, a compare table with proof, and a practice link: model routing and fallback, cutting inference latency (quantization, batching, caching), retrieval quality (hybrid search, reranking, query rewriting), workflow vs agent, hosted vs open-source models with LoRA/QLoRA, and monitoring an AI feature (traces, cost, quality drift, regression gates)
 
