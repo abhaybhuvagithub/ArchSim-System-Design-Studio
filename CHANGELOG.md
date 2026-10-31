@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.57.1 — 2026-10-31
+- Deep-dive Internals for 10 more components: llm, guard, ledger, iam, otel, tracing, sandbox, geoidx, stream, tenant (35 of 115 done).
+
 ## 1.57.0 — 2026-10-31
 - 🔬 **Deep-dive Internals** — the 🔍 Internals modal now has a long form for the core components: why it exists, the request lifecycle step by step, the algorithms with their cost, the data structures and why, how it fails and the fix, the knobs that matter, the classic mistakes, and how ArchSim models it. First 25 written: load balancer, gateway, CDN, rate limiter, app, microservice, WebSocket, worker, scheduler, Kubernetes, mesh, saga, global routing, WAF, cache, SQL, NoSQL, search, blob, vector, queue, Kafka, warehouse, lake, coordination service. More follow; components not yet written keep the short form
 
