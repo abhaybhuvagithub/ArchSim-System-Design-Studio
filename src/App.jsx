@@ -26,6 +26,7 @@ import { TOUR_STEPS, placeTooltip, stepsFor, shouldAutoStart, markSeen } from '.
 import { ENGINES, CONSISTENCY, ENCODINGS, MULTI_WRITE, DELIVERY, STREAM_ROLE, physicalEffects, readFractionOf } from './ddia2.js'
 import { buildInterview, report as interviewReport, STAGES } from './interview.js'
 import * as LLM from './interview-llm.js'
+import { PRINCIPLES as LP_LIST, byId as lpById, pickQuestions, analyzeStar, coverage as lpCoverage, storyAdvice } from './leadership.js'
 import { matchConcepts, pickProbe, respond as interviewRespond } from './interview.js'
 import { FLOW_MODES, flowSubset, flowSummary } from './flow.js'
 import { HLD, LLD } from './hld-lld.jsx'
@@ -3892,9 +3893,114 @@ function StreamFields({ n, set }) {
   )
 }
 
+// Wrapper: system-design mock interview, or behavioural prep on Amazon's
+// Leadership Principles. Stories are kept in this browser only.
+const STORIES_KEY = 'archsim.stories.v1'
+function readStories() {
+  try { const v = JSON.parse(localStorage.getItem(STORIES_KEY) || '[]'); return Array.isArray(v) ? v : [] } catch { return [] }
+}
+function Interview({ template }) {
+  const [mode, setMode] = useState('design')
+  return (
+    <>
+      <div className="iv-modes" role="tablist" aria-label="Interview type">
+        {[['design', 'System design'], ['behavioural', 'Behavioural · Leadership Principles']].map(([k, l]) => (
+          <button key={k} role="tab" aria-selected={mode === k} className={`iv-modetab ${mode === k ? 'on' : ''}`} onClick={() => setMode(k)}>{l}</button>
+        ))}
+      </div>
+      {mode === 'design' ? <DesignInterview template={template} /> : <BehaviouralPrep />}
+    </>
+  )
+}
+
+function BehaviouralPrep() {
+  const [pid, setPid] = useState(LP_LIST[0].id)
+  const [seed, setSeed] = useState(1)
+  const [answer, setAnswer] = useState('')
+  const [result, setResult] = useState(null)
+  const [stories, setStories] = useState(readStories)
+  const [title, setTitle] = useState('')
+  const [tags, setTags] = useState([])
+  const p = lpById[pid]
+  const q = pickQuestions([pid], 1, seed)[0]
+  const cov = lpCoverage(stories)
+  const advice = storyAdvice(stories)
+  const persist = list => { setStories(list); try { localStorage.setItem(STORIES_KEY, JSON.stringify(list)) } catch { /* storage refused: stays in memory */ } }
+  const save = () => {
+    if (!answer.trim()) return
+    persist([...stories, { id: `s${Date.now().toString(36)}`, title: title.trim() || `Story ${stories.length + 1}`, text: answer, principles: tags.length ? tags : [pid] }])
+    setTitle(''); setTags([]); setAnswer(''); setResult(null)
+  }
+  const toggleTag = id => setTags(t => t.includes(id) ? t.filter(x => x !== id) : [...t, id])
+  return (
+    <section className="iv" aria-label="Behavioural interview prep">
+      <h3>Behavioural prep — Leadership Principles</h3>
+      <p className="muted">
+        Amazon interviews every candidate against its 16 Leadership Principles, so prepare a handful of true stories and learn which principles each one proves.
+        Pick a principle, read what an interviewer listens for, answer out loud, then paste your answer to check its shape. The checker looks at structure (scene, your own actions, a number, a lesson); it cannot judge whether the story is true or strong.
+      </p>
+      <div className="lp-chips" role="group" aria-label="Principles">
+        {LP_LIST.map(x => (
+          <button key={x.id} className={`lp-chip ${x.id === pid ? 'on' : ''} ${cov.covered[x.id] ? 'done' : ''}`} onClick={() => { setPid(x.id); setSeed(1); setResult(null) }}>
+            {cov.covered[x.id] ? '✓ ' : ''}{x.name}
+          </button>
+        ))}
+      </div>
+      <div className="lp-card">
+        <h4>{p.name}</h4>
+        <p>{p.gist}</p>
+        <b>What the interviewer listens for</b>
+        <ul>{p.listenFor.map(l => <li key={l}>{l}</li>)}</ul>
+        <b>In engineering terms</b>
+        <p>{p.tech}</p>
+        <p className="lp-red"><b>Red flag:</b> {p.redFlag}</p>
+      </div>
+      <h4>Practice question</h4>
+      <p className="lp-q">{q.question}</p>
+      <button className="iv-skip" onClick={() => { setSeed(x => x + 1); setResult(null) }}>Another question</button>
+      <div className="iv-input">
+        <textarea rows={7} value={answer} onChange={e => setAnswer(e.target.value)} placeholder="Answer in STAR order: Situation, Task, Action (what you did), Result (with a number), then what you learned." aria-label="Your answer" />
+      </div>
+      <div className="iv-btns">
+        <button className="iv-start" onClick={() => setResult(analyzeStar(answer))} disabled={!answer.trim()}>Check my answer</button>
+      </div>
+      {result && (
+        <div className="lp-result" role="status">
+          <b>Shape score {result.score} / {result.max}</b>
+          <ul className="lp-parts">
+            {[['situation', 'Situation'], ['task', 'Your task'], ['action', 'Your actions'], ['result', 'Measured result'], ['reflection', 'Lesson']].map(([k, l]) => (
+              <li key={k}>{result.parts[k] ? '✓' : '✗'} {l}</li>
+            ))}
+          </ul>
+          <p className="muted">{result.words} words · "I" {result.i} vs "we" {result.we}</p>
+          {result.notes.length > 0 && <ul>{result.notes.map(n => <li key={n}>{n}</li>)}</ul>}
+        </div>
+      )}
+      <h4>Save as a story</h4>
+      <div className="field"><label>Title</label><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Short name you will recognise" /></div>
+      <div className="lp-tags" role="group" aria-label="Principles this story proves">
+        {LP_LIST.map(x => (
+          <label key={x.id}><input type="checkbox" checked={tags.includes(x.id)} onChange={() => toggleTag(x.id)} /> {x.name}</label>
+        ))}
+      </div>
+      <button className="iv-start" onClick={save} disabled={!answer.trim()}>Save story</button>
+      <h4>Your story bank — {cov.percent}% of principles covered</h4>
+      {stories.length === 0 && <p className="muted">Nothing saved yet. Stories stay in this browser and are never sent anywhere.</p>}
+      <ul className="lp-stories">
+        {stories.map(st => (
+          <li key={st.id}><b>{st.title}</b> — {(st.principles || []).map(id => lpById[id]?.name).filter(Boolean).join(', ')}
+            <button className="iv-clearkey" onClick={() => persist(stories.filter(x => x.id !== st.id))}>Delete</button></li>
+        ))}
+      </ul>
+      {cov.gaps.length > 0 && stories.length > 0 && <p className="muted">Not yet covered: {cov.gaps.map(id => lpById[id].name).join(', ')}</p>}
+      {advice.length > 0 && <ul>{advice.map(a => <li key={a}>{a}</li>)}</ul>}
+    </section>
+  )
+}
+
 // A mock interview on the loaded design. The rubric engine is the default and
 // needs nothing; a model is optional and needs a key the user supplies.
-function Interview({ template }) {
+function DesignInterview({ template }) {
   const [state, setState] = useState('idle')     // idle | running | done
   const [stageIdx, setStageIdx] = useState(0)
   const [turns, setTurns] = useState([])

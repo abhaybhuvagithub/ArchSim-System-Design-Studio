@@ -2016,3 +2016,19 @@ code, pre, .mono, .crash-msg, .api-line, .schema, .num { font-family: var(--font
 .deep-cost { opacity: .85; }
 .deep-fail { border-left: 3px solid #d9822b; }
 .deep-model { margin-top: 12px; }
+
+.iv-modes { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.iv-modetab { font: inherit; font-size: 14px; font-weight: 600; border: 1px solid var(--border); border-radius: 9px; padding: 7px 13px; cursor: pointer; background: transparent; color: inherit; }
+.iv-modetab.on { background: var(--accent, #0a84ff); color: #fff; border-color: transparent; }
+.lp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.lp-chip { font: inherit; font-size: 13px; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; cursor: pointer; background: transparent; color: inherit; }
+.lp-chip.on { background: var(--accent, #0a84ff); color: #fff; border-color: transparent; }
+.lp-chip.done:not(.on) { border-color: #2e9e5b; }
+.lp-card { border: 1px solid var(--border); border-radius: 10px; padding: 4px 14px 10px; margin: 8px 0; font-size: 14.2px; line-height: 1.55; }
+.lp-red { opacity: .8; }
+.lp-q { font-size: 15.5px; font-weight: 600; margin: 4px 0 8px; }
+.lp-result { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 14px; }
+.lp-parts { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.lp-tags { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; margin: 8px 0; font-size: 13.5px; }
+.lp-stories { padding-left: 18px; font-size: 14px; }
+.lp-stories .iv-clearkey { margin-left: 8px; }

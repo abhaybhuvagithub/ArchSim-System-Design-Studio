@@ -320,6 +320,28 @@ try {
       (broken.length ? ' — broken: ' + broken.map(t => t.name).join(', ') : ''), broken.length === 0);
   }
 
+  // ── behavioural prep: Leadership Principles ───────────────────────────────
+  {
+    const L = await import(pathToFileURL(path.join(root, 'src/leadership.js')).href);
+    check('sixteen leadership principles, each with a name, meaning, listening cues, questions and an engineering angle',
+      L.PRINCIPLES.length === 16 && L.PRINCIPLES.every(p => p.name && p.gist.length > 40 && p.listenFor.length >= 3 && p.questions.length >= 3 && p.tech.length > 30 && p.redFlag.length > 15));
+    check('principle ids are unique', new Set(L.PRINCIPLES.map(p => p.id)).size === 16);
+    const a = L.pickQuestions(['dive', 'trust', 'ownership'], 1, 5), b = L.pickQuestions(['dive', 'trust', 'ownership'], 1, 5);
+    check('question picking is reproducible and one per principle', JSON.stringify(a) === JSON.stringify(b) && a.length === 3);
+    const good = 'When our checkout service was timing out at peak last quarter, my job was to find why. I traced one request, I measured p99 at 4s, I decided to add a cache and I rolled it out behind a flag. As a result p99 dropped from 4s to 300ms and we saved 40% cost. I learned to check the sampling first.';
+    const r = L.analyzeStar(good);
+    check('a complete STAR answer scores every part', r.parts.situation && r.parts.task && r.parts.action && r.parts.result && r.parts.reflection && r.score === r.max);
+    const weak = L.analyzeStar('We worked on the migration as a team and it went well. We all contributed and we were happy with how we handled things overall in the end.');
+    check('a "we"-only, number-free answer is told what is missing',
+      !weak.parts.action && !weak.parts.result && !weak.parts.reflection && weak.notes.some(n => /number/i.test(n)) && weak.notes.some(n => /YOU did/.test(n)));
+    check('empty input does not throw', L.analyzeStar('').score === 0);
+    const cov = L.coverage([{ title: 'A', principles: ['dive', 'trust'] }, { title: 'B', principles: ['dive'] }]);
+    check('coverage lists gaps and percent', cov.gaps.length === 14 && cov.percent === 13 && cov.covered.dive.length === 2);
+    check('advice flags untagged stories', L.storyAdvice([{ title: 'X', principles: [] }]).some(x => x.includes('not tagged')));
+    check('behavioural content carries no personal history',
+      !/oracle|tileviz|intel\b/i.test(JSON.stringify(L.PRINCIPLES)));
+  }
+
   // ── mock interview: rubric, and the key never leaving the tab ──────────────
   {
     const iv = await import(pathToFileURL(path.join(root, 'src/interview.js')).href);
@@ -2112,6 +2134,20 @@ try {
 
   // ── no template header before anything is loaded ───────────────────────────
   check('no template header on a blank canvas', !doc.querySelector('.tpl-header'));
+
+  // ── behavioural prep UI ───────────────────────────────────────────────────
+  {
+    click(byText('.tabs button', 'Interview')); await wait(200);
+    check('the Interview tab offers system design and behavioural modes', doc.querySelectorAll('.iv-modetab').length === 2);
+    click(byText('.iv-modetab', 'Behavioural')); await wait(150);
+    check('behavioural mode shows all sixteen principle chips', doc.querySelectorAll('.lp-chip').length === 16);
+    check('a principle card and a practice question are shown', !!doc.querySelector('.lp-card') && (doc.querySelector('.lp-q')?.textContent || '').length > 20);
+    const before = doc.querySelector('.lp-card h4')?.textContent;
+    click(byText('.lp-chip', 'Dive Deep')); await wait(100);
+    check('choosing a principle swaps the card', doc.querySelector('.lp-card h4')?.textContent === 'Dive Deep' && before !== 'Dive Deep');
+    check('the story bank starts empty and says it stays in the browser', /stay in this browser/i.test(doc.querySelector('.iv')?.textContent || ''));
+    click(byText('.iv-modetab', 'System design')); await wait(100);
+  }
 
   // ── read aloud ─────────────────────────────────────────────────────────────
   {

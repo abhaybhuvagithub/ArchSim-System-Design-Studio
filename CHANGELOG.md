@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.58.0 — 2026-10-31
+- Interview tab: new Behavioural mode built on Amazon's 16 Leadership Principles — what each means, what an interviewer listens for, the engineering angle, red flags, practice questions, a STAR shape checker (scene, your actions, a measured result, a lesson) and a browser-local story bank that shows which principles your stories cover.
+
 ## 1.57.1 — 2026-10-31
 - Deep-dive Internals for 10 more components: llm, guard, ledger, iam, otel, tracing, sandbox, geoidx, stream, tenant (35 of 115 done).
 
