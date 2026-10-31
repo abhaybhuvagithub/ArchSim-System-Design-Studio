@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.56.0 — 2026-10-31
+- 🏗️ **Terraform, rebuilt** — the generated file is now layered and dependency-ordered (foundation, data, messaging, compute, edge, observability) with variables, shared tags, a remote-state note, `depends_on` that can never form a cycle, entry-point outputs, multi-AZ where the canvas has replicas, and a trade-off note on every component
+- 🪜 **Build it step by step** — under the Terraform code, a plan derived from your design: state and network, stateful stores, queues, services, edge, observability, then a gradual cutover. Each step has the commands, the trade-off behind it as a hint, and a check to prove it worked. It follows the canvas; a lone database is flagged as a single point of failure
+
 ## 1.55.0 — 2026-10-31
 - 🧩 **Middleware upgrade lab** (Chaos tab) — move a 100-service fleet from middleware v1 to v2: pick the breaking and additive changes, the contract check names exactly which services break and a migration action for each, then a canary rollout (1 → 5 → 25 → 50 → 100%) with an SLO guard rolls back automatically on breach. The fleet and metrics are a seeded model; the compatibility logic is exact. Plus two new drills (128 concepts): migrating 100 services v1 → v2, and platform vs a pile of shared libraries
 

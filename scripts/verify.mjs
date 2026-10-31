@@ -2718,6 +2718,39 @@ try {
         const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
         return /<MigrationLab \/>/.test(src) && /seeded simulation, not measured data/.test(src) && /Run canary rollout/.test(src);
       })());
+      check('Terraform is layered, dependency-ordered and cycle-free, with a trade-off note per component and outputs for entry points', await (async () => {
+        const CGx = await import(pathToFileURL(path.join(root, 'src/codegen.js')).href);
+        const TP = await import(pathToFileURL(path.join(root, 'src/tfplan.js')).href);
+        const TX = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const { CATALOG: CAT } = await import(pathToFileURL(path.join(root, 'src/catalog.js')).href);
+        return TX.TEMPLATES.every(t => {
+          for (const cl of ['aws', 'gcp', 'azure', 'oci']) {
+            const tf = CGx.generateTerraform(t.nodes, cl, t.edges);
+            if (!/required_version/.test(tf) || !/variable "region"/.test(tf) || !/local\.tags/.test(tf)) return false;
+            const mods = (tf.match(/^module "/gm) || []).length;
+            if ((tf.match(/# TRADE-OFF:/g) || []).length < mods) return false;
+          }
+          // depends_on only ever points at a strictly earlier layer: a cycle is impossible
+          return t.nodes.every(n => TP.moduleDeps(n, t.nodes, t.edges).every(d => TP.LAYER_RANK[TP.layerOf(d.type)] < TP.LAYER_RANK[TP.layerOf(n.type)]));
+        }) && /depends_on/.test(CGx.generateTerraform(TX.TEMPLATES.find(t => t.name === 'Amazon (marketplace)').nodes, 'aws', TX.TEMPLATES.find(t => t.name === 'Amazon (marketplace)').edges));
+      })());
+      check('the step-by-step plan follows the design: foundation first, data before compute, edge after compute, cutover last, every step with a trade-off and a check', await (async () => {
+        const TP = await import(pathToFileURL(path.join(root, 'src/tfplan.js')).href);
+        const TX = await import(pathToFileURL(path.join(root, 'src/templates.js')).href);
+        const t = TX.TEMPLATES.find(x => x.name === 'Amazon (marketplace)');
+        const plan = TP.implementationPlan(t.nodes, t.edges, 'aws');
+        const ph = plan.map(s => s.phase);
+        const small = TP.implementationPlan([{ id: 'a', type: 'app', label: 'API', replicas: 2 }], [], 'aws').map(s => s.phase);
+        const lonely = TP.implementationPlan([{ id: 'd', type: 'sql', label: 'DB', replicas: 1 }], [], 'aws').find(s => s.phase === 'Data');
+        return ph[0] === 'Foundation' && ph.at(-1) === 'Cutover' && ph.indexOf('Data') < ph.indexOf('Compute') && ph.indexOf('Compute') < ph.indexOf('Edge')
+          && plan.every((s, i) => s.n === i + 1 && s.tradeoff.length > 40 && s.verify.length > 10 && s.commands.length >= 2)
+          && !small.includes('Data') && !small.includes('Edge') && /single point of failure/i.test(lonely.tradeoff)
+          && TP.implementationPlan([], [], 'aws').length === 0;
+      })());
+      check('the Terraform tab shows the build plan and says it is a plan, not a finished stack', (() => {
+        const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+        return /<TerraformPlan /.test(src) && /Build it step by step/.test(src) && /not a finished production stack/.test(src);
+      })());
       check('every comparison table arrives expanded — the table IS the mastery',
         [...ms().querySelectorAll('details.ms-cmp')].every(d => d.hasAttribute('open')));
       check('comparison tables live inside the items, in this same tab',

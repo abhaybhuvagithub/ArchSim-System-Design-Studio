@@ -66,6 +66,7 @@ const GROUP_ICON = {
   'GenAI': '🤖', 'Cloud business': '☁️', 'Classics': '🏛️', 'Infra': '🔧',
 }
 import { VERSION } from './version.js'
+import { implementationPlan } from './tfplan.js'
 import { buildFleet, checkCompatibility, simulateRollout, V2_CHANGES, V1_FEATURES } from './migration.js'
 import { readVersions, saveVersion, deleteVersion, diffVersions, describeDiff } from './versions.js'
 import { initAnalytics } from './analytics.js'
@@ -2440,6 +2441,31 @@ function VersionsPanel({ nodes, edges, rps, onImport }) {
   )
 }
 
+// Step-by-step build plan for the design on the canvas, with the trade-off
+// behind each step as a hint. Derived from nodes and edges, so it follows edits.
+function TerraformPlan({ nodes, edges, cloud }) {
+  const steps = useMemo(() => implementationPlan(nodes, edges, cloud), [nodes, edges, cloud])
+  if (!steps.length) return null
+  return (
+    <section className="tf-plan" aria-label="Step-by-step implementation plan" style={{ marginTop: 12 }}>
+      <h4 style={{ margin: '0 0 4px' }}>🪜 Build it step by step</h4>
+      <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>The order your design implies, with the trade-off behind each step. Derived from the canvas: change the design and this plan changes. It is a plan and a skeleton, not a finished production stack.</p>
+      <ol style={{ paddingLeft: 18, margin: 0 }}>
+        {steps.map(st => (
+          <li key={st.n} style={{ marginBottom: 10, fontSize: 12 }}>
+            <strong>{st.phase}: {st.title}</strong>
+            {st.components.length > 0 && <span className="muted"> — {st.components.slice(0, 6).join(', ')}{st.components.length > 6 ? ` +${st.components.length - 6} more` : ''}</span>}
+            <div>{st.do}</div>
+            <pre className="code-out" style={{ margin: '4px 0', padding: '6px 8px', fontSize: 12 }}>{st.commands.join('\n')}</pre>
+            <div className="tf-hint" title="The trade-off behind this step">💡 <b>Trade-off:</b> {st.tradeoff}</div>
+            <div className="muted">✔ Check: {st.verify}</div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 // The Code tab: three generated artifacts, re-derived from nodes and edges on
 // every change — which is what makes "the code evolves with Improve and Quick
 // Fix" true by construction rather than by bookkeeping.
@@ -2519,6 +2545,7 @@ function CodeGen({ nodes, edges, cloud, sugs, rps, onImport }) {
         {isProject && <button className="btn" onClick={downloadZip} title="Every generated file plus docker-compose.yml, zipped">📦 project .zip</button>}
       </div>
       <pre className="code-out" aria-label={isProject ? `Generated ${curFile?.path}` : `Generated ${meta.label}`}>{code}</pre>
+      {view === 'terraform' && cloud !== 'generic' && <TerraformPlan nodes={nodes} edges={edges} cloud={cloud} />}
       {(view === 'mermaid' || view === 'json') && (
         <details className="dac-import" open>
           <summary>📥 Import — paste a Mermaid flowchart or an ArchSim JSON document and it becomes a live simulation</summary>
