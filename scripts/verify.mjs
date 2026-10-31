@@ -2690,6 +2690,34 @@ try {
         const area = MX.MASTERY.find(a => a.id === 'llm-prod');
         return ids.every(id => { const it = area.items.find(x => x.id === id); return it && it.asks.length > 60 && names.has(it.go.tpl) && !!MX.MASTERY_CMP[id]; });
       })());
+      check('middleware upgrade lab: the contract check is exact, additive changes break nobody, breaking ones name who and how', await (async () => {
+        const MG = await import(pathToFileURL(path.join(root, 'src/migration.js')).href);
+        const fleet = MG.buildFleet(100, 7);
+        const add = MG.checkCompatibility(fleet, ['add-tenant']);
+        const all = MG.checkCompatibility(fleet, MG.V2_CHANGES.map(c => c.id));
+        const xml = MG.checkCompatibility(fleet, ['rm-xml']);
+        const expectXml = fleet.filter(s => s.uses.includes('legacy.xmlCodec')).length;
+        return fleet.length === 100 && add.broken === 0 && add.verdict === 'additive'
+          && xml.broken === expectXml && all.broken >= xml.broken && all.safe + all.broken === 100
+          && all.recommendations.length >= 3 && all.recommendations[0].consumers >= all.recommendations.at(-1).consumers
+          && JSON.stringify(MG.buildFleet(100, 7)) === JSON.stringify(fleet);
+      })());
+      check('middleware upgrade lab: unmigrated breaking v2 is caught by the canary and rolled back; migrated consumers complete; a latency regression rolls back even when compatible', await (async () => {
+        const MG = await import(pathToFileURL(path.join(root, 'src/migration.js')).href);
+        const fleet = MG.buildFleet(100, 7), all = MG.V2_CHANGES.map(c => c.id);
+        const bad = MG.simulateRollout(fleet, { changeIds: all });
+        const good = MG.simulateRollout(fleet, { changeIds: all, consumersMigrated: true });
+        const slow = MG.simulateRollout(fleet, { changeIds: all, consumersMigrated: true, regression: { latencyMul: 3, errorAdd: 0 } });
+        const again = MG.simulateRollout(fleet, { changeIds: all });
+        return bad.outcome === 'rolled-back' && bad.rolledBackAt < 100 && bad.stages.at(-1).breach
+          && good.outcome === 'completed' && good.stages.length === MG.STAGES.length
+          && slow.outcome === 'rolled-back' && /p99/.test(slow.stages.at(-1).breach)
+          && JSON.stringify(bad.stages) === JSON.stringify(again.stages);
+      })());
+      check('the middleware upgrade lab is wired into the Chaos tab and says it is a model', (() => {
+        const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
+        return /<MigrationLab \/>/.test(src) && /seeded simulation, not measured data/.test(src) && /Run canary rollout/.test(src);
+      })());
       check('every comparison table arrives expanded — the table IS the mastery',
         [...ms().querySelectorAll('details.ms-cmp')].every(d => d.hasAttribute('open')));
       check('comparison tables live inside the items, in this same tab',

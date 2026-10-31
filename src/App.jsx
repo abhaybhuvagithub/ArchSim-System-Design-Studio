@@ -66,6 +66,7 @@ const GROUP_ICON = {
   'GenAI': '🤖', 'Cloud business': '☁️', 'Classics': '🏛️', 'Infra': '🔧',
 }
 import { VERSION } from './version.js'
+import { buildFleet, checkCompatibility, simulateRollout, V2_CHANGES, V1_FEATURES } from './migration.js'
 import { readVersions, saveVersion, deleteVersion, diffVersions, describeDiff } from './versions.js'
 import { initAnalytics } from './analytics.js'
 
@@ -2580,6 +2581,61 @@ const WHATIF_SCENARIOS = [
   { id: 'retry-storm', label: 'Retry storm (+40% dup load)', fx: (b, nodes) => ({ node: Object.fromEntries(nodes.map(n => [n.id, { dup: 0.4 }])) }) },
 ]
 
+// Middleware upgrade lab: the contract check and canary rollout of migration.js.
+// A seeded MODEL of a 100-service fleet - the logic is real, the fleet is not.
+function MigrationLab() {
+  const [picked, setPicked] = useState(['rm-xml', 'rn-config'])
+  const [migrated, setMigrated] = useState(false)
+  const [lat, setLat] = useState(1)
+  const [ran, setRan] = useState(0)
+  const fleet = useMemo(() => buildFleet(100, 7), [])
+  const compat = useMemo(() => checkCompatibility(fleet, picked), [fleet, picked])
+  const run = useMemo(() => ran ? simulateRollout(fleet, { changeIds: picked, consumersMigrated: migrated, regression: { latencyMul: lat, errorAdd: 0 } }) : null, [ran, fleet, picked, migrated, lat])
+  const toggle = id => { setPicked(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]); setRan(0) }
+  const featLabel = id => V1_FEATURES.find(f => f.id === id)?.label || id
+  return (
+    <details className="wi-panel mig-lab">
+      <summary>🧩 Middleware upgrade lab — move 100 services from v1 to v2 without breaking anyone</summary>
+      <p className="muted wi-intro">A model of a shared library used by 100 services (Java, Go, Node.js). Choose what v2 changes; the contract check shows exactly who breaks, then a canary rollout (1 → 5 → 25 → 50 → 100%) rolls back automatically if an SLO is breached. The fleet and its metrics are a seeded simulation, not measured data — the compatibility logic is exact over the declared usage.</p>
+      <div className="wi-controls" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+        {V2_CHANGES.map(c => (
+          <label key={c.id} style={{ fontSize: 12 }}>
+            <input type="checkbox" checked={picked.includes(c.id)} onChange={() => toggle(c.id)} /> {c.title} <span className="muted">({c.breaking ? 'breaking' : 'additive'}, {c.kind})</span>
+          </label>
+        ))}
+      </div>
+      <p style={{ fontSize: 12, margin: '8px 0 4px' }}>
+        <b>Contract check:</b> {compat.verdict === 'additive' ? 'additive only — no consumer breaks.' : `${compat.broken} of ${compat.total} services break; ${compat.safe} are safe.`}
+      </p>
+      {compat.recommendations.length > 0 && (
+        <table className="wi-table">
+          <thead><tr><th>Breaking change</th><th>Services</th><th>Recommended migration</th></tr></thead>
+          <tbody>{compat.recommendations.map(rc => <tr key={rc.change}><td>{rc.title}</td><td>{rc.consumers}</td><td>{rc.action}</td></tr>)}</tbody>
+        </table>
+      )}
+      <div className="wi-controls" style={{ marginTop: 8, alignItems: 'center' }}>
+        <label style={{ fontSize: 12 }}><input type="checkbox" checked={migrated} onChange={e => { setMigrated(e.target.checked); setRan(0) }} /> Consumers migrated first (codemods applied)</label>
+        <label style={{ fontSize: 12 }}>v2 latency <select value={lat} onChange={e => { setLat(Number(e.target.value)); setRan(0) }}>
+          <option value={1}>same as v1</option><option value={1.5}>+50%</option><option value={3}>3×</option></select></label>
+        <button type="button" className="btn tiny active" onClick={() => setRan(x => x + 1)}>▶ Run canary rollout</button>
+      </div>
+      {run && (
+        <>
+          <table className="wi-table">
+            <thead><tr><th>Stage</th><th>Services on v2</th><th>Error rate</th><th>p99</th><th>SLO guard</th></tr></thead>
+            <tbody>{run.stages.map(s => (
+              <tr key={s.pct} className={s.breach ? 'wi-worse' : ''}><td>{s.pct}%</td><td>{s.services}</td><td>{(s.errorRate * 100).toFixed(2)}%</td><td>{Math.round(s.p99)} ms</td><td>{s.breach ? `✗ ${s.breach}` : '✓ within SLO'}</td></tr>
+            ))}</tbody>
+          </table>
+          <p style={{ fontSize: 12 }}>{run.outcome === 'completed'
+            ? `✅ Rolled out to 100% — SLO held at every stage (limits: ${(run.slo.maxErrorRate * 100).toFixed(0)}% errors, ${run.slo.maxP99Ms} ms p99).`
+            : `⏪ Automatically rolled back at ${run.rolledBackAt}% — only ${run.stages.at(-1).services} service${run.stages.at(-1).services === 1 ? '' : 's'} were exposed. That is what a canary is for.`}</p>
+        </>
+      )}
+    </details>
+  )
+}
+
 function WhatIfPanel({ nodes, edges, rps }) {
   const [scenarioId, setScenarioId] = useState('traffic10')
   const cmp = useMemo(() => {
@@ -2725,6 +2781,7 @@ function Chaos({ faults, nodes, edges, rps, sel, onInject, onClear, onRecoverAll
         </>
       )}
       <WhatIfPanel nodes={nodes} edges={edges} rps={rps} />
+      <MigrationLab />
     </section>
   )
 }

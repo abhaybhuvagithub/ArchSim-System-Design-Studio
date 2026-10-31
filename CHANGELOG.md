@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.55.0 — 2026-10-31
+- 🧩 **Middleware upgrade lab** (Chaos tab) — move a 100-service fleet from middleware v1 to v2: pick the breaking and additive changes, the contract check names exactly which services break and a migration action for each, then a canary rollout (1 → 5 → 25 → 50 → 100%) with an SLO guard rolls back automatically on breach. The fleet and metrics are a seeded model; the compatibility logic is exact. Plus two new drills (128 concepts): migrating 100 services v1 → v2, and platform vs a pile of shared libraries
+
 ## 1.54.0 — 2026-10-30
 - 🧩 **Platform engineering** — four new Mastery drills (126 concepts): platform and SDK contracts (additive vs breaking, contract tests), API lifecycle (deprecate, brownout, sunset), deep debugging across a service graph, and patching a critical vulnerability without an outage. The JD planner now recognises platform/SDK, debugging, and secure-coding/patching postings and maps them to these drills
 
