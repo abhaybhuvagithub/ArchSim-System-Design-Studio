@@ -2751,6 +2751,22 @@ try {
         const src = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
         return /<TerraformPlan /.test(src) && /Build it step by step/.test(src) && /not a finished production stack/.test(src);
       })());
+      check('deep internals: every authored component has lifecycle, algorithms with cost, structures, failures with fixes, knobs, mistakes and an honest model note', await (async () => {
+        const DI = await import(pathToFileURL(path.join(root, 'src/internals-deep.js')).href);
+        const { CATALOG: CT } = await import(pathToFileURL(path.join(root, 'src/catalog.js')).href);
+        const keys = Object.keys(DI.DEEP_INTERNALS);
+        const ok = e => e.why.length > 60 && e.lifecycle.length >= 5 && e.lifecycle.every(x => x.length > 25)
+          && e.algorithms.length >= 2 && e.algorithms.every(a => a.name && a.how.length > 40 && a.cost.length > 15)
+          && e.structures.length >= 2 && e.structures.every(d => d.name && d.why.length > 15)
+          && e.failures.length >= 3 && e.failures.every(f => f.mode && f.what.length > 25 && f.fix.length > 15)
+          && e.knobs.length >= 2 && e.knobs.every(k => k.name && k.effect.length > 15)
+          && e.pitfalls.length >= 2 && e.model.length > 50;
+        return keys.length >= 25 && keys.every(k => CT[k] && !CT[k].source && ok(DI.DEEP_INTERNALS[k]));
+      })());
+      check('the Internals modal renders the deep dive for an authored component and falls back cleanly for one without', (() => {
+        const src = fs.readFileSync(path.join(root, 'src/component-details.jsx'), 'utf8');
+        return /getDeepInternals\(node\.type\)/.test(src) && /\{deep && \(/.test(src) && /Request lifecycle, step by step/.test(src) && /How ArchSim models it/.test(src);
+      })());
       check('every comparison table arrives expanded — the table IS the mastery',
         [...ms().querySelectorAll('details.ms-cmp')].every(d => d.hasAttribute('open')));
       check('comparison tables live inside the items, in this same tab',

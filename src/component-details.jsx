@@ -1,4 +1,5 @@
 import { COMPONENT_INTERNALS, getComponentInternals } from './component-internals.js'
+import { getDeepInternals } from './internals-deep.js'
 import { CATALOG } from './catalog.js'
 import { getProvenance, PROVENANCE_CLASSES } from './provenance.js'
 
@@ -296,6 +297,7 @@ export function ComponentDetails({ nodeId, node, onClose }) {
 
   const spec = CATALOG[node.type]
   const internals = getComponentInternals(node.type)
+  const deep = getDeepInternals(node.type)
   const diagram = COMPONENT_DIAGRAMS[node.type]
 
   return (
@@ -373,6 +375,50 @@ export function ComponentDetails({ nodeId, node, onClose }) {
               <p>{internals.mechanism}</p>
             </div>
           </div>
+
+
+          {deep && (
+            <div className="details-section deep-internals">
+              <h3>🔬 Deep dive: how it really works</h3>
+              <div className="details-box"><p><b>Why it exists.</b> {deep.why}</p></div>
+
+              <h4>Request lifecycle, step by step</h4>
+              <ol className="deep-steps">{deep.lifecycle.map((st, i) => <li key={i}>{st}</li>)}</ol>
+
+              <h4>Algorithms and their cost</h4>
+              <div className="deep-grid">
+                {deep.algorithms.map((a, i) => (
+                  <div key={i} className="deep-card">
+                    <b>{a.name}</b>
+                    <p>{a.how}</p>
+                    <p className="deep-cost"><i>Cost:</i> {a.cost}</p>
+                  </div>
+                ))}
+              </div>
+
+              <h4>Data structures and why</h4>
+              <ul>{deep.structures.map((d, i) => <li key={i}><b>{d.name}.</b> {d.why}</li>)}</ul>
+
+              <h4>How it fails, and what to do</h4>
+              <div className="deep-grid">
+                {deep.failures.map((f, i) => (
+                  <div key={i} className="deep-card deep-fail">
+                    <b>{f.mode}</b>
+                    <p>{f.what}</p>
+                    <p><i>Fix:</i> {f.fix}</p>
+                  </div>
+                ))}
+              </div>
+
+              <h4>Knobs that matter</h4>
+              <ul>{deep.knobs.map((k, i) => <li key={i}><b>{k.name}.</b> {k.effect}</li>)}</ul>
+
+              <h4>Classic mistakes</h4>
+              <ul>{deep.pitfalls.map((m, i) => <li key={i}>{m}</li>)}</ul>
+
+              <div className="details-box deep-model"><p><b>How ArchSim models it.</b> {deep.model}</p></div>
+            </div>
+          )}
 
           <div className="details-section">
             <h3>📊 Performance Specs</h3>

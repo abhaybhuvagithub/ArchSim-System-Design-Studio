@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.57.0 — 2026-10-31
+- 🔬 **Deep-dive Internals** — the 🔍 Internals modal now has a long form for the core components: why it exists, the request lifecycle step by step, the algorithms with their cost, the data structures and why, how it fails and the fix, the knobs that matter, the classic mistakes, and how ArchSim models it. First 25 written: load balancer, gateway, CDN, rate limiter, app, microservice, WebSocket, worker, scheduler, Kubernetes, mesh, saga, global routing, WAF, cache, SQL, NoSQL, search, blob, vector, queue, Kafka, warehouse, lake, coordination service. More follow; components not yet written keep the short form
+
 ## 1.56.0 — 2026-10-31
 - 🏗️ **Terraform, rebuilt** — the generated file is now layered and dependency-ordered (foundation, data, messaging, compute, edge, observability) with variables, shared tags, a remote-state note, `depends_on` that can never form a cycle, entry-point outputs, multi-AZ where the canvas has replicas, and a trade-off note on every component
 - 🪜 **Build it step by step** — under the Terraform code, a plan derived from your design: state and network, stateful stores, queues, services, edge, observability, then a gradual cutover. Each step has the commands, the trade-off behind it as a hint, and a check to prove it worked. It follows the canvas; a lone database is flagged as a single point of failure
